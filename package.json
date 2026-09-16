@@ -97,8 +97,7 @@
             "x64"
           ]
         }
-      ],
-      "artifactName": "${productName}-${version}-${arch}.${ext}"
+      ]
     },
     "mac": {
       "target": [
@@ -139,18 +138,25 @@
       "artifactName": "${productName}-${version}-${arch}.${ext}"
     },
     "msi": {
+      "artifactName": "${productName}-${version}-${arch}.${ext}",
       "oneClick": false,
       "perMachine": false,
       "createDesktopShortcut": true,
       "shortcutName": "DevOps Toolbox"
     },
     "nsis": {
+      "artifactName": "${productName}-Setup-${version}-${arch}.${ext}",
+      "buildUniversalInstaller": false,
       "oneClick": false,
       "perMachine": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "DevOps Toolbox"
+    },
+    "portable": {
+      "artifactName": "${productName}-Portable-${version}-${arch}.${ext}",
+      "buildUniversalInstaller": false
     }
   }
 }
