@@ -45,7 +45,7 @@
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.6.3",
-    "vite": "^5.4.11"
+    "vite": "^6.4.3"
   },
   "allowScripts": {
     "esbuild@0.21.5": true
@@ -53,33 +53,85 @@
   "build": {
     "appId": "com.bugbucket.devtoolbox",
     "productName": "DevOps Toolbox",
+    "asar": true,
+    "compression": "maximum",
     "directories": {
       "output": "release",
       "buildResources": "build"
     },
-    "files": ["out/**/*"],
+    "files": [
+      "out/**/*",
+      "!**/*.map",
+      "!**/*.d.ts"
+    ],
     "win": {
       "target": [
-        { "target": "nsis", "arch": ["x64"] },
-        { "target": "portable", "arch": ["x64"] }
+        {
+          "target": "nsis",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "msi",
+          "arch": [
+            "x64"
+          ]
+        }
       ],
       "artifactName": "${productName}-${version}-${arch}.${ext}"
     },
     "mac": {
       "target": [
-        { "target": "dmg", "arch": ["x64", "arm64"] },
-        { "target": "zip", "arch": ["x64", "arm64"] }
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
       ],
       "category": "public.app-category.developer-tools",
       "artifactName": "${productName}-${version}-${arch}.${ext}"
     },
     "linux": {
       "target": [
-        { "target": "AppImage", "arch": ["x64"] },
-        { "target": "deb", "arch": ["x64"] }
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64"
+          ]
+        }
       ],
       "category": "Development",
       "artifactName": "${productName}-${version}-${arch}.${ext}"
+    },
+    "msi": {
+      "oneClick": false,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "shortcutName": "DevOps Toolbox"
     },
     "nsis": {
       "oneClick": false,
