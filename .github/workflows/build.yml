@@ -47,7 +47,12 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: DevOps-Toolbox-${{ matrix.platform }}
-          path: release/*
+          path: |
+            release/*.AppImage
+            release/*.deb
+            release/*.dmg
+            release/*.exe
+            release/*.zip
           if-no-files-found: warn
 
   release:
