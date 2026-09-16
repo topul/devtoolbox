@@ -20,13 +20,10 @@ jobs:
         include:
           - os: ubuntu-latest
             platform: linux
-            artifact: DevOps Toolbox-*-x64.AppImage
           - os: windows-latest
             platform: win
-            artifact: DevOps Toolbox-*-x64.exe
           - os: macos-latest
             platform: mac
-            artifact: DevOps Toolbox-*-*.dmg
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -50,7 +47,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: DevOps-Toolbox-${{ matrix.platform }}
-          path: release/${{ matrix.artifact }}
+          path: release/*
           if-no-files-found: warn
 
   release:
