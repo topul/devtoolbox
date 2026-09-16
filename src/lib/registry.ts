@@ -10,11 +10,13 @@ import { ReverseShellTool, PayloadCheatSheetTool, PortRefTool, HttpStatusTool, S
 import { YamlTool, JsonPathTool, CssTool } from '../tools/dataformats'
 import { ColorTool, ImgBase64Tool, StringEscapeTool } from '../tools/converters'
 import { UrlParserTool, UserAgentTool, IpIntTool, CookieTool } from '../tools/network'
+import { HttpClientTool } from '../tools/httpclient'
+import { TrafficProxyTool } from '../tools/proxy'
 import { XorTool, RotTool, VigenereTool, PrivescTool } from '../tools/offsec'
 
 export type CategoryId =
   | 'encoding' | 'format' | 'generators' | 'crypto' | 'text'
-  | 'datetime' | 'network' | 'offsec' | 'reference'
+  | 'datetime' | 'network' | 'http' | 'offsec' | 'reference'
 
 export interface ToolDef {
   /** Stable tool id, also the key in TOOLS_L */
@@ -34,6 +36,7 @@ export const CATEGORIES: CategoryId[] = [
   'text',
   'datetime',
   'network',
+  'http',
   'offsec',
   'reference',
 ] as const
@@ -59,6 +62,10 @@ export const TOOLS: ToolDef[] = [
   { id: 'ua-parser', category: 'network', keywords: ['ua', 'user-agent', '浏览器', '爬虫'], component: UserAgentTool },
   { id: 'ip-int', category: 'network', keywords: ['ip', 'int', 'ssrf', '绕过', '0x7f'], component: IpIntTool },
   { id: 'cookie', category: 'network', keywords: ['cookie', 'set-cookie', 'session', '会话'], component: CookieTool },
+
+  // HTTP 调试
+  { id: 'http-client', category: 'http', keywords: ['http', 'https', 'postman', 'rest', 'api', '请求', '接口', 'curl', 'fetch', '接口测试'], hot: true, component: HttpClientTool },
+  { id: 'traffic-proxy', category: 'http', keywords: ['proxy', '抓包', 'mitm', 'charles', 'fiddler', 'wireshark', '代理', '重放', 'replay', 'https', '证书'], hot: true, component: TrafficProxyTool },
 
   // Formatters
   { id: 'json', category: 'format', keywords: ['json', '格式化', '压缩', '校验'], hot: true, component: JsonTool },

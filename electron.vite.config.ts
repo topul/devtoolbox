@@ -23,7 +23,11 @@ export default defineConfig({
       minify: 'esbuild',
       sourcemap: false,
       rollupOptions: {
-        input: { index: resolve(__dirname, 'electron/preload/index.ts') }
+        input: { index: resolve(__dirname, 'electron/preload/index.ts') },
+        // 必须产出 CJS：webPreferences.sandbox 为 true 时，Electron 把 preload 当经典脚本加载，
+        // ESM 的 import 语句会直接 `SyntaxError: Cannot use import statement outside a module`，
+        // 结果是 window.electronAPI 静默变成 undefined（typecheck/build 都发现不了）。
+        output: { format: 'cjs', entryFileNames: '[name].cjs' }
       }
     }
   },

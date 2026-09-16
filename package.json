@@ -25,12 +25,16 @@
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json",
     "typecheck": "tsc --noEmit",
     "i18n:check": "esbuild src/lib/locales/*.ts --outdir=node_modules/.cache/locales --format=esm --out-extension:.js=.mjs --log-level=error && node scripts/check-locale-parity.mjs node_modules/.cache/locales",
-    "smoke:main": "node scripts/check-main-imports.mjs out/main/index.js out/preload/index.mjs",
-    "smoke:render": "esbuild scripts/smoke-render.tsx --bundle --platform=node --format=esm --outfile=node_modules/.cache/smoke.mjs --loader:.tsx=tsx --jsx=automatic --log-level=error --external:qrcode --external:react --external:react-dom --external:react/jsx-runtime && node node_modules/.cache/smoke.mjs"
+    "smoke:main": "node scripts/check-main-imports.mjs out/main/index.js out/preload/index.cjs",
+    "smoke:preload": "electron scripts/check-preload.mjs",
+    "smoke:render": "esbuild scripts/smoke-render.tsx --bundle --platform=node --format=esm --outfile=node_modules/.cache/smoke.mjs --loader:.tsx=tsx --jsx=automatic --log-level=error --external:qrcode --external:react --external:react-dom --external:react/jsx-runtime && node node_modules/.cache/smoke.mjs",
+    "smoke:proxy": "esbuild scripts/smoke-proxy.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/smoke-proxy.mjs --log-level=error --external:node-forge && node node_modules/.cache/smoke-proxy.mjs",
+    "smoke:systemproxy": "esbuild scripts/check-systemproxy.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/check-systemproxy.mjs --log-level=error && node node_modules/.cache/check-systemproxy.mjs"
   },
   "dependencies": {
     "crypto-js": "^4.2.0",
     "electron-updater": "^6.8.9",
+    "node-forge": "^1.4.0",
     "qrcode": "^1.5.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
@@ -38,6 +42,7 @@
   "devDependencies": {
     "@types/crypto-js": "^4.2.2",
     "@types/node": "^22.20.3",
+    "@types/node-forge": "^1.3.14",
     "@types/qrcode": "^1.5.5",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",

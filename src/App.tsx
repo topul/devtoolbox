@@ -16,7 +16,7 @@ const ASCII_LOGO = `
 
 const CAT_ICONS: Record<string, string> = {
   encoding: '⇄', format: '≡', generators: '⚙', crypto: '⚿',
-  text: '¶', datetime: '◷', network: '⌁', offsec: '☠', reference: '▤',
+  text: '¶', datetime: '◷', network: '⌁', http: '⇅', offsec: '☠', reference: '▤',
 }
 
 export default function App() {
