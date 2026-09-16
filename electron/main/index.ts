@@ -1,8 +1,12 @@
 import { app, BrowserWindow, nativeTheme, ipcMain, shell } from 'electron'
 import { join } from 'path'
-import { autoUpdater } from 'electron-updater'
+// electron-updater 是 tsc 编译的 CJS 包，导出用 Object.defineProperty(getter) 定义，
+// Node 的 ESM named-export 探测（cjs-module-lexer）识别不到 → 必须走 default 再解构
+import electronUpdater from 'electron-updater'
 
-// electron-vite 编译后 __dirname 可用（CJS 输出）
+const { autoUpdater } = electronUpdater
+
+// 主进程产物为 ESM（package.json type: module），electron-vite 会把 __dirname 编译成 import.meta.dirname
 
 let mainWindow: BrowserWindow | null = null
 
