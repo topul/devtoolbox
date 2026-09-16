@@ -1,7 +1,9 @@
 import React, { useState, useMemo } from 'react'
 import { Btn, TA, Input, ErrorNote, Select } from '../components/ui'
+import { useLocalized } from '../lib/i18n'
+import { dataformatsL } from '../lib/locales/dataformats'
 
-/* ================= YAML ↔ JSON（轻量解析器） ================= */
+/* ================= YAML ↔ JSON (lightweight parser) ================= */
 
 function parseScalar(v: string): any {
   const t = v.trim()
@@ -142,6 +144,7 @@ function fmtScalar(v: any): string {
 }
 
 export function YamlTool() {
+  const l = useLocalized(dataformatsL).yaml
   const [input, setInput] = useState('server:\n  host: 0.0.0.0\n  port: 8080\n  tags:\n    - web\n    - prod\n  tls: true')
   const [output, setOutput] = useState('')
   const [err, setErr] = useState<string | null>(null)
@@ -152,21 +155,21 @@ export function YamlTool() {
       if (mode === 'y2j') setOutput(JSON.stringify(parseYaml(input), null, 2))
       else setOutput(toYaml(JSON.parse(input)))
     } catch (e) {
-      setErr((mode === 'y2j' ? 'YAML' : 'JSON') + ' 解析失败：' + (e as Error).message)
+      setErr((mode === 'y2j' ? 'YAML' : 'JSON') + l.parseErr + (e as Error).message)
     }
   }
 
   return (
     <div className="space-y-3">
-      <TA value={input} onChange={setInput} label="输入 YAML 或 JSON" rows={9} />
+      <TA value={input} onChange={setInput} label={l.input} rows={9} />
       <div className="flex gap-2">
-        <Btn variant="primary" onClick={() => run('y2j')}>YAML → JSON</Btn>
-        <Btn onClick={() => run('j2y')}>JSON → YAML</Btn>
-        <Btn variant="ghost" onClick={() => { setInput(output); setOutput('') }}>⇅ 交换</Btn>
+        <Btn variant="primary" onClick={() => run('y2j')}>{l.y2j}</Btn>
+        <Btn onClick={() => run('j2y')}>{l.j2y}</Btn>
+        <Btn variant="ghost" onClick={() => { setInput(output); setOutput('') }}>{l.swap}</Btn>
       </div>
       <ErrorNote msg={err} />
-      <TA value={output} readOnly label="输出" rows={9} />
-      <p className="text-[11px] text-muted">* 轻量解析器，支持常见配置结构（嵌套、列表、多行字符串 | / &gt;）；复杂锚点(&amp;)、引用(*)语法暂不支持。</p>
+      <TA value={output} readOnly label={l.output} rows={9} />
+      <p className="text-[11px] text-muted">{l.note}</p>
     </div>
   )
 }
@@ -174,9 +177,9 @@ export function YamlTool() {
 /* ================= JSONPath ================= */
 
 function evalJsonPath(obj: any, path: string): any[] {
-  // 支持 $.a.b[0].c、$..key（递归下降）、$['key']
+  // supports $.a.b[0].c, $..key (recursive descent), $['key']
   let p = path.trim()
-  if (!p.startsWith('$')) throw new Error('路径需以 $ 开头')
+  if (!p.startsWith('$')) throw new Error('NEED_DOLLAR')
   p = p.slice(1)
 
   const tokens: ({ key: string } | { idx: number } | { recursive: string })[] = []
@@ -191,7 +194,7 @@ function evalJsonPath(obj: any, path: string): any[] {
     else if (m[4] !== undefined) tokens.push({ idx: parseInt(m[4]) })
     else tokens.push({ key: '*' })
   }
-  if (consumed !== p) throw new Error(`无法解析路径片段：${p.slice(consumed.length) || p}`)
+  if (consumed !== p) throw new Error('BAD_SEG:' + (p.slice(consumed.length) || p))
 
   let current: any[] = [obj]
   for (const t of tokens) {
@@ -225,15 +228,9 @@ function evalJsonPath(obj: any, path: string): any[] {
   return current
 }
 
-const JSONPATH_EXAMPLES = [
-  ['根对象', '$'],
-  ['取字段', '$.store.book[0].title'],
-  ['所有作者（递归）', '$..author'],
-  ['数组全部', '$.store.book[*].price'],
-]
-
 export function JsonPathTool() {
-  const [json, setJson] = useState('{\n  "store": {\n    "book": [\n      { "title": " hacking 入门", "author": "alice", "price": 39 },\n      { "title": "web 安全", "author": "bob", "price": 59 }\n    ]\n  }\n}')
+  const l = useLocalized(dataformatsL).jsonpath
+  const [json, setJson] = useState(l.sample)
   const [path, setPath] = useState('$.store.book[*].price')
   const [err, setErr] = useState<string | null>(null)
 
@@ -245,36 +242,39 @@ export function JsonPathTool() {
       const r = evalJsonPath(obj, path)
       return r
     } catch (e) {
-      setErr((e as Error).message)
+      const msg = (e as Error).message
+      if (msg === 'NEED_DOLLAR') setErr(l.needDollar)
+      else if (msg.startsWith('BAD_SEG:')) setErr(l.badSeg + msg.slice('BAD_SEG:'.length))
+      else setErr(msg)
       return null
     }
-  }, [json, path])
+  }, [json, path, l])
 
   return (
     <div className="space-y-3">
       <div className="flex gap-2 items-end flex-wrap">
         <div className="flex-1 min-w-[220px]">
-          <Input value={path} onChange={setPath} label="JSONPath 表达式" placeholder="$.store.book[0].title" />
+          <Input value={path} onChange={setPath} label={l.exprLabel} placeholder="$.store.book[0].title" />
         </div>
       </div>
       <div className="flex gap-2 flex-wrap">
-        {JSONPATH_EXAMPLES.map(([name, p]) => (
+        {l.examples.map(([name, p]) => (
           <button key={name} onClick={() => setPath(p)}
             className="px-2 py-1 text-[11px] border border-line-soft text-muted hover:text-phosphor hover:border-phosphor/40 transition-colors">
             {name}
           </button>
         ))}
       </div>
-      <TA value={json} onChange={setJson} label="JSON 数据" rows={8} />
+      <TA value={json} onChange={setJson} label={l.dataLabel} rows={8} />
       <ErrorNote msg={err} />
       {result && (
-        <TA value={result.length === 1 ? JSON.stringify(result[0], null, 2) : JSON.stringify(result, null, 2)} readOnly label={`匹配 ${result.length} 个结果`} rows={7} />
+        <TA value={result.length === 1 ? JSON.stringify(result[0], null, 2) : JSON.stringify(result, null, 2)} readOnly label={l.resultLabel(result.length)} rows={7} />
       )}
     </div>
   )
 }
 
-/* ================= CSS 格式化 ================= */
+/* ================= CSS Formatter ================= */
 
 function formatCss(css: string): string {
   css = css.replace(/\/\*[\s\S]*?\*\//g, '').trim()
@@ -317,22 +317,23 @@ function minifyCss(css: string): string {
 }
 
 export function CssTool() {
+  const l = useLocalized(dataformatsL).css
   const [input, setInput] = useState('body{color:#0f0; margin: 0}a:hover{ text-decoration : underline }')
   const [output, setOutput] = useState('')
 
   return (
     <div className="space-y-3">
-      <TA value={input} onChange={setInput} label="输入 CSS" rows={7} />
+      <TA value={input} onChange={setInput} label={l.input} rows={7} />
       <div className="flex gap-2">
-        <Btn variant="primary" onClick={() => setOutput(formatCss(input))}>格式化</Btn>
-        <Btn onClick={() => setOutput(minifyCss(input))}>压缩</Btn>
+        <Btn variant="primary" onClick={() => setOutput(formatCss(input))}>{l.format}</Btn>
+        <Btn onClick={() => setOutput(minifyCss(input))}>{l.minify}</Btn>
       </div>
       {output && (
         <div className="text-[11px] text-muted">
-          {input.length} → {output.length} 字符（{output.length < input.length ? '减少' : '增加'} {Math.abs(100 - Math.round(output.length / Math.max(input.length, 1) * 100))}%）
+          {input.length} → {output.length} {l.chars}（{output.length < input.length ? l.less : l.more} {Math.abs(100 - Math.round(output.length / Math.max(input.length, 1) * 100))}%）
         </div>
       )}
-      <TA value={output} readOnly label="输出" rows={10} />
+      <TA value={output} readOnly label={l.output} rows={10} />
     </div>
   )
 }

@@ -16,7 +16,7 @@ export default function MatrixRain({ opacity = 0.14, className = '' }: { opacity
     let drops: number[] = []
     const fs = 14
 
-    // 从 CSS 变量读取颜色，支持主题切换
+    // Read colors from CSS variables so theme switching works
     const readColors = () => {
       const styles = getComputedStyle(document.documentElement)
       return {
@@ -27,7 +27,7 @@ export default function MatrixRain({ opacity = 0.14, className = '' }: { opacity
     }
     let colors = readColors()
 
-    // 监听主题变化（MutationObserver 观察 html class 变化）
+    // Watch theme changes (MutationObserver on the html class attribute)
     const observer = new MutationObserver(() => {
       colors = readColors()
     })

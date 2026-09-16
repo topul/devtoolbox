@@ -1,7 +1,9 @@
 import React, { useState, useMemo } from 'react'
 import { Btn, TA, Input, ErrorNote, Panel, Stat, Select, CopyBtn } from '../components/ui'
+import { useLocalized } from '../lib/i18n'
+import { textL } from '../lib/locales/text'
 
-/* ================= 文本 Diff ================= */
+/* ================= Text Diff ================= */
 
 type DiffLine = { type: 'same' | 'add' | 'del'; text: string }
 
@@ -25,6 +27,7 @@ function lineDiff(a: string, b: string): DiffLine[] {
 }
 
 export function DiffTool() {
+  const l = useLocalized(textL).diff
   const [a, setA] = useState('')
   const [b, setB] = useState('')
   const [result, setResult] = useState<DiffLine[] | null>(null)
@@ -42,16 +45,16 @@ export function DiffTool() {
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        <TA value={a} onChange={setA} label="原始文本 (A)" rows={8} />
-        <TA value={b} onChange={setB} label="对比文本 (B)" rows={8} />
+        <TA value={a} onChange={setA} label={l.inputA} rows={8} />
+        <TA value={b} onChange={setB} label={l.inputB} rows={8} />
       </div>
-      <Btn variant="primary" onClick={compare}>开始对比</Btn>
+      <Btn variant="primary" onClick={compare}>{l.compare}</Btn>
       {result && stats && (
         <div className="space-y-3">
           <div className="flex gap-4 text-[12px]">
-            <span className="text-phosphor">+ {stats.add} 新增</span>
-            <span className="text-danger">− {stats.del} 删除</span>
-            <span className="text-muted">= {stats.same} 未变</span>
+            <span className="text-phosphor">+ {stats.add} {l.added}</span>
+            <span className="text-danger">− {stats.del} {l.deleted}</span>
+            <span className="text-muted">= {stats.same} {l.unchanged}</span>
           </div>
           <div className="border border-line-soft bg-panel-2 max-h-[480px] overflow-auto">
             {result.map((r, i) => (
@@ -70,19 +73,10 @@ export function DiffTool() {
   )
 }
 
-/* ================= 正则测试 ================= */
-
-const REGEX_PRESETS = [
-  { name: '邮箱', pattern: '^[\\w.-]+@[\\w-]+(\\.[\\w-]+)+$' },
-  { name: '手机号(中)', pattern: '^1[3-9]\\d{9}$' },
-  { name: 'IPv4', pattern: '^((25[0-5]|2[0-4]\\d|1?\\d?\\d)\\.){3}(25[0-5]|2[0-4]\\d|1?\\d?\\d)$' },
-  { name: 'URL', pattern: '^https?://[\\w.-]+(:\\d+)?(/\\S*)?$' },
-  { name: '身份证(中)', pattern: '^\\d{17}[\\dXx]$' },
-  { name: 'MAC 地址', pattern: '^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$' },
-  { name: '日期 YYYY-MM-DD', pattern: '^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$' },
-]
+/* ================= Regex Tester ================= */
 
 export function RegexTool() {
+  const l = useLocalized(textL).regex
   const [pattern, setPattern] = useState('')
   const [flags, setFlags] = useState('g')
   const [text, setText] = useState('')
@@ -102,35 +96,32 @@ export function RegexTool() {
       }
       return out
     } catch (e) {
-      setErr('正则表达式错误：' + (e as Error).message)
+      setErr(l.errorPrefix + (e as Error).message)
       return null
     }
-  }, [pattern, flags, text])
+  }, [pattern, flags, text, l])
 
   return (
     <div className="space-y-3">
       <div className="flex gap-2 items-end flex-wrap">
         <div className="flex-1 min-w-[240px]">
-          <Input value={pattern} onChange={setPattern} label="正则表达式" placeholder="(\d{3})-(\d{4})" />
+          <Input value={pattern} onChange={setPattern} label={l.patternLabel} placeholder={l.patternPh} />
         </div>
-        <Select value={flags} onChange={setFlags} label="标志" options={[
-          { value: 'g', label: 'g 全局' }, { value: 'gi', label: 'gi 全局+忽略大小写' },
-          { value: 'gm', label: 'gm 全局+多行' }, { value: 'gims', label: 'gims 全部' },
-        ]} />
+        <Select value={flags} onChange={setFlags} label={l.flagsLabel} options={l.flags} />
       </div>
       <div className="flex gap-2 flex-wrap">
-        {REGEX_PRESETS.map(p => (
+        {l.presets.map(p => (
           <button key={p.name} onClick={() => setPattern(p.pattern)}
             className="px-2 py-0.5 text-[11px] border border-line-soft text-muted hover:text-phosphor hover:border-phosphor/40 transition-colors">
             {p.name}
           </button>
         ))}
       </div>
-      <TA value={text} onChange={setText} label="测试文本" rows={6} />
+      <TA value={text} onChange={setText} label={l.testText} rows={6} />
       <ErrorNote msg={err} />
       {matches && (
         <div className="space-y-2">
-          <div className="text-[12px] text-muted">匹配 <span className="text-phosphor">{matches.length}</span> 处</div>
+          <div className="text-[12px] text-muted">{l.matchesPre}<span className="text-phosphor">{matches.length}</span>{l.matchesSuf}</div>
           <div className="border border-line-soft bg-panel-2 max-h-[320px] overflow-auto">
             {matches.map((m, i) => (
               <div key={i} className="flex gap-3 px-3 py-1.5 border-b border-line-soft last:border-0 text-[12px]">
@@ -138,11 +129,11 @@ export function RegexTool() {
                 <span className="text-phosphor break-all">{m.match}</span>
                 <span className="text-muted shrink-0">@{m.index}</span>
                 {m.groups.length > 0 && (
-                  <span className="text-amber break-all">组: {m.groups.map(g => JSON.stringify(g)).join(', ')}</span>
+                  <span className="text-amber break-all">{l.groups}{m.groups.map(g => JSON.stringify(g)).join(', ')}</span>
                 )}
               </div>
             ))}
-            {matches.length === 0 && <div className="px-3 py-2 text-muted text-[12px]">无匹配结果</div>}
+            {matches.length === 0 && <div className="px-3 py-2 text-muted text-[12px]">{l.noMatch}</div>}
           </div>
         </div>
       )}
@@ -150,9 +141,10 @@ export function RegexTool() {
   )
 }
 
-/* ================= 字数统计 ================= */
+/* ================= Word Count ================= */
 
 export function WordCountTool() {
+  const l = useLocalized(textL).wordCount
   const [text, setText] = useState('')
   const s = useMemo(() => {
     const chars = text.length
@@ -166,21 +158,21 @@ export function WordCountTool() {
   }, [text])
   return (
     <div className="space-y-3">
-      <TA value={text} onChange={setText} label="文本" rows={9} placeholder="粘贴文本后实时统计..." />
+      <TA value={text} onChange={setText} label={l.label} rows={9} placeholder={l.ph} />
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2">
-        <Stat label="总字符" value={s.chars} />
-        <Stat label="非空白字符" value={s.noSpace} />
-        <Stat label="汉字" value={s.cjk} />
-        <Stat label="英文单词" value={s.words} />
-        <Stat label="行数" value={s.lines} />
-        <Stat label="段落" value={s.paragraphs} />
-        <Stat label="字节(UTF-8)" value={s.bytes} />
+        <Stat label={l.chars} value={s.chars} />
+        <Stat label={l.noSpace} value={s.noSpace} />
+        <Stat label={l.cjk} value={s.cjk} />
+        <Stat label={l.words} value={s.words} />
+        <Stat label={l.lines} value={s.lines} />
+        <Stat label={l.paragraphs} value={s.paragraphs} />
+        <Stat label={l.bytes} value={s.bytes} />
       </div>
     </div>
   )
 }
 
-/* ================= 命名风格转换 ================= */
+/* ================= Case Converter ================= */
 
 function words(s: string): string[] {
   return s
@@ -190,6 +182,7 @@ function words(s: string): string[] {
 }
 
 export function CaseTool() {
+  const l = useLocalized(textL).case
   const [input, setInput] = useState('')
   const out = useMemo(() => {
     const w = words(input)
@@ -205,7 +198,7 @@ export function CaseTool() {
   }, [input])
   return (
     <div className="space-y-3">
-      <Input value={input} onChange={setInput} label="输入标识符" placeholder="user_name 或 userName 或 user-name" />
+      <Input value={input} onChange={setInput} label={l.label} placeholder={l.ph} />
       {out && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
           {Object.entries(out).map(([k, v]) => (
@@ -223,35 +216,36 @@ export function CaseTool() {
   )
 }
 
-/* ================= 行处理 ================= */
+/* ================= Line Ops ================= */
 
 export function LineOpsTool() {
+  const l = useLocalized(textL).lineOps
   const [input, setInput] = useState('')
   const [output, setOutput] = useState('')
 
-  const ops: [string, (lines: string[]) => string[]][] = [
-    ['去重', l => [...new Set(l)]],
-    ['去空行', l => l.filter(x => x.trim())],
-    ['去除首尾空白', l => l.map(x => x.trim())],
-    ['升序排序', l => [...l].sort()],
-    ['降序排序', l => [...l].sort().reverse()],
-    ['数字排序', l => [...l].sort((a, b) => parseFloat(a) - parseFloat(b))],
-    ['随机打乱', l => [...l].sort(() => Math.random() - 0.5)],
-    ['反转顺序', l => [...l].reverse()],
-    ['添加行号', l => l.map((x, i) => `${i + 1}. ${x}`)],
-    ['每行加引号', l => l.map(x => `"${x}"`)],
-    ['逗号拼接', l => [l.join(',')]],
+  const fns: ((lines: string[]) => string[])[] = [
+    x => [...new Set(x)],
+    x => x.filter(v => v.trim()),
+    x => x.map(v => v.trim()),
+    x => [...x].sort(),
+    x => [...x].sort().reverse(),
+    x => [...x].sort((a, b) => parseFloat(a) - parseFloat(b)),
+    x => [...x].sort(() => Math.random() - 0.5),
+    x => [...x].reverse(),
+    x => x.map((v, i) => `${i + 1}. ${v}`),
+    x => x.map(v => `"${v}"`),
+    x => [x.join(',')],
   ]
 
   return (
     <div className="space-y-3">
-      <TA value={input} onChange={setInput} label="输入（每行一条）" rows={7} />
+      <TA value={input} onChange={setInput} label={l.input} rows={7} />
       <div className="flex gap-2 flex-wrap">
-        {ops.map(([name, fn]) => (
-          <Btn key={name} onClick={() => setOutput(fn(input.split('\n')).join('\n'))}>{name}</Btn>
+        {l.ops.map((name, i) => (
+          <Btn key={name} onClick={() => setOutput(fns[i](input.split('\n')).join('\n'))}>{name}</Btn>
         ))}
       </div>
-      <TA value={output} readOnly label="输出" rows={7} />
+      <TA value={output} readOnly label={l.output} rows={7} />
     </div>
   )
 }

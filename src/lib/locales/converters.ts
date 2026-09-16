@@ -1,0 +1,71 @@
+// Localized strings for src/tools/converters.tsx
+// zh / en branches must keep identical keys and order.
+
+export const convertersL = {
+  zh: {
+    color: {
+      label: '输入颜色（HEX 或 RGB）',
+      placeholder: '#00F48E 或 rgb(0, 244, 142)',
+      picker: '取色器',
+      invalid: '无法识别颜色格式，支持 #RRGGBB / #RGB / rgb(r,g,b)',
+      lightnessGradient: '明度梯度',
+      current: '当前',
+    },
+    imgBase64: {
+      step1: '① 图片 → Base64',
+      choose: '选择图片文件',
+      base64Length: 'Base64 长度',
+      step2: '② Base64 → 图片',
+      pasteLabel: '粘贴 Base64 / DataURL',
+      download: '下载图片',
+      invalid: '无法识别的 Base64 图片数据',
+    },
+    strEscape: {
+      urlName: 'URL 编码',
+      doubleUrlName: '双重 URL',
+      htmlName: 'HTML 实体',
+      unicodeName: 'Unicode 转义',
+      hexName: 'Hex (0x)',
+      base64Name: 'Base64',
+      error: '处理失败：输入格式与所选编码不匹配。',
+      inputLabel: '输入',
+      encode: '编码',
+      decode: '解码',
+      outputLabel: '输出',
+      note: '* 多重编码常用于 WAF 绕过与 payload 混淆测试；HTML 实体支持 &#x41; / &#65; 两种格式解码。',
+    },
+  },
+  en: {
+    color: {
+      label: 'Enter color (HEX or RGB)',
+      placeholder: '#00F48E or rgb(0, 244, 142)',
+      picker: 'Color Picker',
+      invalid: 'Unrecognized color format; supports #RRGGBB / #RGB / rgb(r,g,b)',
+      lightnessGradient: 'Lightness Gradient',
+      current: 'Current',
+    },
+    imgBase64: {
+      step1: '① Image → Base64',
+      choose: 'Choose Image File',
+      base64Length: 'Base64 length',
+      step2: '② Base64 → Image',
+      pasteLabel: 'Paste Base64 / DataURL',
+      download: 'Download Image',
+      invalid: 'Unrecognized Base64 image data',
+    },
+    strEscape: {
+      urlName: 'URL Encode',
+      doubleUrlName: 'Double URL',
+      htmlName: 'HTML Entities',
+      unicodeName: 'Unicode Escape',
+      hexName: 'Hex (0x)',
+      base64Name: 'Base64',
+      error: 'Processing failed: input format does not match the selected encoding.',
+      inputLabel: 'Input',
+      encode: 'Encode',
+      decode: 'Decode',
+      outputLabel: 'Output',
+      note: '* Multi-layer encoding is commonly used for WAF bypass and payload obfuscation; HTML entities support decoding of both &#x41; and &#65; formats.',
+    },
+  },
+}

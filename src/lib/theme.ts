@@ -8,7 +8,7 @@ function getInitialTheme(): Theme {
   if (typeof window === 'undefined') return 'dark'
   const stored = localStorage.getItem(STORAGE_KEY)
   if (stored === 'light' || stored === 'dark') return stored
-  // 跟随系统
+  // Follow the OS preference
   if (window.matchMedia) {
     return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
   }
@@ -31,13 +31,13 @@ export function useTheme() {
   const [theme, setThemeState] = useState<Theme>('dark')
   const [ready, setReady] = useState(false)
 
-  // 初始化
+  // Initialise on mount
   useEffect(() => {
     const stored = getInitialTheme()
     setThemeState(stored)
     applyTheme(stored)
 
-    // Electron: 同步到 nativeTheme，并监听系统主题变化
+    // Electron: mirror the choice into nativeTheme and follow OS theme changes
     if (window.electronAPI) {
       window.electronAPI.setTheme(stored)
       window.electronAPI.onThemeChanged((changed) => {

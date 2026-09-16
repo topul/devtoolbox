@@ -1,9 +1,12 @@
 import React, { useState, useMemo } from 'react'
 import { Btn, TA, Select, ErrorNote, Panel } from '../components/ui'
+import { useLocalized } from '../lib/i18n'
+import { formatL } from '../lib/locales/format'
 
 /* ================= JSON ================= */
 
 export function JsonTool() {
+  const l = useLocalized(formatL).json
   const [input, setInput] = useState('')
   const [output, setOutput] = useState('')
   const [err, setErr] = useState<string | null>(null)
@@ -21,24 +24,22 @@ export function JsonTool() {
       const obj = JSON.parse(input)
       setOutput(mode === 'format' ? JSON.stringify(obj, null, parseInt(indent)) : JSON.stringify(obj))
     } catch (e) {
-      setErr('JSON 解析失败：' + (e as Error).message)
+      setErr(l.err + (e as Error).message)
     }
   }
 
   return (
     <div className="space-y-3">
-      <TA value={input} onChange={setInput} label="输入 JSON" placeholder='{"key": "value", "arr": [1,2,3]}' rows={8} />
+      <TA value={input} onChange={setInput} label={l.input} placeholder='{"key": "value", "arr": [1,2,3]}' rows={8} />
       <div className="flex items-end gap-2 flex-wrap">
-        <Select value={indent} onChange={setIndent} label="缩进" options={[
-          { value: '2', label: '2 空格' }, { value: '4', label: '4 空格' }, { value: '0', label: 'Tab 风格(0)' },
-        ]} />
-        <Btn variant="primary" onClick={() => run('format')}>格式化 / 校验</Btn>
-        <Btn onClick={() => run('minify')}>压缩</Btn>
-        <Btn onClick={() => run('escape')}>转义为字符串</Btn>
-        <Btn onClick={() => run('unescape')}>去除转义</Btn>
+        <Select value={indent} onChange={setIndent} label={l.indentLabel} options={l.indentOptions} />
+        <Btn variant="primary" onClick={() => run('format')}>{l.format}</Btn>
+        <Btn onClick={() => run('minify')}>{l.minify}</Btn>
+        <Btn onClick={() => run('escape')}>{l.escape}</Btn>
+        <Btn onClick={() => run('unescape')}>{l.unescape}</Btn>
       </div>
       <ErrorNote msg={err} />
-      {!err && <TA value={output} readOnly label="输出" rows={10} />}
+      {!err && <TA value={output} readOnly label={l.output} rows={10} />}
     </div>
   )
 }
@@ -53,6 +54,7 @@ const SQL_KEYWORDS = [
 ]
 
 export function SqlTool() {
+  const l = useLocalized(formatL).sql
   const [input, setInput] = useState('')
   const output = useMemo(() => {
     if (!input.trim()) return ''
@@ -75,8 +77,8 @@ export function SqlTool() {
 
   return (
     <div className="space-y-3">
-      <TA value={input} onChange={setInput} label="输入 SQL" placeholder="select id,name from users where age>18 and city='BJ' order by id desc limit 10" rows={6} />
-      <TA value={output} readOnly label="格式化结果" rows={12} />
+      <TA value={input} onChange={setInput} label={l.input} placeholder="select id,name from users where age>18 and city='BJ' order by id desc limit 10" rows={6} />
+      <TA value={output} readOnly label={l.output} rows={12} />
     </div>
   )
 }
@@ -105,6 +107,7 @@ function formatXml(xml: string, indent: string): string {
 }
 
 export function XmlTool() {
+  const l = useLocalized(formatL).xml
   const [input, setInput] = useState('')
   const [output, setOutput] = useState('')
   const [err, setErr] = useState<string | null>(null)
@@ -113,10 +116,10 @@ export function XmlTool() {
     try {
       const doc = new DOMParser().parseFromString(input, 'text/xml')
       const errNode = doc.querySelector('parsererror')
-      if (errNode) throw new Error('XML 语法错误')
+      if (errNode) throw new Error(l.xmlErr)
       setOutput(formatXml(input, '  '))
     } catch (e) {
-      setErr('解析失败：' + (e as Error).message)
+      setErr(l.err + (e as Error).message)
     }
   }
   const minify = () => {
@@ -125,18 +128,18 @@ export function XmlTool() {
   }
   return (
     <div className="space-y-3">
-      <TA value={input} onChange={setInput} label="输入 XML / HTML" placeholder={'<root><item id="1">text</item></root>'} rows={7} />
+      <TA value={input} onChange={setInput} label={l.input} placeholder={'<root><item id="1">text</item></root>'} rows={7} />
       <div className="flex gap-2">
-        <Btn variant="primary" onClick={format}>格式化</Btn>
-        <Btn onClick={minify}>压缩</Btn>
+        <Btn variant="primary" onClick={format}>{l.format}</Btn>
+        <Btn onClick={minify}>{l.minify}</Btn>
       </div>
       <ErrorNote msg={err} />
-      <TA value={output} readOnly label="输出" rows={10} />
+      <TA value={output} readOnly label={l.output} rows={10} />
     </div>
   )
 }
 
-/* ================= Markdown 预览（轻量） ================= */
+/* ================= Markdown Preview (lightweight) ================= */
 
 function mdToHtml(md: string): string {
   const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -161,11 +164,12 @@ function mdToHtml(md: string): string {
 }
 
 export function MarkdownTool() {
-  const [input, setInput] = useState('# Hello\n\n输入 **Markdown**，右侧实时预览。\n\n- 支持标题 / 列表 / 代码\n- `inline code`\n\n```js\nconsole.log("hack the planet")\n```')
+  const l = useLocalized(formatL).markdown
+  const [input, setInput] = useState(l.sample)
   const html = useMemo(() => mdToHtml(input), [input])
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-      <Panel title="markdown 源">
+      <Panel title={l.sourceTitle}>
         <textarea
           value={input}
           onChange={e => setInput(e.target.value)}
@@ -173,7 +177,7 @@ export function MarkdownTool() {
           className="w-full h-[420px] resize-y bg-panel-2 border border-line-soft px-2.5 py-2 text-[12.5px] text-bright focus:border-phosphor/40"
         />
       </Panel>
-      <Panel title="实时预览">
+      <Panel title={l.previewTitle}>
         <div
           className="h-[420px] overflow-auto px-2 text-[13px] leading-relaxed"
           dangerouslySetInnerHTML={{ __html: html }}

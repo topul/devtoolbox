@@ -1,9 +1,12 @@
 import React, { useState, useMemo } from 'react'
 import { Panel, Btn, TA, Input, ErrorNote, KV, CopyBtn } from '../components/ui'
+import { useLocalized } from '../lib/i18n'
+import { networkL } from '../lib/locales/network'
 
-/* ================= URL 解析器 ================= */
+/* ================= URL Parser ================= */
 
 export function UrlParserTool() {
+  const l = useLocalized(networkL).urlParser
   const [input, setInput] = useState('https://user:pass@api.example.com:8443/v1/users?id=42&token=abc%20def&tag=a&tag=b#section')
 
   const parsed = useMemo(() => {
@@ -18,16 +21,16 @@ export function UrlParserTool() {
         username: decodeURIComponent(u.username),
         password: decodeURIComponent(u.password),
         hostname: u.hostname,
-        port: u.port || (u.protocol === 'https:' ? '443' : u.protocol === 'http:' ? '80' : '(默认)'),
+        port: u.port || (u.protocol === 'https:' ? '443' : u.protocol === 'http:' ? '80' : l.default),
         pathname: decodeURIComponent(u.pathname),
         search: u.search,
         hash: decodeURIComponent(u.hash.replace(/^#/, '')),
         params,
       }
     } catch {
-      return { error: '无法解析为 URL' }
+      return { error: l.error }
     }
-  }, [input])
+  }, [input, l])
 
   return (
     <div className="space-y-3">
@@ -35,17 +38,17 @@ export function UrlParserTool() {
       {parsed && 'error' in parsed && <ErrorNote msg={parsed.error!} />}
       {parsed && !('error' in parsed) && (
         <div className="space-y-3">
-          <Panel title="组成部分">
-            <KV k="协议" v={parsed.protocol} />
-            {parsed.username && <KV k="用户名" v={<span className="text-amber">{parsed.username}</span>} />}
-            {parsed.password && <KV k="密码" v={<span className="text-danger">{parsed.password}</span>} />}
-            <KV k="主机" v={<span className="text-phosphor">{parsed.hostname}</span>} />
-            <KV k="端口" v={parsed.port} />
-            <KV k="路径" v={parsed.pathname} />
-            {parsed.hash && <KV k="锚点 (#)" v={parsed.hash} />}
+          <Panel title={l.componentsTitle}>
+            <KV k={l.protocol} v={parsed.protocol} />
+            {parsed.username && <KV k={l.username} v={<span className="text-amber">{parsed.username}</span>} />}
+            {parsed.password && <KV k={l.password} v={<span className="text-danger">{parsed.password}</span>} />}
+            <KV k={l.hostname} v={<span className="text-phosphor">{parsed.hostname}</span>} />
+            <KV k={l.port} v={parsed.port} />
+            <KV k={l.path} v={parsed.pathname} />
+            {parsed.hash && <KV k={l.hash} v={parsed.hash} />}
           </Panel>
-          <Panel title={`查询参数 (${parsed.params.length})`}>
-            {parsed.params.length === 0 && <span className="text-muted text-[12px]">无查询参数</span>}
+          <Panel title={l.paramsTitle(parsed.params.length)}>
+            {parsed.params.length === 0 && <span className="text-muted text-[12px]">{l.noParams}</span>}
             {parsed.params.map((p, i) => (
               <div key={i} className="flex items-center justify-between gap-2 py-1 border-b border-line-soft last:border-0">
                 <div className="min-w-0 text-[12.5px]">
@@ -58,8 +61,8 @@ export function UrlParserTool() {
             ))}
           </Panel>
           <div className="flex gap-2 flex-wrap">
-            <Btn onClick={() => setInput(encodeURI(input.trim()))}>整体 URL 编码</Btn>
-            <Btn variant="ghost" onClick={() => setInput(decodeURI(input.trim()))}>整体解码</Btn>
+            <Btn onClick={() => setInput(encodeURI(input.trim()))}>{l.encodeAll}</Btn>
+            <Btn variant="ghost" onClick={() => setInput(decodeURI(input.trim()))}>{l.decodeAll}</Btn>
           </div>
         </div>
       )}
@@ -67,17 +70,17 @@ export function UrlParserTool() {
   )
 }
 
-/* ================= User-Agent 解析 ================= */
+/* ================= User-Agent Parser ================= */
 
 interface UaInfo { browser: string; version: string; os: string; device: string; bot: string | null }
 
-function parseUa(ua: string): UaInfo {
+function parseUa(ua: string, L: { unknown: string; wechatBrowser: string; desktop: string; phone: string; tablet: string }): UaInfo {
   const t = ua
   let bot: string | null = null
   const botMatch = t.match(/(Googlebot|Bingbot|Baiduspider|YandexBot|DuckDuckBot|Slurp|Sogou|Bytespider|GPTBot|ClaudeBot|curl|wget|python-requests|PostmanRuntime|sqlmap|nmap|Nikto|masscan|Go-http-client)/i)
   if (botMatch) bot = botMatch[1]
 
-  let browser = '未知', version = ''
+  let browser = L.unknown, version = ''
   const rules: [RegExp, string][] = [
     [/Edg(?:e|A|iOS)?\/([\d.]+)/, 'Edge'],
     [/OPR\/([\d.]+)/, 'Opera'],
@@ -86,7 +89,7 @@ function parseUa(ua: string): UaInfo {
     [/Version\/([\d.]+).*Safari/, 'Safari'],
     [/MSIE ([\d.]+)/, 'IE'],
     [/Trident.*rv:([\d.]+)/, 'IE'],
-    [/MicroMessenger\/([\d.]+)/, '微信内置浏览器'],
+    [/MicroMessenger\/([\d.]+)/, L.wechatBrowser],
     [/CriOS\/([\d.]+)/, 'Chrome (iOS)'],
     [/curl\/([\d.]+)/, 'curl'],
     [/python-requests\/([\d.]+)/, 'python-requests'],
@@ -96,7 +99,7 @@ function parseUa(ua: string): UaInfo {
     if (m) { browser = name; version = m[1]; break }
   }
 
-  let os = '未知'
+  let os: string = L.unknown
   if (/Windows NT 10/.test(t)) os = 'Windows 10/11'
   else if (/Windows NT 6\.3/.test(t)) os = 'Windows 8.1'
   else if (/Windows NT 6\.1/.test(t)) os = 'Windows 7'
@@ -106,9 +109,9 @@ function parseUa(ua: string): UaInfo {
   else if (/Mac OS X ([\d_]+)/.test(t)) os = 'macOS ' + t.match(/Mac OS X ([\d_]+)/)![1].replace(/_/g, '.')
   else if (/Linux/.test(t)) os = 'Linux'
 
-  let device = '桌面设备'
-  if (/Mobile|iPhone|Android.*Mobile/.test(t)) device = '手机'
-  else if (/iPad|Tablet|Android(?!.*Mobile)/.test(t)) device = '平板'
+  let device = L.desktop
+  if (/Mobile|iPhone|Android.*Mobile/.test(t)) device = L.phone
+  else if (/iPad|Tablet|Android(?!.*Mobile)/.test(t)) device = L.tablet
 
   return { browser, version, os, device, bot }
 }
@@ -121,12 +124,13 @@ const UA_EXAMPLES: [string, string][] = [
 ]
 
 export function UserAgentTool() {
+  const l = useLocalized(networkL).uaParser
   const [input, setInput] = useState('')
-  const info = useMemo(() => input.trim() ? parseUa(input) : null, [input])
+  const info = useMemo(() => input.trim() ? parseUa(input, l) : null, [input, l])
 
   return (
     <div className="space-y-3">
-      <TA value={input} onChange={setInput} label="User-Agent 字符串" rows={4} placeholder="Mozilla/5.0 (Windows NT 10.0; Win64; x64) ..." />
+      <TA value={input} onChange={setInput} label={l.label} rows={4} placeholder="Mozilla/5.0 (Windows NT 10.0; Win64; x64) ..." />
       <div className="flex gap-2 flex-wrap">
         {UA_EXAMPLES.map(([name, ua]) => (
           <button key={name} onClick={() => setInput(ua)}
@@ -136,18 +140,18 @@ export function UserAgentTool() {
         ))}
       </div>
       {info && (
-        <Panel title="解析结果">
-          <KV k="浏览器" v={<span className="text-phosphor">{info.browser} {info.version}</span>} />
-          <KV k="操作系统" v={info.os} />
-          <KV k="设备类型" v={info.device} />
-          <KV k="爬虫/工具" v={info.bot ? <span className="text-danger">{info.bot}（自动化程序）</span> : <span className="text-muted">未识别到</span>} />
+        <Panel title={l.resultTitle}>
+          <KV k={l.browser} v={<span className="text-phosphor">{info.browser} {info.version}</span>} />
+          <KV k={l.os} v={info.os} />
+          <KV k={l.device} v={info.device} />
+          <KV k={l.botKey} v={info.bot ? <span className="text-danger">{info.bot} ({l.botSuffix})</span> : <span className="text-muted">{l.botNone}</span>} />
         </Panel>
       )}
     </div>
   )
 }
 
-/* ================= IP 整形转换 ================= */
+/* ================= IP ↔ Integer ================= */
 
 function ipToLong(ip: string): number | null {
   const parts = ip.trim().split('.')
@@ -166,6 +170,7 @@ function longToIp(n: number): string {
 }
 
 export function IpIntTool() {
+  const l = useLocalized(networkL).ipInt
   const [input, setInput] = useState('127.0.0.1')
 
   const result = useMemo(() => {
@@ -176,7 +181,7 @@ export function IpIntTool() {
     else if (/^0x[0-9a-f]+$/i.test(t)) n = parseInt(t, 16) >>> 0
     else if (/^0[0-7]+$/.test(t)) n = parseInt(t, 8) >>> 0
     else n = ipToLong(t)
-    if (n === null || n > 0xFFFFFFFF) return { error: '无法识别的 IP 格式' }
+    if (n === null || n > 0xFFFFFFFF) return { error: l.error }
     const ip = longToIp(n)
     return {
       n, ip,
@@ -185,44 +190,31 @@ export function IpIntTool() {
       dottedHex: ip.split('.').map(o => '0x' + parseInt(o).toString(16).padStart(2, '0')).join('.'),
       dottedOctal: ip.split('.').map(o => '0' + parseInt(o).toString(8).padStart(3, '0')).join('.'),
     }
-  }, [input])
+  }, [input, l])
 
   return (
     <div className="space-y-3">
-      <Input value={input} onChange={setInput} label="IP 地址 / 整数 / Hex / 八进制" placeholder="127.0.0.1 或 2130706433" />
+      <Input value={input} onChange={setInput} label={l.label} placeholder={l.placeholder} />
       {result && 'error' in result && <ErrorNote msg={result.error!} />}
       {result && !('error' in result) && (
-        <Panel title="等价表示（SSRF / 过滤绕过常用）">
-          <KV k="点分十进制" v={<span className="text-phosphor">{result.ip}</span>} />
-          <KV k="十进制整数" v={<>{result.n} <CopyBtn text={String(result.n)} /></>} />
-          <KV k="十六进制" v={<>{result.hex} <CopyBtn text={result.hex} /></>} />
-          <KV k="八进制" v={<>{result.octal} <CopyBtn text={result.octal} /></>} />
-          <KV k="点分 Hex" v={<>{result.dottedHex} <CopyBtn text={result.dottedHex} /></>} />
-          <KV k="点分八进制" v={<>{result.dottedOctal} <CopyBtn text={result.dottedOctal} /></>} />
+        <Panel title={l.equivTitle}>
+          <KV k={l.dottedDecimal} v={<span className="text-phosphor">{result.ip}</span>} />
+          <KV k={l.decimalInt} v={<>{result.n} <CopyBtn text={String(result.n)} /></>} />
+          <KV k={l.hex} v={<>{result.hex} <CopyBtn text={result.hex} /></>} />
+          <KV k={l.octal} v={<>{result.octal} <CopyBtn text={result.octal} /></>} />
+          <KV k={l.dottedHex} v={<>{result.dottedHex} <CopyBtn text={result.dottedHex} /></>} />
+          <KV k={l.dottedOctal} v={<>{result.dottedOctal} <CopyBtn text={result.dottedOctal} /></>} />
         </Panel>
       )}
-      <p className="text-[11px] text-muted">
-        * 多数 HTTP 客户端与浏览器接受 http://2130706433 、http://0x7F000001 等形式访问 127.0.0.1，
-        常用于 SSRF 场景绕过内网地址黑名单。
-      </p>
+      <p className="text-[11px] text-muted">{l.note}</p>
     </div>
   )
 }
 
-/* ================= Cookie 解析 ================= */
-
-const COOKIE_ATTR_NOTES: Record<string, string> = {
-  expires: '过期时间（GMT 格式）',
-  'max-age': '存活秒数，优先级高于 Expires',
-  domain: '生效域名，缺省为当前主机（不含子域）',
-  path: '生效路径',
-  secure: '仅通过 HTTPS 传输',
-  httponly: '禁止 JS 读取（防 XSS 窃取）',
-  samesite: '跨站发送策略：Strict / Lax / None（None 必须配合 Secure）',
-  partitioned: 'CHIPS：第三方 Cookie 分区存储',
-}
+/* ================= Cookie Parser ================= */
 
 export function CookieTool() {
+  const l = useLocalized(networkL).cookie
   const [input, setInput] = useState('sessionid=abc123; Expires=Wed, 21 Oct 2026 07:28:00 GMT; Path=/; Domain=.example.com; Secure; HttpOnly; SameSite=Lax')
 
   const parsed = useMemo(() => {
@@ -237,26 +229,26 @@ export function CookieTool() {
       const i = s.indexOf('=')
       const k = (i > 0 ? s.slice(0, i) : s).trim().toLowerCase()
       const v = i > 0 ? s.slice(i + 1).trim() : '(flag)'
-      return { k, v, note: COOKIE_ATTR_NOTES[k] }
+      return { k, v, note: (l.attrNotes as Record<string, string>)[k] }
     })
     return { cookie, attrs }
-  }, [input])
+  }, [input, l])
 
   return (
     <div className="space-y-3">
-      <TA value={input} onChange={setInput} label="Set-Cookie 响应头值 / Cookie 请求头" rows={3} />
+      <TA value={input} onChange={setInput} label={l.label} rows={3} />
       {parsed && (
         <div className="space-y-3">
           {parsed.cookie ? (
-            <Panel title="Cookie 本体">
-              <KV k="名称" v={<span className="text-phosphor">{parsed.cookie.name}</span>} />
-              <KV k="值" v={<span className="break-all">{parsed.cookie.value}</span>} />
+            <Panel title={l.cookieTitle}>
+              <KV k={l.name} v={<span className="text-phosphor">{parsed.cookie.name}</span>} />
+              <KV k={l.value} v={<span className="break-all">{parsed.cookie.value}</span>} />
             </Panel>
           ) : (
-            <ErrorNote msg="首段不是 name=value 结构，可能只粘贴了属性部分" />
+            <ErrorNote msg={l.notNameValue} />
           )}
           {parsed.attrs.length > 0 && (
-            <Panel title="属性">
+            <Panel title={l.attrsTitle}>
               {parsed.attrs.map((a, i) => (
                 <div key={i} className="py-1 border-b border-line-soft last:border-0 text-[12.5px]">
                   <span className="text-phosphor">{a.k}</span>
@@ -266,13 +258,13 @@ export function CookieTool() {
               ))}
             </Panel>
           )}
-          <Panel title="安全检查">
+          <Panel title={l.securityTitle}>
             {(() => {
               const ks = parsed.attrs.map(a => a.k)
               const checks: [boolean, string, string][] = [
-                [ks.includes('httponly'), 'HttpOnly', '缺失时可被 XSS 窃取'],
-                [ks.includes('secure'), 'Secure', '缺失时可经 HTTP 明文泄露'],
-                [ks.includes('samesite'), 'SameSite', '缺失时 CSRF 风险更高'],
+                [ks.includes('httponly'), 'HttpOnly', l.riskHttponly],
+                [ks.includes('secure'), 'Secure', l.riskSecure],
+                [ks.includes('samesite'), 'SameSite', l.riskSamesite],
               ]
               return checks.map(([ok, name, risk]) => (
                 <div key={name} className="py-1 border-b border-line-soft last:border-0 text-[12.5px]">

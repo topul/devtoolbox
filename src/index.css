@@ -4,7 +4,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ==================== 主题变量 ==================== */
+/* ==================== Theme variables ==================== */
 
 :root,
 .dark {
@@ -71,7 +71,7 @@
   color-scheme: light;
 }
 
-/* ==================== 基础样式 ==================== */
+/* ==================== Base styles ==================== */
 
 html, body, #root {
   height: 100%;
@@ -144,7 +144,7 @@ textarea:focus, input:focus, select:focus, button:focus-visible {
   outline-offset: -1px;
 }
 
-/* ==================== 动画 ==================== */
+/* ==================== Animations ==================== */
 
 @keyframes blink {
   0%, 49% { opacity: 1; }
@@ -158,7 +158,7 @@ textarea:focus, input:focus, select:focus, button:focus-visible {
 }
 .fade-in { animation: fadein 0.35s ease-out both; }
 
-/* ==================== 终端特效 ==================== */
+/* ==================== Terminal effects ==================== */
 
 .glow {
   text-shadow: 0 0 8px rgba(0, 244, 142, var(--glow-strength)), 0 0 24px rgba(0, 244, 142, var(--glow-spread));

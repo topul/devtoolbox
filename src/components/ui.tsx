@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react'
+import { useI18n, COMMON } from '../lib/i18n'
 
 /* ---------- shared primitives ---------- */
 
@@ -45,6 +46,8 @@ export function Btn({ children, onClick, variant = 'default', disabled, classNam
 }
 
 export function CopyBtn({ text, className = '' }: { text: string; className?: string }) {
+  const { locale } = useI18n()
+  const c = COMMON[locale]
   const [ok, setOk] = useState(false)
   const copy = useCallback(async () => {
     try {
@@ -65,7 +68,7 @@ export function CopyBtn({ text, className = '' }: { text: string; className?: st
       onClick={copy}
       className={`px-2 py-0.5 text-[11px] border border-line text-muted hover:text-phosphor hover:border-phosphor/50 transition-colors ${className}`}
     >
-      {ok ? '✓ 已复制' : '复制'}
+      {ok ? c.copied : c.copy}
     </button>
   )
 }

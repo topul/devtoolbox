@@ -23,7 +23,9 @@
     "package:all": "electron-vite build && electron-builder -mwl",
     "release": "electron-vite build && electron-builder --publish never",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "i18n:check": "esbuild src/lib/locales/*.ts --outdir=node_modules/.cache/locales --format=esm --out-extension:.js=.mjs --log-level=error && node scripts/check-locale-parity.mjs node_modules/.cache/locales",
+    "smoke:render": "esbuild scripts/smoke-render.tsx --bundle --platform=node --format=esm --outfile=node_modules/.cache/smoke.mjs --loader:.tsx=tsx --jsx=automatic --log-level=error --external:qrcode --external:react --external:react-dom --external:react/jsx-runtime && node node_modules/.cache/smoke.mjs"
   },
   "dependencies": {
     "crypto-js": "^4.2.0",

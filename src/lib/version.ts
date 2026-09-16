@@ -1,5 +1,6 @@
-// 版本号管理工具
-// 在 Electron 环境下通过 app.getVersion() 获取，Web 环境下使用硬编码版本
+// App version helper.
+// In Electron it comes from app.getVersion(); in the browser build it falls back
+// to a hard-coded value.
 
 const FALLBACK_VERSION = '1.0.0'
 

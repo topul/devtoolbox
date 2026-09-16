@@ -1,5 +1,7 @@
 import React, { useState, useMemo } from 'react'
 import { Panel, Btn, TA, Input, Select, ErrorNote, CopyBtn } from '../components/ui'
+import { useLocalized } from '../lib/i18n'
+import { encodingL } from '../lib/locales/encoding'
 
 /* ================= Base64 ================= */
 
@@ -11,6 +13,7 @@ function b64ToUtf8(s: string): string {
 }
 
 export function Base64Tool() {
+  const l = useLocalized(encodingL).base64
   const [input, setInput] = useState('')
   const [output, setOutput] = useState('')
   const [err, setErr] = useState<string | null>(null)
@@ -19,19 +22,19 @@ export function Base64Tool() {
       setErr(null)
       setOutput(mode === 'enc' ? utf8ToB64(input) : b64ToUtf8(input))
     } catch {
-      setErr('输入内容无法被正确解析，请检查是否为合法的 Base64 / 文本。')
+      setErr(l.err)
     }
   }
   return (
     <div className="space-y-3">
-      <TA value={input} onChange={setInput} label="输入" placeholder="输入文本或 Base64 字符串..." rows={6} />
+      <TA value={input} onChange={setInput} label={l.input} placeholder={l.inputPh} rows={6} />
       <div className="flex gap-2">
-        <Btn variant="primary" onClick={() => run('enc')}>编码 → Base64</Btn>
-        <Btn onClick={() => run('dec')}>解码 → 文本</Btn>
-        <Btn variant="ghost" onClick={() => { setInput(output); setOutput('') }}>⇅ 交换</Btn>
+        <Btn variant="primary" onClick={() => run('enc')}>{l.enc}</Btn>
+        <Btn onClick={() => run('dec')}>{l.dec}</Btn>
+        <Btn variant="ghost" onClick={() => { setInput(output); setOutput('') }}>{l.swap}</Btn>
       </div>
       <ErrorNote msg={err} />
-      <TA value={output} readOnly label="输出" rows={6} />
+      <TA value={output} readOnly label={l.output} rows={6} />
     </div>
   )
 }
@@ -39,6 +42,7 @@ export function Base64Tool() {
 /* ================= URL ================= */
 
 export function UrlTool() {
+  const l = useLocalized(encodingL).url
   const [input, setInput] = useState('')
   const [output, setOutput] = useState('')
   const [err, setErr] = useState<string | null>(null)
@@ -49,19 +53,19 @@ export function UrlTool() {
       else if (mode === 'encAll') setOutput(encodeURI(input))
       else setOutput(decodeURIComponent(input))
     } catch {
-      setErr('解码失败：输入包含非法的 % 转义序列。')
+      setErr(l.err)
     }
   }
   return (
     <div className="space-y-3">
-      <TA value={input} onChange={setInput} label="输入" placeholder="输入 URL 或文本..." rows={5} />
+      <TA value={input} onChange={setInput} label={l.input} placeholder={l.inputPh} rows={5} />
       <div className="flex gap-2 flex-wrap">
         <Btn variant="primary" onClick={() => run('enc')}>encodeURIComponent</Btn>
         <Btn onClick={() => run('encAll')}>encodeURI</Btn>
-        <Btn onClick={() => run('dec')}>解码</Btn>
+        <Btn onClick={() => run('dec')}>{l.dec}</Btn>
       </div>
       <ErrorNote msg={err} />
-      <TA value={output} readOnly label="输出" rows={5} />
+      <TA value={output} readOnly label={l.output} rows={5} />
     </div>
   )
 }
@@ -69,6 +73,7 @@ export function UrlTool() {
 /* ================= Unicode ================= */
 
 export function UnicodeTool() {
+  const l = useLocalized(encodingL).unicode
   const [input, setInput] = useState('')
   const [output, setOutput] = useState('')
   const toUnicode = () =>
@@ -80,53 +85,49 @@ export function UnicodeTool() {
     setOutput(input.replace(/\\u([0-9a-fA-F]{4})/g, (_, h) => String.fromCharCode(parseInt(h, 16))))
   return (
     <div className="space-y-3">
-      <TA value={input} onChange={setInput} label="输入" placeholder="中文 → \u4e2d\u6587，或反向转换..." rows={5} />
+      <TA value={input} onChange={setInput} label={l.input} placeholder={l.inputPh} rows={5} />
       <div className="flex gap-2">
-        <Btn variant="primary" onClick={toUnicode}>转 Unicode 转义</Btn>
-        <Btn onClick={fromUnicode}>Unicode 转文本</Btn>
+        <Btn variant="primary" onClick={toUnicode}>{l.toUni}</Btn>
+        <Btn onClick={fromUnicode}>{l.fromUni}</Btn>
       </div>
-      <TA value={output} readOnly label="输出" rows={5} />
+      <TA value={output} readOnly label={l.output} rows={5} />
     </div>
   )
 }
 
-/* ================= 进制转换 ================= */
+/* ================= Radix ================= */
 
 export function RadixTool() {
+  const l = useLocalized(encodingL).radix
   const [input, setInput] = useState('')
   const [from, setFrom] = useState('10')
   const result = useMemo(() => {
     if (!input.trim()) return null
     const n = parseInt(input.trim().replace(/^0x/i, ''), parseInt(from))
-    if (isNaN(n)) return { error: '无法解析为数字，请检查输入与源进制是否匹配。' }
+    if (isNaN(n)) return { error: l.err }
     return {
       bin: n.toString(2),
       oct: n.toString(8),
       dec: n.toString(10),
       hex: n.toString(16).toUpperCase(),
     }
-  }, [input, from])
+  }, [input, from, l])
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <Input value={input} onChange={setInput} label="数值" placeholder="例如 255 或 0xFF" />
-        <Select value={from} onChange={setFrom} label="源进制" options={[
-          { value: '2', label: '二进制 (0b)' },
-          { value: '8', label: '八进制 (0o)' },
-          { value: '10', label: '十进制' },
-          { value: '16', label: '十六进制 (0x)' },
-        ]} />
+        <Input value={input} onChange={setInput} label={l.input} placeholder={l.inputPh} />
+        <Select value={from} onChange={setFrom} label={l.fromLabel} options={l.fromOptions} />
       </div>
       {result && 'error' in result && <ErrorNote msg={result.error!} />}
       {result && !('error' in result) && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-          {([['二进制', result.bin], ['八进制', result.oct], ['十进制', result.dec], ['十六进制', result.hex]] as [string, string][]).map(([k, v]) => (
+          {l.bases.map(([k, key]) => (
             <div key={k} className="border border-line-soft bg-panel-2 px-3 py-2 flex items-center justify-between gap-2">
               <div>
                 <div className="text-[10px] uppercase tracking-widest text-muted">{k}</div>
-                <div className="text-phosphor break-all text-[13px]">{v}</div>
+                <div className="text-phosphor break-all text-[13px]">{(result as unknown as Record<string, string>)[key]}</div>
               </div>
-              <CopyBtn text={v} />
+              <CopyBtn text={(result as unknown as Record<string, string>)[key]} />
             </div>
           ))}
         </div>
@@ -135,9 +136,10 @@ export function RadixTool() {
   )
 }
 
-/* ================= HTML 实体 ================= */
+/* ================= HTML Entities ================= */
 
 export function HtmlEntityTool() {
+  const l = useLocalized(encodingL).htmlEntity
   const [input, setInput] = useState('')
   const [output, setOutput] = useState('')
   const encode = () => setOutput(input.replace(/[&<>"']/g, c => ({
@@ -150,17 +152,17 @@ export function HtmlEntityTool() {
   }
   return (
     <div className="space-y-3">
-      <TA value={input} onChange={setInput} label="输入" placeholder={'<script>alert(1)</script> → &lt;script&gt;...'} rows={5} />
+      <TA value={input} onChange={setInput} label={l.input} placeholder={'<script>alert(1)</script> → &lt;script&gt;...'} rows={5} />
       <div className="flex gap-2">
-        <Btn variant="primary" onClick={encode}>编码为实体</Btn>
-        <Btn onClick={decode}>实体解码</Btn>
+        <Btn variant="primary" onClick={encode}>{l.enc}</Btn>
+        <Btn onClick={decode}>{l.dec}</Btn>
       </div>
-      <TA value={output} readOnly label="输出" rows={5} />
+      <TA value={output} readOnly label={l.output} rows={5} />
     </div>
   )
 }
 
-/* ================= 摩尔斯电码 ================= */
+/* ================= Morse Code ================= */
 
 const MORSE: Record<string, string> = {
   A: '.-', B: '-...', C: '-.-.', D: '-..', E: '.', F: '..-.', G: '--.', H: '....',
@@ -173,6 +175,7 @@ const MORSE: Record<string, string> = {
 const MORSE_REV = Object.fromEntries(Object.entries(MORSE).map(([k, v]) => [v, k]))
 
 export function MorseTool() {
+  const l = useLocalized(encodingL).morse
   const [input, setInput] = useState('')
   const [output, setOutput] = useState('')
   const encode = () => setOutput(
@@ -183,12 +186,12 @@ export function MorseTool() {
   )
   return (
     <div className="space-y-3">
-      <TA value={input} onChange={setInput} label="输入" placeholder="SOS 或 ... --- ..." rows={4} />
+      <TA value={input} onChange={setInput} label={l.input} placeholder={l.ph} rows={4} />
       <div className="flex gap-2">
-        <Btn variant="primary" onClick={encode}>文本 → 摩尔斯</Btn>
-        <Btn onClick={decode}>摩尔斯 → 文本</Btn>
+        <Btn variant="primary" onClick={encode}>{l.toMorse}</Btn>
+        <Btn onClick={decode}>{l.fromMorse}</Btn>
       </div>
-      <TA value={output} readOnly label="输出" rows={4} />
+      <TA value={output} readOnly label={l.output} rows={4} />
     </div>
   )
 }

@@ -1,6 +1,8 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react'
 import QRCode from 'qrcode'
 import { Panel, Btn, TA, Input, Select, Stat, ErrorNote, CopyBtn } from '../components/ui'
+import { useLocalized, useI18n } from '../lib/i18n'
+import { genL } from '../lib/locales/generators'
 
 /* ================= UUID ================= */
 
@@ -13,6 +15,7 @@ function uuidv4(): string {
 }
 
 export function UuidTool() {
+  const l = useLocalized(genL).uuid
   const [count, setCount] = useState('5')
   const [upper, setUpper] = useState(false)
   const [noDash, setNoDash] = useState(false)
@@ -29,21 +32,21 @@ export function UuidTool() {
   return (
     <div className="space-y-3">
       <div className="flex items-end gap-3 flex-wrap">
-        <Input value={count} onChange={setCount} label="数量 (1-500)" type="number" className="w-32" />
+        <Input value={count} onChange={setCount} label={l.count} type="number" className="w-32" />
         <label className="flex items-center gap-2 text-[12px] text-muted cursor-pointer pb-1.5">
-          <input type="checkbox" checked={upper} onChange={e => setUpper(e.target.checked)} className="accent-phosphor" /> 大写
+          <input type="checkbox" checked={upper} onChange={e => setUpper(e.target.checked)} className="accent-phosphor" /> {l.upper}
         </label>
         <label className="flex items-center gap-2 text-[12px] text-muted cursor-pointer pb-1.5">
-          <input type="checkbox" checked={noDash} onChange={e => setNoDash(e.target.checked)} className="accent-phosphor" /> 去掉连字符
+          <input type="checkbox" checked={noDash} onChange={e => setNoDash(e.target.checked)} className="accent-phosphor" /> {l.noDash}
         </label>
-        <Btn variant="primary" onClick={gen}>生成 UUID v4</Btn>
+        <Btn variant="primary" onClick={gen}>{l.gen}</Btn>
       </div>
-      <TA value={list.join('\n')} readOnly label={`已生成 ${list.length} 个`} rows={Math.min(list.length + 1, 14)} />
+      <TA value={list.join('\n')} readOnly label={l.generated(list.length)} rows={Math.min(list.length + 1, 14)} />
     </div>
   )
 }
 
-/* ================= 随机密码 ================= */
+/* ================= Password ================= */
 
 const CHARSETS = {
   lower: 'abcdefghijklmnopqrstuvwxyz',
@@ -53,14 +56,17 @@ const CHARSETS = {
   ambiguous: 'Il1O0',
 }
 
-function strength(bits: number): { label: string; color: string } {
-  if (bits < 40) return { label: '弱', color: '#ff5555' }
-  if (bits < 70) return { label: '中等', color: '#ffb000' }
-  if (bits < 100) return { label: '强', color: '#00F48E' }
-  return { label: '极强', color: '#00F48E' }
+type StrengthKey = 'weak' | 'medium' | 'strong' | 'veryStrong'
+
+function strength(bits: number): { key: StrengthKey; color: string } {
+  if (bits < 40) return { key: 'weak', color: '#ff5555' }
+  if (bits < 70) return { key: 'medium', color: '#ffb000' }
+  if (bits < 100) return { key: 'strong', color: '#00F48E' }
+  return { key: 'veryStrong', color: '#00F48E' }
 }
 
 export function PasswordTool() {
+  const l = useLocalized(genL).password
   const [len, setLen] = useState('16')
   const [use, setUse] = useState({ lower: true, upper: true, digit: true, symbol: true })
   const [noAmb, setNoAmb] = useState(false)
@@ -88,22 +94,22 @@ export function PasswordTool() {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <Input value={len} onChange={setLen} label="长度 (4-128)" type="number" />
+        <Input value={len} onChange={setLen} label={l.len} type="number" />
         <div className="md:col-span-2 flex flex-col gap-1">
-          <span className="text-[11px] text-muted uppercase tracking-wider">字符集</span>
+          <span className="text-[11px] text-muted uppercase tracking-wider">{l.charset}</span>
           <div className="flex gap-4 flex-wrap pt-1">
-            {([['lower', '小写 a-z'], ['upper', '大写 A-Z'], ['digit', '数字 0-9'], ['symbol', '符号 !@#']] as const).map(([k, label]) => (
-              <label key={k} className="flex items-center gap-2 text-[12px] text-muted cursor-pointer">
-                <input type="checkbox" checked={use[k]} onChange={e => setUse({ ...use, [k]: e.target.checked })} className="accent-phosphor" /> {label}
+            {l.sets.map(s => (
+              <label key={s.key} className="flex items-center gap-2 text-[12px] text-muted cursor-pointer">
+                <input type="checkbox" checked={use[s.key]} onChange={e => setUse({ ...use, [s.key]: e.target.checked })} className="accent-phosphor" /> {s.label}
               </label>
             ))}
             <label className="flex items-center gap-2 text-[12px] text-muted cursor-pointer">
-              <input type="checkbox" checked={noAmb} onChange={e => setNoAmb(e.target.checked)} className="accent-phosphor" /> 排除易混淆 (Il1O0)
+              <input type="checkbox" checked={noAmb} onChange={e => setNoAmb(e.target.checked)} className="accent-phosphor" /> {l.noAmb}
             </label>
           </div>
         </div>
       </div>
-      <Btn variant="primary" onClick={gen}>⚡ 生成密码</Btn>
+      <Btn variant="primary" onClick={gen}>{l.gen}</Btn>
       {pw && (
         <div className="space-y-3">
           <div className="flex items-center gap-3 border border-line bg-panel-2 px-4 py-3">
@@ -111,11 +117,11 @@ export function PasswordTool() {
             <CopyBtn text={pw} />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            <Stat label="熵值" value={`${bits} bit`} />
-            <Stat label="长度" value={pw.length} />
+            <Stat label={l.entropy} value={`${bits} bit`} />
+            <Stat label={l.length} value={pw.length} />
             <div className="border border-line-soft bg-panel-2 px-3 py-2">
-              <div className="text-[10px] uppercase tracking-[0.15em] text-muted">强度</div>
-              <div className="text-lg leading-tight" style={{ color: s.color }}>{s.label}</div>
+              <div className="text-[10px] uppercase tracking-[0.15em] text-muted">{l.strength}</div>
+              <div className="text-lg leading-tight" style={{ color: s.color }}>{l.strengthLabels[s.key]}</div>
             </div>
           </div>
         </div>
@@ -124,9 +130,10 @@ export function PasswordTool() {
   )
 }
 
-/* ================= 二维码 ================= */
+/* ================= QR Code ================= */
 
 export function QrTool() {
+  const l = useLocalized(genL).qr
   const [text, setText] = useState('')
   const [size, setSize] = useState('256')
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -143,8 +150,8 @@ export function QrTool() {
       width: parseInt(size),
       margin: 2,
       color: { dark: '#00F48E', light: '#000000' },
-    }, e => setErr(e ? '生成失败：内容过长' : null))
-  }, [text, size])
+    }, e => setErr(e ? l.genFail : null))
+  }, [text, size, l])
 
   const download = () => {
     const a = document.createElement('a')
@@ -155,13 +162,13 @@ export function QrTool() {
 
   return (
     <div className="space-y-3">
-      <TA value={text} onChange={setText} label="内容" placeholder="输入链接、文本、WiFi 配置 (WIFI:T:WPA;S:名称;P:密码;;)..." rows={4} />
+      <TA value={text} onChange={setText} label={l.content} placeholder={l.contentPh} rows={4} />
       <div className="flex items-end gap-3">
-        <Select value={size} onChange={setSize} label="尺寸" options={[
+        <Select value={size} onChange={setSize} label={l.size} options={[
           { value: '128', label: '128 px' }, { value: '256', label: '256 px' },
           { value: '512', label: '512 px' }, { value: '1024', label: '1024 px' },
         ]} />
-        {text.trim() && <Btn onClick={download}>下载 PNG</Btn>}
+        {text.trim() && <Btn onClick={download}>{l.download}</Btn>}
       </div>
       <ErrorNote msg={err} />
       <div className="border border-line-soft bg-panel-2 inline-block max-w-full overflow-hidden p-3">
@@ -171,51 +178,81 @@ export function QrTool() {
   )
 }
 
-/* ================= 测试数据生成 ================= */
-
-const SURNAMES = '王李张刘陈杨黄赵吴周徐孙马朱胡郭何罗高林郑梁谢宋唐许韩冯邓曹彭'.split('')
-const GIVEN = '伟芳娜敏静丽强磊军洋勇艳杰娟涛明超霞平刚桂英华玉梅浩宇欣怡子轩雨泽思远若曦'.split('')
-const DOMAINS = ['example.com', 'test.org', 'demo.net', 'mail.cn', 'dev.io']
+/* ================= Mock Data Generator ================= */
 
 function rndInt(min: number, max: number) {
   return min + crypto.getRandomValues(new Uint32Array(1))[0] % (max - min + 1)
 }
-function rndName() {
-  return SURNAMES[rndInt(0, SURNAMES.length - 1)] + GIVEN[rndInt(0, GIVEN.length - 1)] + (Math.random() > 0.5 ? GIVEN[rndInt(0, GIVEN.length - 1)] : '')
+
+function rndNameZh(surnames: string[], givens: string[]): string {
+  return surnames[rndInt(0, surnames.length - 1)] + givens[rndInt(0, givens.length - 1)] + (Math.random() > 0.5 ? givens[rndInt(0, givens.length - 1)] : '')
 }
-function rndPhone() {
-  const pre = ['130', '131', '135', '138', '150', '155', '176', '186', '188', '199']
-  return pre[rndInt(0, pre.length - 1)] + String(rndInt(10000000, 99999999))
+function rndNameEn(first: string[], last: string[]): string {
+  return first[rndInt(0, first.length - 1)] + ' ' + last[rndInt(0, last.length - 1)]
 }
-function rndEmail() {
+function rndPhoneZh(prefixes: string[]): string {
+  return prefixes[rndInt(0, prefixes.length - 1)] + String(rndInt(10000000, 99999999))
+}
+function rndPhoneEn(): string {
+  return `555-${String(rndInt(0, 999)).padStart(3, '0')}-${String(rndInt(0, 9999)).padStart(4, '0')}`
+}
+function rndEmailZh(domains: string[]): string {
   const chars = 'abcdefghijklmnopqrstuvwxyz0123456789'
   const n = rndInt(5, 10)
   let u = ''
   for (let i = 0; i < n; i++) u += chars[rndInt(0, chars.length - 1)]
-  return u + '@' + DOMAINS[rndInt(0, DOMAINS.length - 1)]
+  return u + '@' + domains[rndInt(0, domains.length - 1)]
 }
-function rndIdCard() {
-  const area = ['110101', '310104', '440305', '330106', '510107']
+function rndEmailEn(first: string[], last: string[], domains: string[]): string {
+  const f = first[rndInt(0, first.length - 1)].toLowerCase()
+  const x = last[rndInt(0, last.length - 1)].toLowerCase()
+  return `${f}.${x}@${domains[rndInt(0, domains.length - 1)]}`
+}
+function rndIdCardZh(areas: string[]): string {
+  const area = areas[rndInt(0, areas.length - 1)]
   const y = rndInt(1970, 2002), m = rndInt(1, 12), d = rndInt(1, 28)
-  const body = area[rndInt(0, area.length - 1)] + y + String(m).padStart(2, '0') + String(d).padStart(2, '0') + String(rndInt(100, 999))
+  const body = area + y + String(m).padStart(2, '0') + String(d).padStart(2, '0') + String(rndInt(100, 999))
   const W = [7, 9, 10, 5, 8, 4, 2, 1, 6, 3, 7, 9, 10, 5, 8, 4, 2]
   const C = ['1', '0', 'X', '9', '8', '7', '6', '5', '4', '3', '2']
   const sum = body.split('').reduce((acc, ch, i) => acc + parseInt(ch) * W[i], 0)
   return body + C[sum % 11]
 }
+function rndSsnEn(): string {
+  return `${String(rndInt(0, 999)).padStart(3, '0')}-${String(rndInt(0, 99)).padStart(2, '0')}-${String(rndInt(0, 9999)).padStart(4, '0')}`
+}
 function rndIPv4() { return Array.from({ length: 4 }, () => rndInt(1, 254)).join('.') }
 function rndMac() { return Array.from({ length: 6 }, () => rndInt(0, 255).toString(16).padStart(2, '0')).join(':') }
 
 export function FakeDataTool() {
+  const { locale } = useI18n()
+  const l = useLocalized(genL).fakeData
   const [count, setCount] = useState('10')
   const [rows, setRows] = useState<any[]>([])
 
   const gen = () => {
     const n = Math.min(Math.max(parseInt(count) || 10, 1), 100)
-    setRows(Array.from({ length: n }, (_, i) => ({
-      id: i + 1, name: rndName(), phone: rndPhone(), email: rndEmail(),
-      idcard: rndIdCard(), ip: rndIPv4(), mac: rndMac().toUpperCase(),
-    })))
+    setRows(Array.from({ length: n }, (_, i) => {
+      if (locale === 'zh') {
+        return {
+          id: i + 1,
+          name: rndNameZh(l.surnames, l.givens),
+          phone: rndPhoneZh(l.phonePrefixes),
+          email: rndEmailZh(l.domains),
+          idcard: rndIdCardZh(l.areas),
+          ip: rndIPv4(),
+          mac: rndMac().toUpperCase(),
+        }
+      }
+      return {
+        id: i + 1,
+        name: rndNameEn(l.firstNames, l.lastNames),
+        phone: rndPhoneEn(),
+        email: rndEmailEn(l.firstNames, l.lastNames, l.enDomains),
+        idcard: rndSsnEn(),
+        ip: rndIPv4(),
+        mac: rndMac().toUpperCase(),
+      }
+    }))
   }
   useEffect(gen, [])
 
@@ -225,16 +262,16 @@ export function FakeDataTool() {
   return (
     <div className="space-y-3">
       <div className="flex items-end gap-2 flex-wrap">
-        <Input value={count} onChange={setCount} label="条数 (1-100)" type="number" className="w-32" />
-        <Btn variant="primary" onClick={gen}>生成测试数据</Btn>
-        <CopyBtn text={asJson} /> <span className="text-[11px] text-muted">JSON</span>
-        <CopyBtn text={asCsv} /> <span className="text-[11px] text-muted">CSV</span>
+        <Input value={count} onChange={setCount} label={l.count} type="number" className="w-32" />
+        <Btn variant="primary" onClick={gen}>{l.gen}</Btn>
+        <CopyBtn text={asJson} /> <span className="text-[11px] text-muted">{l.json}</span>
+        <CopyBtn text={asCsv} /> <span className="text-[11px] text-muted">{l.csv}</span>
       </div>
       <div className="overflow-auto border border-line-soft">
         <table className="w-full text-[12px]">
           <thead>
             <tr className="bg-panel-2 text-muted text-left">
-              {['#', '姓名', '手机号', '邮箱', '身份证', 'IPv4', 'MAC'].map(h => (
+              {l.headers.map(h => (
                 <th key={h} className="px-3 py-2 font-normal uppercase tracking-wider">{h}</th>
               ))}
             </tr>
@@ -254,7 +291,7 @@ export function FakeDataTool() {
           </tbody>
         </table>
       </div>
-      <p className="text-[11px] text-muted">* 所有数据均为本地随机生成的虚拟数据，身份证校验位已按 GB 11643 算法计算，仅可用于开发测试。</p>
+      <p className="text-[11px] text-muted">{l.footer}</p>
     </div>
   )
 }
