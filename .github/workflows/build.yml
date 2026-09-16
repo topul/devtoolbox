@@ -39,6 +39,12 @@ jobs:
       - name: Build (electron-vite)
         run: npm run build
 
+      # 拦「只在运行时暴露」的崩溃：主进程产物是 ESM，被 externalizeDepsPlugin 外置的 CJS 依赖
+      # 若用 Object.defineProperty(getter) 导出，具名导入会让应用启动即 SyntaxError（v1.1.0 的教训）。
+      # 必须在打包之前跑，否则会先把崩溃包装进 Release。
+      - name: Check main-process imports (smoke:main)
+        run: npm run smoke:main
+
       # tag 构建：直接发布到 GitHub Release（生成 latest.yml 等自动升级元数据）
       # 手动触发：只打包不上传
       - name: Package & Publish (${{ matrix.platform }})
