@@ -2,10 +2,7 @@ name: Build & Release
 
 on:
   push:
-    branches: [main, master]
     tags: ['v*']
-  pull_request:
-    branches: [main, master]
   workflow_dispatch:
 
 env:
@@ -26,6 +23,8 @@ jobs:
             platform: mac
 
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write # tag 构建时 electron-builder 直接上传产物到 Release
     steps:
       - uses: actions/checkout@v4
 
@@ -40,8 +39,12 @@ jobs:
       - name: Build (electron-vite)
         run: npm run build
 
-      - name: Package (${{ matrix.platform }})
-        run: npx electron-builder --${{ matrix.platform }} --publish never
+      # tag 构建：直接发布到 GitHub Release（生成 latest.yml 等自动升级元数据）
+      # 手动触发：只打包不上传
+      - name: Package & Publish (${{ matrix.platform }})
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder --${{ matrix.platform }} --publish ${{ github.ref_type == 'tag' && 'always' || 'never' }}
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -52,32 +55,27 @@ jobs:
             release/*.deb
             release/*.dmg
             release/*.exe
+            release/*.msi
             release/*.zip
+            release/*.blockmap
+            release/latest*.yml
           if-no-files-found: warn
 
+  # electron-builder 以 draft 形式创建 Release（避免三平台并发发布半成品）
+  # 等全部产物上传完成后，这里统一生成 Release Notes 并正式发布
   release:
     needs: build
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: github.ref_type == 'tag'
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
-        with:
-          path: artifacts
+      - uses: actions/checkout@v4
 
-      - name: Flatten artifacts
+      - name: Generate release notes and publish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
         run: |
-          mkdir -p release
-          find artifacts -type f -exec cp {} release/ \;
-          ls -la release/
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.ref_name }}
-          name: ${{ github.ref_name }}
-          generate_release_notes: true
-          files: release/*
-          draft: false
-          prerelease: false
+          BODY=$(gh api repos/${{ github.repository }}/releases/generate-notes -f tag_name="$TAG" -f target_commitish="${{ github.sha }}" --jq .body)
+          gh release edit "$TAG" --draft=false --latest --notes "$BODY"

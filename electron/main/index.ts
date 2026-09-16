@@ -1,9 +1,35 @@
 import { app, BrowserWindow, nativeTheme, ipcMain, shell } from 'electron'
 import { join } from 'path'
+import { autoUpdater } from 'electron-updater'
 
 // electron-vite 编译后 __dirname 可用（CJS 输出）
 
 let mainWindow: BrowserWindow | null = null
+
+/* ================= 自动更新 ================= */
+
+function sendUpdaterEvent(evt: Record<string, unknown>): void {
+  mainWindow?.webContents.send('updater:event', evt)
+}
+
+function setupAutoUpdater(): void {
+  // 开发环境跳过自动更新
+  if (!app.isPackaged) return
+
+  autoUpdater.autoDownload = true
+  autoUpdater.autoInstallOnAppQuit = true
+
+  autoUpdater.on('checking-for-update', () => sendUpdaterEvent({ type: 'checking' }))
+  autoUpdater.on('update-available', (info) => sendUpdaterEvent({ type: 'available', version: info.version }))
+  autoUpdater.on('update-not-available', () => sendUpdaterEvent({ type: 'none' }))
+  autoUpdater.on('download-progress', (p) => sendUpdaterEvent({ type: 'progress', percent: p.percent }))
+  autoUpdater.on('update-downloaded', (info) => sendUpdaterEvent({ type: 'downloaded', version: info.version }))
+  autoUpdater.on('error', () => sendUpdaterEvent({ type: 'error' }))
+
+  // 启动 3 秒后检查，之后每 4 小时检查一次
+  setTimeout(() => { autoUpdater.checkForUpdates().catch(() => {}) }, 3000)
+  setInterval(() => { autoUpdater.checkForUpdates().catch(() => {}) }, 4 * 60 * 60 * 1000)
+}
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
@@ -54,6 +80,17 @@ nativeTheme.on('updated', () => {
 // ---- IPC ----
 ipcMain.handle('app:get-version', () => app.getVersion())
 
+ipcMain.handle('updater:check', () => {
+  sendUpdaterEvent({ type: 'checking' })
+  return autoUpdater.checkForUpdates().catch(() => {
+    sendUpdaterEvent({ type: 'error' })
+  })
+})
+
+ipcMain.handle('updater:quit-and-install', () => {
+  autoUpdater.quitAndInstall()
+})
+
 ipcMain.handle('theme:get', () => {
   return nativeTheme.shouldUseDarkColors ? 'dark' : 'light'
 })
@@ -66,6 +103,7 @@ ipcMain.handle('theme:set', (_event, theme: 'dark' | 'light' | 'system') => {
 // ---- App lifecycle ----
 app.whenReady().then(() => {
   createWindow()
+  setupAutoUpdater()
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
