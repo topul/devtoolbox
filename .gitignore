@@ -7,3 +7,6 @@ release/
 
 # Electron
 Thumbs.db
+
+# Local assistant workspace notes
+.workbuddy/
