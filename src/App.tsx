@@ -3,6 +3,7 @@ import MatrixRain from './components/MatrixRain'
 import { TOOLS, CATEGORIES, searchTools, ToolDef, CategoryId } from './lib/registry'
 import { useTheme } from './lib/theme'
 import { useUiZoom } from './lib/uiZoom'
+import { useSidebarCollapsed } from './lib/sidebar'
 import { useI18n, I18nProvider } from './lib/i18n'
 import { getVersion } from './lib/version'
 import { UpdateToast, useUpdater } from './components/Updater'
@@ -36,6 +37,7 @@ function AppInner() {
   const [version, setVersion] = useState('')
   const { theme, toggleTheme } = useTheme()
   const zoom = useUiZoom()
+  const sidebar = useSidebarCollapsed()
   const updater = useUpdater()
   const searchRef = React.useRef<HTMLInputElement>(null)
 
@@ -53,6 +55,20 @@ function AppInner() {
     setSidebarOpen(false)
     window.scrollTo({ top: 0 })
   }, [])
+
+  /** 窄栏里点分类图标：回到首页并滚到对应分区（收起状态下也能快速跳转） */
+  const jumpToCategory = useCallback((cat: CategoryId) => {
+    openTool(null)
+    setTimeout(() => {
+      document.getElementById(`cat-${cat}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 80)
+  }, [openTool])
+
+  /** 窄栏里点搜索：展开侧栏并把焦点给搜索框 */
+  const expandAndFocusSearch = useCallback(() => {
+    sidebar.setCollapsed(false)
+    setTimeout(() => searchRef.current?.focus(), 220)
+  }, [sidebar])
 
   useEffect(() => {
     const onHash = () => setActiveId(location.hash.replace('#', '') || null)
@@ -76,80 +92,148 @@ function AppInner() {
     <div className="scanlines min-h-screen bg-terminal flex">
       {/* ============ Sidebar ============ */}
       <aside className={`
-        fixed lg:sticky top-0 z-50 h-screen h-[100dvh] w-[82vw] max-w-[300px] lg:w-64 shrink-0 flex flex-col
+        fixed lg:sticky top-0 z-50 h-screen h-[100dvh] w-[82vw] max-w-[300px] shrink-0 flex flex-col
         border-r border-line bg-panel/95 lg:bg-panel backdrop-blur
-        transition-transform duration-200 pt-safe pl-safe
+        transition-[transform,width] duration-200 pt-safe pl-safe
+        ${sidebar.collapsed ? 'lg:w-[3.25rem]' : 'lg:w-64'}
         ${sidebarOpen ? 'translate-x-0 shadow-[0_0_40px_rgba(0,244,142,0.15)]' : '-translate-x-full lg:translate-x-0 lg:shadow-none'}
       `}>
-        <div className="flex items-center border-b border-line">
-          <button onClick={() => openTool(null)} className="flex-1 text-left px-4 pt-4 pb-3 group !min-h-0">
-            <div className="text-phosphor font-bold text-[15px] tracking-wider glow group-hover:text-phosphor-glow">
-              &gt;_ BUGBUCKET.BOX
-            </div>
-            <div className="text-[10px] text-muted tracking-[0.25em] mt-0.5">DEV × SEC TOOLKIT</div>
-          </button>
-          <button
-            onClick={() => setSidebarOpen(false)}
-            className="lg:hidden px-4 self-stretch flex items-center text-muted text-xl"
-            aria-label={t.closeMenu}
-          >×</button>
-        </div>
+        {/* ===== 桌面端窄栏（收起态） ===== */}
+        {sidebar.collapsed && (
+          <div data-sb-rail className="hidden lg:flex flex-col flex-1 min-h-0">
+            <button
+              onClick={() => openTool(null)}
+              className="py-3 text-phosphor font-bold text-[12px] tracking-wider glow hover:text-phosphor-glow !min-h-0"
+              title={`${t.allTools} (${TOOLS.length})`}
+              aria-label={t.allTools}
+            >&gt;_</button>
+            <button
+              onClick={sidebar.toggle}
+              className="py-2 border-y border-line-soft text-muted hover:text-phosphor text-[13px] !min-h-0"
+              title={t.expandSidebar}
+              aria-label={t.expandSidebar}
+            >»</button>
+            <button
+              onClick={expandAndFocusSearch}
+              className="py-2.5 border-b border-line-soft text-muted hover:text-phosphor text-[13px] !min-h-0"
+              title={t.searchToolsAria}
+              aria-label={t.searchToolsAria}
+            >⌕</button>
 
-        <div className="p-3 border-b border-line-soft">
-          <div className="relative">
-            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted text-[11px]">⌕</span>
-            <input
-              ref={searchRef}
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-              placeholder={t.searchPlaceholder}
-              className="w-full bg-panel-2 border border-line-soft pl-7 pr-2 py-2 lg:py-1.5 text-[12px] text-bright placeholder:text-muted/50 focus:border-phosphor/40"
-            />
-          </div>
-        </div>
-
-        <nav className="flex-1 overflow-y-auto py-2">
-          <button
-            onClick={() => openTool(null)}
-            className={`w-full text-left px-4 py-2.5 lg:py-1.5 text-[13px] lg:text-[12px] transition-colors ${!active ? 'text-phosphor bg-phosphor-faint border-r-2 border-phosphor' : 'text-muted hover:text-bright'}`}
-          >
-            [ ~ ] {t.allTools} <span className="text-muted/50 text-[10px]">({TOOLS.length})</span>
-          </button>
-          {[...grouped.entries()].map(([cat, items]) => (
-            <div key={cat} className="mt-3">
-              <div className="px-4 pb-1 text-[10px] uppercase tracking-[0.2em] text-muted/70 select-none">
-                {CAT_ICONS[cat]} {catName(cat)}
-              </div>
-              {items.map(t => (
+            <div className="flex-1 min-h-0 overflow-y-auto py-1">
+              {CATEGORIES.map((cat) => (
                 <button
-                  key={t.id}
-                  onClick={() => openTool(t.id)}
-                  className={`w-full text-left px-4 py-2.5 lg:py-1.5 text-[13px] lg:text-[12px] transition-colors truncate
-                    ${active?.id === t.id
-                      ? 'text-phosphor bg-phosphor-faint border-r-2 border-phosphor'
-                      : 'text-dim hover:text-phosphor hover:bg-phosphor-faint/50'}`}
-                >
-                  <span className="text-phosphor/40 mr-1.5">{active?.id === t.id ? '[x]' : '[ ]'}</span>
-                  {toolName(t)}
-                  {t.hot && <span className="ml-1.5 text-[9px] text-amber">★</span>}
-                </button>
+                  key={cat}
+                  onClick={() => jumpToCategory(cat)}
+                  className="w-full py-2 text-[14px] text-dim hover:text-phosphor hover:bg-phosphor-faint/50 transition-colors !min-h-0"
+                  title={`${t.jumpToCategory}: ${catName(cat)}`}
+                  aria-label={catName(cat)}
+                >{CAT_ICONS[cat]}</button>
               ))}
             </div>
-          ))}
-          {grouped.size === 0 && (
-            <div className="px-4 py-6 text-center text-muted text-[12px]">
-              {t.noMatch}
-            </div>
-          )}
-        </nav>
 
-        <div className="border-t border-line px-4 py-2.5 pb-safe text-[10px] text-muted/70 leading-relaxed">
-          <div className="flex items-center justify-between mb-1">
-            <span><span className="text-danger/80">⚠</span> {t.disclaimer}</span>
-            <span className="flex gap-1">
+            <div className="border-t border-line-soft py-1">
               <button
                 onClick={zoom.cycle}
-                className="text-muted hover:text-phosphor border border-line-soft hover:border-phosphor/40 px-2 py-0.5 text-[10px] transition-colors"
+                className="w-full py-1.5 text-muted hover:text-phosphor text-[11px] !min-h-0"
+                title={t.zoomTip}
+                aria-label={t.zoomTip}
+              >⇕</button>
+              <button
+                onClick={() => setLocale(locale === 'zh' ? 'en' : 'zh')}
+                className="w-full py-1.5 text-muted hover:text-phosphor text-[10px] !min-h-0"
+                title={t.switchLangTip}
+                aria-label={t.switchLangTip}
+              >{t.langSwitch}</button>
+              <button
+                onClick={toggleTheme}
+                className="w-full py-1.5 text-muted hover:text-phosphor text-[11px] !min-h-0"
+                title={theme === 'dark' ? t.switchToLight : t.switchToDark}
+                aria-label={t.toggleTheme}
+              >{theme === 'dark' ? '◑' : '◐'}</button>
+            </div>
+          </div>
+        )}
+
+        {/* ===== 移动端抽屉 + 桌面端展开态 ===== */}
+        <div className={`flex flex-col flex-1 min-h-0 ${sidebar.collapsed ? 'lg:hidden' : ''}`}>
+          <div className="flex items-center border-b border-line">
+            <button onClick={() => openTool(null)} className="flex-1 text-left px-4 pt-4 pb-3 group !min-h-0">
+              <div className="text-phosphor font-bold text-[15px] tracking-wider glow group-hover:text-phosphor-glow">
+                &gt;_ BUGBUCKET.BOX
+              </div>
+              <div className="text-[10px] text-muted tracking-[0.25em] mt-0.5">DEV × SEC TOOLKIT</div>
+            </button>
+            <button
+              onClick={sidebar.toggle}
+              className="hidden lg:flex items-center self-stretch px-3 text-muted hover:text-phosphor text-[14px] transition-colors"
+              title={t.collapseSidebar}
+              aria-label={t.collapseSidebar}
+            >«</button>
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className="lg:hidden px-4 self-stretch flex items-center text-muted text-xl"
+              aria-label={t.closeMenu}
+            >×</button>
+          </div>
+
+          <div className="p-3 border-b border-line-soft">
+            <div className="relative">
+              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted text-[11px]">⌕</span>
+              <input
+                ref={searchRef}
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+                placeholder={t.searchPlaceholder}
+                className="w-full bg-panel-2 border border-line-soft pl-7 pr-2 py-2 lg:py-1.5 text-[12px] text-bright placeholder:text-muted/50 focus:border-phosphor/40"
+              />
+            </div>
+          </div>
+
+          <nav className="flex-1 overflow-y-auto py-2">
+            <button
+              onClick={() => openTool(null)}
+              className={`w-full text-left px-4 py-2.5 lg:py-1.5 text-[13px] lg:text-[12px] transition-colors ${!active ? 'text-phosphor bg-phosphor-faint border-r-2 border-phosphor' : 'text-muted hover:text-bright'}`}
+            >
+              [ ~ ] {t.allTools} <span className="text-muted/50 text-[10px]">({TOOLS.length})</span>
+            </button>
+            {[...grouped.entries()].map(([cat, items]) => (
+              <div key={cat} className="mt-3">
+                <div className="px-4 pb-1 text-[10px] uppercase tracking-[0.2em] text-muted/70 select-none">
+                  {CAT_ICONS[cat]} {catName(cat)}
+                </div>
+                {items.map(t => (
+                  <button
+                    key={t.id}
+                    onClick={() => openTool(t.id)}
+                    className={`w-full text-left px-4 py-2.5 lg:py-1.5 text-[13px] lg:text-[12px] transition-colors truncate
+                      ${active?.id === t.id
+                        ? 'text-phosphor bg-phosphor-faint border-r-2 border-phosphor'
+                        : 'text-dim hover:text-phosphor hover:bg-phosphor-faint/50'}`}
+                  >
+                    <span className="text-phosphor/40 mr-1.5">{active?.id === t.id ? '[x]' : '[ ]'}</span>
+                    {toolName(t)}
+                    {t.hot && <span className="ml-1.5 text-[9px] text-amber">★</span>}
+                  </button>
+                ))}
+              </div>
+            ))}
+            {grouped.size === 0 && (
+              <div className="px-4 py-6 text-center text-muted text-[12px]">
+                {t.noMatch}
+              </div>
+            )}
+          </nav>
+
+          {/* 底栏：声明 / 操作 / 版本 三块分离，不再挤成一行 */}
+          <div data-sb-foot className="border-t border-line px-3 pt-2.5 pb-safe space-y-2">
+            <div className="text-[10px] text-muted/70 leading-snug">
+              <span className="text-danger/80">⚠</span> {t.disclaimer}
+            </div>
+            <div className="grid grid-cols-3 gap-1.5">
+              <button
+                onClick={zoom.cycle}
+                className="border border-line-soft px-1.5 py-1.5 text-[10px] text-muted text-center truncate hover:text-phosphor hover:border-phosphor/40 transition-colors"
                 aria-label={t.zoomTip}
                 title={t.zoomTip}
               >
@@ -157,7 +241,7 @@ function AppInner() {
               </button>
               <button
                 onClick={() => setLocale(locale === 'zh' ? 'en' : 'zh')}
-                className="text-muted hover:text-phosphor border border-line-soft hover:border-phosphor/40 px-2 py-0.5 text-[10px] transition-colors"
+                className="border border-line-soft px-1.5 py-1.5 text-[10px] text-muted text-center truncate hover:text-phosphor hover:border-phosphor/40 transition-colors"
                 aria-label={t.switchLangTip}
                 title={t.switchLangTip}
               >
@@ -165,24 +249,24 @@ function AppInner() {
               </button>
               <button
                 onClick={toggleTheme}
-                className="text-muted hover:text-phosphor border border-line-soft hover:border-phosphor/40 px-2 py-0.5 text-[10px] transition-colors"
+                className="border border-line-soft px-1.5 py-1.5 text-[10px] text-muted text-center truncate hover:text-phosphor hover:border-phosphor/40 transition-colors"
                 aria-label={t.toggleTheme}
                 title={theme === 'dark' ? t.switchToLight : t.switchToDark}
               >
                 {theme === 'dark' ? t.themeLight : t.themeDark}
               </button>
-            </span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span>{t.localCompute} · v{version || '...'}</span>
-            {window.electronAPI && (
-              <button
-                onClick={() => window.electronAPI?.checkForUpdates()}
-                className="text-muted/70 hover:text-phosphor border border-line-soft hover:border-phosphor/40 px-1.5 py-0.5 text-[9px] transition-colors"
-              >
-                {t.checkUpdate}
-              </button>
-            )}
+            </div>
+            <div className="flex items-center justify-between gap-2 text-[10px] text-muted/60">
+              <span className="truncate">{t.localCompute} · v{version || '...'}</span>
+              {window.electronAPI && (
+                <button
+                  onClick={() => window.electronAPI?.checkForUpdates()}
+                  className="shrink-0 text-muted/70 hover:text-phosphor border border-line-soft hover:border-phosphor/40 px-1.5 py-1 text-[9px] transition-colors"
+                >
+                  {t.checkUpdate}
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </aside>
@@ -257,7 +341,7 @@ function HomeView({ grouped, onOpen, query }: {
       {/* tool grid */}
       <div className="w-full mx-auto max-w-[1720px] px-4 md:px-8 xl:px-10 py-6 md:py-8 pb-12 pb-safe space-y-8">
         {[...grouped.entries()].map(([cat, items]) => (
-          <section key={cat}>
+          <section key={cat} id={`cat-${cat}`}>
             <div className="flex items-baseline gap-3 mb-3">
               <h2 className="text-[13px] text-phosphor tracking-wider">
                 <span className="text-muted">##</span> {CAT_ICONS[cat]} {catName(cat)}
