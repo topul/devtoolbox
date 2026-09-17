@@ -88,6 +88,13 @@ export function TrafficProxyTool() {
   const [notice, setNotice] = useState<string | null>(null)
   const [portInput, setPortInput] = useState(String(DEFAULT_PORT))
   const [busy, setBusy] = useState(false)
+  /** 页签：会话是主战场，设置类操作收进「设置」页 */
+  const [tab, setTab] = useState<'sessions' | 'rules' | 'settings'>('sessions')
+  /** 暂停刷新：流量一直在动时，清空/观察单条都要先按住列表 */
+  const [paused, setPaused] = useState(false)
+  const pausedRef = useRef(false)
+  const [pendingCount, setPendingCount] = useState(0)
+  const [confirmClear, setConfirmClear] = useState(false)
 
   const api = typeof window !== 'undefined' ? window.electronAPI?.proxy : undefined
   const httpApi = typeof window !== 'undefined' ? window.electronAPI?.http : undefined
@@ -97,6 +104,11 @@ export function TrafficProxyTool() {
     if (!api) return
     const off = api.onEvent((evt: ProxyEvent) => {
       if (evt.type === 'session') {
+        // 暂停期间只计数不落表，继续时从主进程拉全量（主进程才是权威来源）
+        if (pausedRef.current) {
+          setPendingCount((n) => n + 1)
+          return
+        }
         setSessions((prev) => {
           const idx = prev.findIndex((s) => s.id === evt.session.id)
           if (idx >= 0) {
@@ -173,11 +185,24 @@ export function TrafficProxyTool() {
 
   const clearSessions = useCallback(async () => {
     if (!api) return
-    if (!window.confirm(l.controls.clearConfirm)) return
+    setConfirmClear(false)
     setState(await api.clear())
     setSessions([])
     setSelected(null)
-  }, [api, l])
+    setPendingCount(0)
+  }, [api])
+
+  /** 暂停 / 继续刷新（继续时以主进程列表为准补齐） */
+  const togglePause = useCallback(async () => {
+    const next = !pausedRef.current
+    pausedRef.current = next
+    setPaused(next)
+    if (!next && api) {
+      const all = await api.sessions().catch(() => null)
+      if (all) setSessions(all)
+      setPendingCount(0)
+    }
+  }, [api])
 
   const exportSessions = useCallback(async (format: 'json' | 'har') => {
     if (!api) return
@@ -248,140 +273,187 @@ export function TrafficProxyTool() {
         />
       )}
 
-      {/* ===== 控制条 ===== */}
-      <Panel
-        title={l.status[running ? 'running' : 'stopped']}
-        right={
-          <span className="flex items-center gap-2 text-[11px]">
-            <span className={running ? 'text-phosphor' : 'text-muted'}>● {running ? l.status.running : l.status.stopped}</span>
-            <span className="text-muted">{l.status.sessions}: {sessions.length}</span>
+      {/* ===== 顶栏：只留高频操作（状态 / 启停 / 页签），其余收进「设置」页 ===== */}
+      <div className="border border-line bg-panel">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2 border-b border-line-soft">
+          <span className={`text-[12.5px] ${running ? 'text-phosphor' : 'text-muted'}`}>
+            ● {running ? l.status.running : l.status.stopped}
           </span>
-        }
-      >
-        <div className="space-y-3">
-          <div className="flex flex-wrap items-end gap-2">
-            <div className="w-24">
-              <Input label={l.controls.portLabel} value={portInput} onChange={setPortInput} />
-            </div>
-            {!running ? (
-              <Btn variant="primary" onClick={() => void start(true)} disabled={busy || !api}>{l.controls.start}</Btn>
-            ) : (
-              <Btn variant="danger" onClick={() => void stop()} disabled={busy}>{l.controls.stop}</Btn>
-            )}
-            <Btn variant="ghost" onClick={() => void clearSessions()} disabled={!api || sessions.length === 0}>{l.controls.clear}</Btn>
-            <Btn variant="ghost" onClick={() => void exportSessions('json')} disabled={!api || sessions.length === 0}>{l.controls.exportJson}</Btn>
-            <Btn variant="ghost" onClick={() => void exportSessions('har')} disabled={!api || sessions.length === 0}>{l.controls.exportHar}</Btn>
-            <label className="flex items-center gap-1.5 text-[12px] text-bright cursor-pointer select-none ml-auto">
-              <input type="checkbox" checked={state?.mitm ?? true} onChange={(e) => void toggleMitm(e.target.checked)} className="accent-[color:var(--c-phosphor)]" />
-              {l.controls.mitmLabel}
-            </label>
-          </div>
-
-          <div className="grid sm:grid-cols-2 gap-x-4 gap-y-1 text-[11.5px] text-muted">
-            <div>{l.controls.portHint}</div>
-            <div>{l.controls.mitmHint}</div>
-          </div>
-          {running && (state?.mitm ?? false) && (
-            <div className="border border-amber/40 bg-amber/5 px-3 py-2 text-[11.5px] text-amber">
-              {l.controls.mitmTrustWarn}
-            </div>
+          <span className="text-[11.5px] text-muted">
+            {running ? `127.0.0.1:${state?.port ?? DEFAULT_PORT}` : l.controls.portHint}
+          </span>
+          {!running ? (
+            <Btn variant="primary" onClick={() => void start(state?.mitm ?? true)} disabled={busy || !api}>{l.controls.start}</Btn>
+          ) : (
+            <Btn variant="danger" onClick={() => void stop()} disabled={busy}>{l.controls.stop}</Btn>
           )}
-
-          <div className="border-t border-line-soft pt-2 grid sm:grid-cols-2 gap-2">
-            <div className="space-y-1">
-              <div className="text-[11px] uppercase tracking-wider text-muted">{l.system.title}</div>
-              <div className="flex flex-wrap items-center gap-2">
-                {(state?.systemProxy.enabled && state.systemProxy.managed) ? (
-                  <Btn
-                    variant="danger"
-                    disabled={!api || busy}
-                    onClick={async () => {
-                      setBusy(true)
-                      try {
-                        const s = await api?.systemRestore()
-                        if (!s) return
-                        setState((p) => (p ? { ...p, systemProxy: s } : p))
-                        // 还原结果以主进程回报为准：取消授权 / 失败都不能报成功
-                        if (s.enabled) setError(s.detail || l.errors.systemFailed)
-                        else setNotice(s.detail || l.system.disabled)
-                      } finally {
-                        setBusy(false)
-                      }
-                    }}
-                  >
-                    {l.system.disable}
-                  </Btn>
-                ) : (
-                  <Btn
-                    disabled={!api || !running || busy}
-                    onClick={async () => {
-                      setError(null)
-                      setBusy(true)
-                      try {
-                        const s = await api?.systemSet()
-                        if (!s) return
-                        setState((p) => (p ? { ...p, systemProxy: s } : p))
-                        // 只有主进程确认系统代理真的指向本机时才提示成功
-                        if (s.enabled && s.managed) setNotice(`${l.system.done} · ${s.server}`)
-                        else setError(s.detail || l.errors.systemFailed)
-                      } finally {
-                        setBusy(false)
-                      }
-                    }}
-                  >
-                    {l.system.enable}
-                  </Btn>
-                )}
-                <span className={`text-[11.5px] ${state?.systemProxy.enabled ? 'text-phosphor' : 'text-muted'}`}>
-                  {state?.systemProxy.enabled ? `${l.system.enabled} · ${state.systemProxy.server}` : l.system.disabled}
-                </span>
-              </div>
-              <div className="text-[11px] text-muted">{l.system.hint}</div>
-              {isMac && <div className="text-[11px] text-amber">{l.system.authHint}</div>}
-              {state?.systemProxy.detail && <div className="text-[11px] text-muted">{state.systemProxy.detail}</div>}
-              {state?.systemProxy.enabled && state.systemProxy.managed && (
-                <div className="text-[11px] text-amber">{l.system.restoreTip}</div>
-              )}
-              {state && !state.systemProxy.supported && <div className="text-[11px] text-amber">{l.errors.systemUnsupported}</div>}
-            </div>
-
-            <div className="space-y-1">
-              <div className="text-[11px] uppercase tracking-wider text-muted">{l.ca.title}</div>
-              <CaSummary ca={ca} l={l} />
-            </div>
-          </div>
+          <span className="flex flex-wrap items-center gap-1.5">
+            <Badge ok={running && (state?.mitm ?? false)} title={l.controls.mitmHint}>
+              {l.controls.mitmLabel}: {(state?.mitm ?? false) ? l.status.mitmOn : l.status.mitmOff}
+            </Badge>
+            <Badge ok={!!state?.systemProxy.enabled} title={state?.systemProxy.detail ?? ''}>
+              {l.system.title}: {state?.systemProxy.enabled ? l.system.enabled : l.system.disabled}
+            </Badge>
+            <Badge ok={!!ca}>{l.ca.title}: {ca ? l.ca.ready : l.ca.notReady}</Badge>
+          </span>
+          <span className="text-[11px] text-muted ml-auto">{l.status.sessions}: {sessions.length}</span>
         </div>
-      </Panel>
+        <div className="flex flex-wrap items-center gap-1 px-3 py-2">
+          {(['sessions', 'rules', 'settings'] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={`px-2.5 py-1 text-[12px] border transition-colors ${tab === t ? 'border-phosphor/60 text-phosphor bg-phosphor-faint' : 'border-line-soft text-muted hover:text-phosphor'}`}
+            >
+              {l.tabs[t]}
+              {t === 'sessions' && sessions.length > 0 && <span className="ml-1 text-phosphor/70">{sessions.length}</span>}
+              {t === 'rules' && rules.length > 0 && <span className="ml-1 text-phosphor/70">{rules.filter((r) => r.enabled).length}/{rules.length}</span>}
+            </button>
+          ))}
+          <span className="text-[11px] text-muted ml-auto hidden md:inline">{l.tabsHint[tab]}</span>
+        </div>
+      </div>
 
-      {/* ===== 根证书详情 ===== */}
-      <CaPanel ca={ca} l={l} api={api} onError={setError} onNotice={setNotice} onUpdate={(info) => setState((p) => (p ? { ...p, caInfo: info, caReady: true } : p))} />
+      {/* ===== 设置页：端口 / HTTPS 解密 / 系统代理 / 根证书 / 导出 ===== */}
+      {tab === 'settings' && (
+        <div className="space-y-3">
+          <Panel title={l.settings.captureTitle}>
+            <div className="grid min-[1300px]:grid-cols-2 gap-x-6 gap-y-3">
+              <div className="space-y-2">
+                <div className="flex items-end gap-2">
+                  <div className="w-24">
+                    <Input label={l.controls.portLabel} value={portInput} onChange={setPortInput} />
+                  </div>
+                  <span className="text-[11px] text-muted pb-1.5">{running ? l.settings.portLocked : l.controls.portHint}</span>
+                </div>
+                <label className="flex items-center gap-1.5 text-[12.5px] text-bright cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={state?.mitm ?? true}
+                    onChange={(e) => void toggleMitm(e.target.checked)}
+                    className="accent-[color:var(--c-phosphor)]"
+                  />
+                  {l.controls.mitmLabel}
+                </label>
+                <div className="text-[11.5px] text-muted">{l.controls.mitmHint}</div>
+                {running && (state?.mitm ?? false) && (
+                  <div className="border border-amber/40 bg-amber/5 px-3 py-2 text-[11.5px] text-amber">
+                    {l.controls.mitmTrustWarn}
+                  </div>
+                )}
+              </div>
 
-      {/* ===== 规则 ===== */}
-      <RulesPanel
-        rules={rules}
-        editing={editing}
-        l={l}
-        api={api}
-        onNew={() => setEditing(emptyRule())}
-        onEdit={(r) => setEditing(r)}
-        onCancel={() => setEditing(null)}
-        onSave={(r) => void saveRule(r)}
-        onRemove={(id) => void removeRule(id)}
-        onToggleAll={async (enabled) => {
-          if (!api) return
-          setRules(await api.rulesSave(rules.map((r) => ({ ...r, enabled }))))
-        }}
-      />
+              <div className="space-y-1.5">
+                <div className="text-[11px] uppercase tracking-wider text-muted">{l.system.title}</div>
+                <div className="flex flex-wrap items-center gap-2">
+                  {(state?.systemProxy.enabled && state.systemProxy.managed) ? (
+                    <Btn
+                      variant="danger"
+                      disabled={!api || busy}
+                      onClick={async () => {
+                        setBusy(true)
+                        try {
+                          const s = await api?.systemRestore()
+                          if (!s) return
+                          setState((p) => (p ? { ...p, systemProxy: s } : p))
+                          // 还原结果以主进程回报为准：取消授权 / 失败都不能报成功
+                          if (s.enabled) setError(s.detail || l.errors.systemFailed)
+                          else setNotice(s.detail || l.system.disabled)
+                        } finally {
+                          setBusy(false)
+                        }
+                      }}
+                    >
+                      {l.system.disable}
+                    </Btn>
+                  ) : (
+                    <Btn
+                      disabled={!api || !running || busy}
+                      onClick={async () => {
+                        setError(null)
+                        setBusy(true)
+                        try {
+                          const s = await api?.systemSet()
+                          if (!s) return
+                          setState((p) => (p ? { ...p, systemProxy: s } : p))
+                          // 只有主进程确认系统代理真的指向本机时才提示成功
+                          if (s.enabled && s.managed) setNotice(`${l.system.done} · ${s.server}`)
+                          else setError(s.detail || l.errors.systemFailed)
+                        } finally {
+                          setBusy(false)
+                        }
+                      }}
+                    >
+                      {l.system.enable}
+                    </Btn>
+                  )}
+                  <span className={`text-[11.5px] ${state?.systemProxy.enabled ? 'text-phosphor' : 'text-muted'}`}>
+                    {state?.systemProxy.enabled ? `${l.system.enabled} · ${state.systemProxy.server}` : l.system.disabled}
+                  </span>
+                </div>
+                <div className="text-[11px] text-muted">{l.system.hint}</div>
+                {isMac && <div className="text-[11px] text-amber">{l.system.authHint}</div>}
+                {state?.systemProxy.detail && <div className="text-[11px] text-muted">{state.systemProxy.detail}</div>}
+                {state?.systemProxy.enabled && state.systemProxy.managed && (
+                  <div className="text-[11px] text-amber">{l.system.restoreTip}</div>
+                )}
+                {state && !state.systemProxy.supported && <div className="text-[11px] text-amber">{l.errors.systemUnsupported}</div>}
+              </div>
+            </div>
+          </Panel>
 
-      {/* ===== 会话 ===== */}
+          {/* 根证书 */}
+          <CaPanel ca={ca} l={l} api={api} onError={setError} onNotice={setNotice} onUpdate={(info) => setState((p) => (p ? { ...p, caInfo: info, caReady: true } : p))} />
+
+          <Panel title={l.settings.dataTitle}>
+            <div className="flex flex-wrap items-center gap-2">
+              <Btn onClick={() => void exportSessions('json')} disabled={!api || sessions.length === 0}>{l.controls.exportJson}</Btn>
+              <Btn onClick={() => void exportSessions('har')} disabled={!api || sessions.length === 0}>{l.controls.exportHar}</Btn>
+              <span className="text-[11.5px] text-muted">{l.status.sessions}: {sessions.length}</span>
+            </div>
+          </Panel>
+        </div>
+      )}
+
+      {/* ===== 规则页 ===== */}
+      {tab === 'rules' && (
+        <RulesPanel
+          rules={rules}
+          editing={editing}
+          l={l}
+          api={api}
+          onNew={() => setEditing(emptyRule())}
+          onEdit={(r) => setEditing(r)}
+          onCancel={() => setEditing(null)}
+          onSave={(r) => void saveRule(r)}
+          onRemove={(id) => void removeRule(id)}
+          onToggleAll={async (enabled) => {
+            if (!api) return
+            setRules(await api.rulesSave(rules.map((r) => ({ ...r, enabled }))))
+          }}
+        />
+      )}
+
+      {/* ===== 会话页：主战场，占满剩余空间 ===== */}
+      {tab === 'sessions' && (
       <Panel
         title={`${l.sessions.title} (${filtered.length}/${sessions.length})`}
         right={
-          <div className="flex items-center gap-1">
+          <span className="text-[11px] text-muted">{follow ? l.sessions.follow : l.sessions.notFollowed}</span>
+        }
+      >
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              placeholder={l.sessions.filterPlaceholder}
+              className="flex-1 min-w-[180px] bg-panel-2 border border-line-soft px-2 py-1 text-[12px] text-bright placeholder:text-muted/50 focus:border-phosphor/40"
+            />
             <select
               value={schemeFilter}
               onChange={(e) => setSchemeFilter(e.target.value as typeof schemeFilter)}
-              className="bg-panel-2 border border-line-soft px-1.5 py-0.5 text-[11px] text-bright"
+              className="bg-panel-2 border border-line-soft px-1.5 py-1 text-[11.5px] text-bright"
             >
               <option value="all">{l.sessions.schemeAll}</option>
               <option value="http">http</option>
@@ -389,19 +461,38 @@ export function TrafficProxyTool() {
               <option value="tunnel">tunnel</option>
             </select>
             <button
+              onClick={() => void togglePause()}
+              className={`px-2 py-1 text-[11.5px] border transition-colors ${paused ? 'border-amber/60 text-amber bg-amber/5' : 'border-line-soft text-muted hover:text-phosphor'}`}
+            >{paused ? l.sessions.resume : l.sessions.pause}</button>
+            <button
               onClick={() => setFollow(!follow)}
-              className={`px-2 py-0.5 text-[11px] border ${follow ? 'border-phosphor/60 text-phosphor' : 'border-line-soft text-muted'}`}
+              className={`px-2 py-1 text-[11.5px] border transition-colors ${follow ? 'border-phosphor/60 text-phosphor' : 'border-line-soft text-muted hover:text-phosphor'}`}
             >{follow ? l.sessions.follow : l.sessions.notFollowed}</button>
+
+            {confirmClear ? (
+              <span className="flex items-center gap-1.5">
+                <span className="text-[11.5px] text-danger">{l.sessions.clearAsk(sessions.length)}</span>
+                <button onClick={() => void clearSessions()} className="px-2 py-1 text-[11.5px] border border-danger/60 text-danger hover:bg-danger/10">
+                  {l.sessions.confirmYes}
+                </button>
+                <button onClick={() => setConfirmClear(false)} className="px-2 py-1 text-[11.5px] border border-line-soft text-muted hover:text-phosphor">
+                  {l.sessions.cancel}
+                </button>
+              </span>
+            ) : (
+              <button
+                onClick={() => setConfirmClear(true)}
+                disabled={sessions.length === 0}
+                className="px-2 py-1 text-[11.5px] border border-line-soft text-muted hover:text-danger hover:border-danger/50 disabled:opacity-40"
+              >{l.sessions.clear}</button>
+            )}
           </div>
-        }
-      >
-        <div className="space-y-2">
-          <input
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            placeholder={l.sessions.filterPlaceholder}
-            className="w-full bg-panel-2 border border-line-soft px-2 py-1 text-[12px] text-bright placeholder:text-muted/50 focus:border-phosphor/40"
-          />
+
+          {paused && (
+            <div className="border border-amber/40 bg-amber/5 px-3 py-1.5 text-[11.5px] text-amber">
+              {l.sessions.pausedHint(pendingCount)}
+            </div>
+          )}
 
           {sessions.length === 0 && (
             <div className="border border-line-soft bg-panel-2 px-3 py-6 text-center">
@@ -412,7 +503,7 @@ export function TrafficProxyTool() {
           )}
 
           <div className="grid min-[1500px]:grid-cols-2 gap-3">
-            <div className="border border-line-soft max-h-[420px] overflow-auto" ref={listRef}>
+            <div className="border border-line-soft max-h-[560px] overflow-auto" ref={listRef}>
               <table className="w-full text-[11.5px]">
                 <thead className="sticky top-0 bg-panel-2 text-muted">
                   <tr>
@@ -457,31 +548,35 @@ export function TrafficProxyTool() {
               )}
             </div>
 
-            <div className="border border-line-soft bg-panel-2 min-h-[200px]">
+            <div className="border border-line-soft bg-panel-2 min-h-[200px] max-h-[560px] overflow-auto">
               {selected ? (
                 <SessionDetail session={selected} l={l} httpApi={httpApi} proxyPort={state?.port ?? DEFAULT_PORT} proxyRunning={running} />
               ) : (
-                <div className="px-3 py-6 text-center text-[12px] text-muted">{l.detail.title}</div>
+                <div className="px-3 py-6 text-center text-[12px] text-muted">{l.sessions.detailHint}</div>
               )}
             </div>
           </div>
         </div>
       </Panel>
+      )}
     </div>
+  )
+}
+
+/* ================= 顶栏状态徽标 ================= */
+
+function Badge({ ok, title, children }: { ok: boolean; title?: string; children: React.ReactNode }) {
+  return (
+    <span
+      title={title}
+      className={`px-1.5 py-0.5 text-[10.5px] border whitespace-nowrap ${ok ? 'border-phosphor/40 text-phosphor' : 'border-line-soft text-muted'}`}
+    >
+      <span className={ok ? 'text-phosphor' : 'text-muted/70'}>●</span> {children}
+    </span>
   )
 }
 
 /* ================= 根证书 ================= */
-
-function CaSummary({ ca, l }: { ca: CaInfo | null; l: L }) {
-  if (!ca) return <div className="text-[11.5px] text-amber">{l.status.caMissing}</div>
-  return (
-    <div className="space-y-0.5 text-[11px] text-muted">
-      <div><span className="text-muted">{l.ca.subject}: </span><span className="text-bright break-all">{ca.subject}</span></div>
-      <div><span className="text-muted">{l.ca.fingerprint}: </span><span className="text-bright break-all text-[10.5px]">{ca.fingerprintSha256}</span></div>
-    </div>
-  )
-}
 
 function CaPanel({ ca, l, api, onError, onNotice, onUpdate }: {
   ca: CaInfo | null

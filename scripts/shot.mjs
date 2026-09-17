@@ -8,6 +8,10 @@
  *   npm run shot -- "#http-client"          # 截图到 /tmp/shot-<n>-<WxH>.png
  *   DTB_NO_SANDBOX=1 npm run shot          # 受限环境（CI 容器 / 受限 shell）起窗口要加
  *   DTB_SHOT_SIZES=1600x1000,2560x1440     # 自定义窗口尺寸
+ *   DTB_SHOT_PREP="<js>"                   # 截图前先执行的 JS（例如点开某个页签）
+ *
+ *   例：DTB_SHOT_PREP="[...document.querySelectorAll('button')].find((b)=>b.textContent==='设置').click()" \
+ *       npm run shot -- "#traffic-proxy"
  *
  * 若 shell 里继承了 ELECTRON_RUN_AS_NODE=1（某些受限环境会），Electron 会退化成纯 Node，
  * 报 `does not provide an export named 'BrowserWindow'` —— 用 env -u ELECTRON_RUN_AS_NODE 去掉它。
@@ -58,6 +62,10 @@ async function shoot(win, width, height, index) {
   await win.webContents.executeJavaScript("location.hash = ''")
   await new Promise((r) => setTimeout(r, 250))
   await win.webContents.executeJavaScript(`location.hash = ${JSON.stringify(target)}`)
+  await new Promise((r) => setTimeout(r, 400))
+  if (process.env.DTB_SHOT_PREP) {
+    await win.webContents.executeJavaScript(process.env.DTB_SHOT_PREP).catch((err) => console.log(`   prep 失败：${err.message}`))
+  }
   await new Promise((r) => setTimeout(r, 1100))
 
   const info = await report(win)

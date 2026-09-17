@@ -3,6 +3,12 @@
 
 export const proxyL = {
   zh: {
+    tabs: { sessions: '会话', rules: '规则', settings: '设置' },
+    tabsHint: {
+      sessions: '抓到的请求实时出现在这里，点任意一行看详情、编辑重发',
+      rules: '按域名与路径匹配，改包 / 伪造 / 阻断 / 断点，配置一次长期生效',
+      settings: '端口、HTTPS 解密、系统代理、根证书、导出 —— 一般只需设置一次',
+    },
     status: {
       running: '抓包中',
       stopped: '已停止',
@@ -30,6 +36,11 @@ export const proxyL = {
       exportJson: '导出 JSON',
       exportHar: '导出 HAR',
       exported: (n: number) => `已导出 ${n} 条会话`,
+    },
+    settings: {
+      captureTitle: '抓包参数',
+      dataTitle: '数据导出',
+      portLocked: '停止代理后可修改端口',
     },
     ca: {
       title: '根证书',
@@ -87,6 +98,14 @@ export const proxyL = {
       modified: '已改写',
       follow: '自动滚动',
       notFollowed: '已暂停滚动',
+      pause: '暂停刷新',
+      resume: '继续刷新',
+      pausedHint: (n: number) => `已暂停刷新，期间新增 ${n} 条会话（点「继续刷新」后显示）`,
+      clear: '清空',
+      clearAsk: (n: number) => `确认清空 ${n} 条会话？`,
+      confirmYes: '确认',
+      cancel: '取消',
+      detailHint: '点左侧任意一行查看请求 / 响应详情',
     },
     detail: {
       title: '会话详情',
@@ -209,6 +228,12 @@ export const proxyL = {
     },
   },
   en: {
+    tabs: { sessions: 'Sessions', rules: 'Rules', settings: 'Settings' },
+    tabsHint: {
+      sessions: 'Captured requests stream in here — click a row for details, edit and resend',
+      rules: 'Match by host and path: rewrite, mock, block, breakpoint — set once, stays active',
+      settings: 'Port, HTTPS decryption, system proxy, root CA, export — usually a one-time setup',
+    },
     status: {
       running: 'Capturing',
       stopped: 'Stopped',
@@ -236,6 +261,11 @@ export const proxyL = {
       exportJson: 'Export JSON',
       exportHar: 'Export HAR',
       exported: (n: number) => `Exported ${n} sessions`,
+    },
+    settings: {
+      captureTitle: 'Capture setup',
+      dataTitle: 'Export',
+      portLocked: 'Stop the proxy to change the port',
     },
     ca: {
       title: 'Root certificate',
@@ -293,6 +323,14 @@ export const proxyL = {
       modified: 'edited',
       follow: 'Auto scroll',
       notFollowed: 'Scroll paused',
+      pause: 'Pause stream',
+      resume: 'Resume stream',
+      pausedHint: (n: number) => `Stream paused — ${n} new session(s) captured (shown after resuming)`,
+      clear: 'Clear',
+      clearAsk: (n: number) => `Clear ${n} session(s)?`,
+      confirmYes: 'Confirm',
+      cancel: 'Cancel',
+      detailHint: 'Click a row on the left to inspect the request / response',
     },
     detail: {
       title: 'Session detail',
