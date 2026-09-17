@@ -27,6 +27,7 @@
     "i18n:check": "esbuild src/lib/locales/*.ts --outdir=node_modules/.cache/locales --format=esm --out-extension:.js=.mjs --log-level=error && node scripts/check-locale-parity.mjs node_modules/.cache/locales",
     "smoke:main": "node scripts/check-main-imports.mjs out/main/index.js out/preload/index.cjs",
     "smoke:preload": "electron scripts/check-preload.mjs",
+    "shot": "electron scripts/shot.mjs",
     "smoke:render": "esbuild scripts/smoke-render.tsx --bundle --platform=node --format=esm --outfile=node_modules/.cache/smoke.mjs --loader:.tsx=tsx --jsx=automatic --log-level=error --external:qrcode --external:react --external:react-dom --external:react/jsx-runtime && node node_modules/.cache/smoke.mjs",
     "smoke:proxy": "esbuild scripts/smoke-proxy.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/smoke-proxy.mjs --log-level=error --external:node-forge && node node_modules/.cache/smoke-proxy.mjs",
     "smoke:systemproxy": "esbuild scripts/check-systemproxy.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/check-systemproxy.mjs --log-level=error && node node_modules/.cache/check-systemproxy.mjs"
