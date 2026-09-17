@@ -56,6 +56,98 @@ interface Received {
   body: string
 }
 
+/** 最小 SOCKS5 服务（无认证 / 用户名密码认证），用于验证客户端的 SOCKS 通道 */
+function startSocksServer(opts: { user?: string; pass?: string } = {}): Promise<{ port: number; close: () => Promise<void> }> {
+  const clients = new Set<net.Socket>()
+  const server = net.createServer((socket) => {
+    clients.add(socket)
+    socket.on('close', () => clients.delete(socket))
+    let stage: 'greet' | 'auth' | 'req' | 'tunnel' = 'greet'
+    let buf = Buffer.alloc(0)
+    const upstreams: net.Socket[] = []
+    socket.on('error', () => { for (const u of upstreams) u.destroy() })
+    const onData = (chunk: Buffer): void => {
+      if (stage === 'tunnel') return
+      buf = Buffer.concat([buf, chunk])
+      if (stage === 'greet') {
+        if (buf.length < 2 + buf[1]) return
+        const methods = buf.subarray(2, 2 + buf[1])
+        buf = buf.subarray(2 + buf[1])
+        if (opts.user) {
+          if (!methods.includes(0x02)) { socket.end(Buffer.from([0x05, 0xff])); return }
+          socket.write(Buffer.from([0x05, 0x02]))
+          stage = 'auth'
+          return
+        }
+        if (!methods.includes(0x00)) { socket.end(Buffer.from([0x05, 0xff])); return }
+        socket.write(Buffer.from([0x05, 0x00]))
+        stage = 'req'
+        return
+      }
+      if (stage === 'auth') {
+        if (buf.length < 2) return
+        const ulen = buf[1]
+        if (buf.length < 2 + ulen + 1) return
+        const plen = buf[2 + ulen]
+        if (buf.length < 3 + ulen + plen) return
+        const uname = buf.subarray(2, 2 + ulen).toString()
+        const pass = buf.subarray(3 + ulen, 3 + ulen + plen).toString()
+        buf = buf.subarray(3 + ulen + plen)
+        const ok = uname === opts.user && pass === opts.pass
+        socket.write(Buffer.from([0x01, ok ? 0x00 : 0x01]))
+        if (!ok) { socket.end(); return }
+        stage = 'req'
+        return
+      }
+      // CONNECT 请求
+      if (buf.length < 5) return
+      const atyp = buf[3]
+      let consumed = 0
+      let host = ''
+      if (atyp === 0x01) {
+        consumed = 4 + 4 + 2
+        if (buf.length < consumed) return
+        host = Array.from(buf.subarray(4, 8)).join('.')
+      } else if (atyp === 0x03) {
+        const dlen = buf[4]
+        consumed = 4 + 1 + dlen + 2
+        if (buf.length < consumed) return
+        host = buf.subarray(5, 5 + dlen).toString()
+      } else {
+        socket.end(Buffer.from([0x05, 0x08, 0x00, 0x01, 0, 0, 0, 0, 0, 0]))
+        return
+      }
+      const port = buf.readUInt16BE(consumed - 2)
+      const rest = buf.subarray(consumed)
+      buf = Buffer.alloc(0)
+      const upstream = net.connect(port, host, () => {
+        stage = 'tunnel'
+        socket.off('data', onData)
+        socket.write(Buffer.concat([Buffer.from([0x05, 0x00, 0x00, 0x01, 0, 0, 0, 0, 0, 0]), rest]))
+        upstream.pipe(socket)
+        socket.pipe(upstream)
+      })
+      upstreams.push(upstream)
+      upstream.on('error', () => socket.end(Buffer.from([0x05, 0x04, 0x00, 0x01, 0, 0, 0, 0, 0, 0])))
+    }
+    socket.on('data', onData)
+  })
+  return new Promise((resolve) => {
+    server.listen(0, '127.0.0.1', () => {
+      const addr = server.address()
+      resolve({
+        port: typeof addr === 'object' && addr ? addr.port : 0,
+        // 关闭时主动断开所有连接，否则 server.close() 会一直等连接释放（表现为测试挂住）
+        close: () => new Promise<void>((r) => {
+          for (const c of clients) c.destroy()
+          clients.clear()
+          server.close(() => r())
+        }),
+      })
+    })
+  })
+}
+
 const main = async (): Promise<void> => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'devtoolbox-proxy-'))
   const caDir = path.join(tmp, 'ca')
@@ -268,7 +360,64 @@ const main = async (): Promise<void> => {
   const replayViaProxy = await performRequest({ method: 'GET', url: `http://127.0.0.1:${upstreamPort}/echo?replay=2`, proxy: proxyUrl })
   check('经代理重发成功', replayViaProxy.ok && replayViaProxy.viaProxy && replayViaProxy.status === 200)
 
-  console.log('\n[11] 引擎细节')
+  console.log('\n[11] 代理形态：HTTP 认证 / SOCKS5 / SOCKS5 认证')
+  const authSessionCount = sessions.length
+  await performRequest({
+    method: 'GET',
+    url: `http://127.0.0.1:${upstreamPort}/echo?authproxy=1`,
+    proxy: `http://alice:s3cret@127.0.0.1:${proxyPort}`,
+  })
+  const authSession = sessions[authSessionCount]
+  const proxyAuth = authSession?.reqHeaders.find(([k]) => k.toLowerCase() === 'proxy-authorization')?.[1] ?? ''
+  check('带账号密码的 HTTP 代理会下发 Proxy-Authorization', proxyAuth === `Basic ${Buffer.from('alice:s3cret').toString('base64')}`, proxyAuth || '(缺失)')
+
+  const socks = await startSocksServer()
+  const socksHttp = await performRequest({
+    method: 'GET',
+    url: `http://127.0.0.1:${upstreamPort}/echo?socks=plain`,
+    proxy: `socks5://127.0.0.1:${socks.port}`,
+  })
+  check('明文 HTTP 经 SOCKS5 成功', socksHttp.ok && socksHttp.status === 200 && decode(socksHttp.bodyBase64).includes('socks=plain'), `status=${socksHttp.status} ${socksHttp.error ?? ''}`)
+  const socksHttps = await performRequest({
+    method: 'GET',
+    url: `https://localhost:${tlsPort}/socks`,
+    proxy: `socks5://127.0.0.1:${socks.port}`,
+    rejectUnauthorized: false,
+  })
+  check('HTTPS 经 SOCKS5（套 TLS）成功', socksHttps.ok && socksHttps.status === 200 && decode(socksHttps.bodyBase64).includes('"secure":true'), `status=${socksHttps.status} ${socksHttps.error ?? ''}`)
+  check('SOCKS5 通道下 TLS 信息仍可读', !!socksHttps.tls?.protocol, socksHttps.tls?.protocol ?? '')
+
+  const socksAuth = await startSocksServer({ user: 'bob', pass: 'hunter2' })
+  const socksOk = await performRequest({
+    method: 'GET',
+    url: `http://127.0.0.1:${upstreamPort}/echo?socks=auth`,
+    proxy: `socks5://bob:hunter2@127.0.0.1:${socksAuth.port}`,
+  })
+  check('SOCKS5 用户名密码认证通过', socksOk.ok && socksOk.status === 200, `status=${socksOk.status} ${socksOk.error ?? ''}`)
+  const socksBad = await performRequest({
+    method: 'GET',
+    url: `http://127.0.0.1:${upstreamPort}/echo`,
+    proxy: `socks5://bob:wrong@127.0.0.1:${socksAuth.port}`,
+  })
+  check('SOCKS5 认证失败有明确报错', !socksBad.ok && /认证失败/.test(socksBad.error ?? ''), socksBad.error ?? '')
+
+  const socksDown = await performRequest({
+    method: 'GET',
+    url: `http://127.0.0.1:${upstreamPort}/echo`,
+    proxy: `socks5://127.0.0.1:${await freePort()}`,
+  })
+  check('SOCKS5 端口不可用时如实报错', !socksDown.ok && !!socksDown.errorCode, `${socksDown.errorCode} ${socksDown.error ?? ''}`)
+
+  const httpProxyDown = await performRequest({
+    method: 'GET',
+    url: `http://127.0.0.1:${upstreamPort}/echo`,
+    proxy: `http://127.0.0.1:${await freePort()}`,
+  })
+  check('HTTP 代理端口不可用时如实报错', !httpProxyDown.ok && !!httpProxyDown.errorCode, `${httpProxyDown.errorCode} ${httpProxyDown.error ?? ''}`)
+  await socks.close()
+  await socksAuth.close()
+
+  console.log('\n[12] 引擎细节')
   const r8 = await performRequest({ method: 'GET', url: `http://127.0.0.1:${upstreamPort}/redirect`, followRedirects: true })
   check('重定向自动跟随并记录链路', r8.ok && r8.status === 200 && r8.redirects.length === 1 && decode(r8.bodyBase64).includes('followed=1'), `status=${r8.status} chain=${r8.redirects.length}`)
   const r9 = await performRequest({ method: 'GET', url: `http://127.0.0.1:${upstreamPort}/redirect`, followRedirects: false })
@@ -279,7 +428,7 @@ const main = async (): Promise<void> => {
   const badUrl = await performRequest({ method: 'GET', url: 'ftp://example.com/x' })
   check('非 http(s) 协议被拒绝', !badUrl.ok && badUrl.errorCode === 'EBADPROTOCOL', badUrl.error ?? '')
 
-  console.log('\n[12] 停止后释放端口')
+  console.log('\n[13] 停止后释放端口')
   const usedPort = proxy.port
   await proxy.stop()
   const stillOpen = await new Promise<boolean>((resolve) => {
@@ -303,3 +452,10 @@ main().catch((err) => {
   console.error('验证脚本异常终止：', err)
   process.exit(1)
 })
+
+// 兜底：任何一步挂住都要以失败收场，而不是让调用方看到「莫名被杀」
+const guard = setTimeout(() => {
+  console.error('\n验证脚本超时（120s），有步骤未释放资源或陷入等待')
+  process.exit(1)
+}, 120_000)
+guard.unref()

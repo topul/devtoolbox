@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react'
 import MatrixRain from './components/MatrixRain'
 import { TOOLS, CATEGORIES, searchTools, ToolDef, CategoryId } from './lib/registry'
 import { useTheme } from './lib/theme'
+import { useUiZoom } from './lib/uiZoom'
 import { useI18n, I18nProvider } from './lib/i18n'
 import { getVersion } from './lib/version'
 import { UpdateToast, useUpdater } from './components/Updater'
@@ -34,6 +35,7 @@ function AppInner() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [version, setVersion] = useState('')
   const { theme, toggleTheme } = useTheme()
+  const zoom = useUiZoom()
   const updater = useUpdater()
   const searchRef = React.useRef<HTMLInputElement>(null)
 
@@ -146,6 +148,14 @@ function AppInner() {
             <span><span className="text-danger/80">⚠</span> {t.disclaimer}</span>
             <span className="flex gap-1">
               <button
+                onClick={zoom.cycle}
+                className="text-muted hover:text-phosphor border border-line-soft hover:border-phosphor/40 px-2 py-0.5 text-[10px] transition-colors"
+                aria-label={t.zoomTip}
+                title={t.zoomTip}
+              >
+                ⇕ {zoom.percent || t.zoomAuto}
+              </button>
+              <button
                 onClick={() => setLocale(locale === 'zh' ? 'en' : 'zh')}
                 className="text-muted hover:text-phosphor border border-line-soft hover:border-phosphor/40 px-2 py-0.5 text-[10px] transition-colors"
                 aria-label={t.switchLangTip}
@@ -182,7 +192,7 @@ function AppInner() {
       )}
 
       {/* ============ Main ============ */}
-      <main className="flex-1 min-w-0">
+      <main className="flex-1 min-w-0 content-zoom">
         {/* mobile topbar */}
         <div className="lg:hidden sticky top-0 z-30 flex items-center gap-1 border-b border-line bg-panel/95 backdrop-blur px-2 py-1.5 pt-safe">
           <button onClick={() => setSidebarOpen(true)} className="text-phosphor text-lg px-3 py-1" aria-label={t.openMenu}>☰</button>
@@ -230,7 +240,7 @@ function HomeView({ grouped, onOpen, query }: {
       {/* hero */}
       <div className="relative border-b border-line overflow-hidden">
         <MatrixRain opacity={0.16} />
-        <div className="relative px-4 md:px-10 py-8 md:py-14 max-w-5xl">
+        <div className="relative w-full mx-auto max-w-[1720px] px-4 md:px-8 xl:px-10 py-8 md:py-14">
           <pre className="hidden md:block text-phosphor/90 text-[9px] leading-[1.15] glow select-none whitespace-pre">{ASCII_LOGO}</pre>
           <h1 className="md:hidden text-3xl font-bold text-phosphor glow">&gt;_ BUGBUCKET.BOX</h1>
           <p className="mt-4 text-[13px] text-muted max-w-xl leading-relaxed">
@@ -245,7 +255,7 @@ function HomeView({ grouped, onOpen, query }: {
       </div>
 
       {/* tool grid */}
-      <div className="px-4 md:px-10 py-6 md:py-8 pb-12 pb-safe max-w-6xl space-y-8">
+      <div className="w-full mx-auto max-w-[1720px] px-4 md:px-8 xl:px-10 py-6 md:py-8 pb-12 pb-safe space-y-8">
         {[...grouped.entries()].map(([cat, items]) => (
           <section key={cat}>
             <div className="flex items-baseline gap-3 mb-3">
@@ -255,7 +265,7 @@ function HomeView({ grouped, onOpen, query }: {
               <span className="text-[10px] text-muted/60">{t.toolsCount(items.length)}</span>
               <div className="flex-1 border-t border-line-soft" />
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-2.5">
               {items.map(t => (
                 <button
                   key={t.id}
@@ -295,7 +305,7 @@ function ToolView({ tool, onBack }: { tool: ToolDef; onBack: () => void }) {
   const { catName, toolName, toolDesc } = useI18n()
   const C = tool.component
   return (
-    <div className="fade-in px-4 md:px-10 py-4 md:py-6 pb-12 pb-safe max-w-6xl">
+    <div className="fade-in w-full mx-auto max-w-[1720px] px-4 md:px-8 xl:px-10 py-4 md:py-6 pb-12 pb-safe">
       <div className="flex items-center gap-2 md:gap-3 text-[12px] text-muted mb-1">
         <button onClick={onBack} className="text-phosphor/70 hover:text-phosphor px-1.5 py-0.5 border border-line-soft lg:border-0 !min-h-0">← ~/</button>
         <span className="shrink-0">{catName(tool.category)}</span>

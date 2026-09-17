@@ -24,12 +24,13 @@ export function Panel({ title, children, right, className = '' }: {
   )
 }
 
-export function Btn({ children, onClick, variant = 'default', disabled, className = '' }: {
+export function Btn({ children, onClick, variant = 'default', disabled, className = '', title }: {
   children: React.ReactNode
   onClick?: () => void
   variant?: 'default' | 'primary' | 'danger' | 'ghost'
   disabled?: boolean
   className?: string
+  title?: string
 }) {
   const base = 'px-3 py-1.5 text-[12px] border transition-colors select-none disabled:opacity-40 disabled:cursor-not-allowed '
   const styles = {
@@ -39,7 +40,7 @@ export function Btn({ children, onClick, variant = 'default', disabled, classNam
     ghost: 'border-transparent text-muted hover:text-phosphor hover:border-line',
   }
   return (
-    <button className={base + styles[variant] + ' ' + className} onClick={onClick} disabled={disabled}>
+    <button className={base + styles[variant] + ' ' + className} onClick={onClick} disabled={disabled} title={title}>
       {children}
     </button>
   )

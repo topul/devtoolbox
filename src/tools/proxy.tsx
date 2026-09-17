@@ -411,7 +411,7 @@ export function TrafficProxyTool() {
             </div>
           )}
 
-          <div className="grid lg:grid-cols-2 gap-3">
+          <div className="grid min-[1500px]:grid-cols-2 gap-3">
             <div className="border border-line-soft max-h-[420px] overflow-auto" ref={listRef}>
               <table className="w-full text-[11.5px]">
                 <thead className="sticky top-0 bg-panel-2 text-muted">

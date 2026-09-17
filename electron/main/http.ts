@@ -56,11 +56,103 @@ export function parseProxyUrl(raw: string | null | undefined): URL | null {
   if (!s) return null
   try {
     const u = new URL(s.includes('://') ? s : `http://${s}`)
-    if (!u.port) u.port = u.protocol === 'https:' ? '443' : '80'
+    if (!u.port) u.port = /^socks/i.test(u.protocol) ? '1080' : u.protocol === 'https:' ? '443' : '80'
     return u
   } catch {
     return null
   }
+}
+
+/** 是否 SOCKS 代理（socks5 / socks5h / socks） */
+export function isSocksProxy(url: URL | null): boolean {
+  return !!url && /^socks/i.test(url.protocol)
+}
+
+/** SOCKS5 CONNECT 请求（域名形式交给代理解析，等价 socks5h，避免本地 DNS 污染） */
+function socks5ConnectRequest(host: string, port: number): Buffer {
+  const isIpv4 = /^\d{1,3}(\.\d{1,3}){3}$/.test(host)
+  const head = Buffer.from([0x05, 0x01, 0x00, isIpv4 ? 0x01 : 0x03])
+  if (isIpv4) {
+    return Buffer.concat([head, Buffer.from(host.split('.').map((n) => Number(n))), Buffer.from([(port >> 8) & 0xff, port & 0xff])])
+  }
+  const name = Buffer.from(host, 'utf8')
+  return Buffer.concat([head, Buffer.from([name.length]), name, Buffer.from([(port >> 8) & 0xff, port & 0xff])])
+}
+
+/**
+ * SOCKS5 握手（无认证或用户名密码认证），返回已连到目标的裸 socket。
+ * 连上之后这个 socket 对上层就是「透明 TCP 通道」——http 直接写报文，https 再套一层 TLS。
+ */
+function openSocksTunnel(proxy: URL, host: string, port: number, timeoutMs: number): Promise<net.Socket> {
+  return new Promise((resolve, reject) => {
+    const socket = net.connect({ host: proxy.hostname, port: Number(proxy.port) })
+    const user = decodeURIComponent(proxy.username || '')
+    const pass = decodeURIComponent(proxy.password || '')
+    let stage: 'greet' | 'auth' | 'connect' = 'greet'
+    let buf = Buffer.alloc(0)
+
+    const fail = (err: Error): void => {
+      socket.destroy()
+      reject(err)
+    }
+    socket.setTimeout(timeoutMs, () => fail(new Error(`SOCKS 代理超时 (${timeoutMs}ms)`)))
+    socket.once('error', fail)
+
+    socket.once('connect', () => {
+      const methods = user ? [0x00, 0x02] : [0x00]
+      socket.write(Buffer.from([0x05, methods.length, ...methods]))
+    })
+
+    // 注意：握手成功后必须摘掉本监听器再 unshift —— 否则 unshift 会再次触发 data 事件，
+    // 被当成 SOCKS 报文重新解析并再次 unshift，形成死循环（表现为进程被 OOM kill）。
+    const onData = (chunk: Buffer): void => {
+      buf = Buffer.concat([buf, chunk])
+      if (stage === 'greet') {
+        if (buf.length < 2) return
+        if (buf[0] !== 0x05) return fail(new Error('SOCKS 代理协议版本不符'))
+        const method = buf[1]
+        buf = buf.subarray(2)
+        if (method === 0xff) return fail(new Error('SOCKS 代理拒绝了所有认证方式'))
+        if (method === 0x02) {
+          stage = 'auth'
+          const u = Buffer.from(user, 'utf8')
+          const p = Buffer.from(pass, 'utf8')
+          socket.write(Buffer.concat([Buffer.from([0x01, u.length]), u, Buffer.from([p.length]), p]))
+          return
+        }
+        stage = 'connect'
+        socket.write(socks5ConnectRequest(host, port))
+        return
+      }
+      if (stage === 'auth') {
+        if (buf.length < 2) return
+        const ok = buf[1] === 0x00
+        buf = buf.subarray(2)
+        if (!ok) return fail(new Error('SOCKS 代理用户名密码认证失败'))
+        stage = 'connect'
+        socket.write(socks5ConnectRequest(host, port))
+        return
+      }
+      // connect 应答：VER REP RSV ATYP BND.ADDR BND.PORT
+      if (buf.length < 5) return
+      if (buf[1] !== 0x00) {
+        const reason = ['成功', '一般性失败', '规则不允许', '网络不可达', '主机不可达', '连接被拒', 'TTL 过期', '命令不支持', '地址类型不支持'][buf[1]] ?? `代码 ${buf[1]}`
+        return fail(new Error(`SOCKS 代理无法连接目标：${reason}`))
+      }
+      const atyp = buf[3]
+      const addrLen = atyp === 0x01 ? 4 : atyp === 0x04 ? 16 : buf[4] + 1
+      const total = 4 + addrLen + 2
+      if (buf.length < total) return
+      const rest = buf.subarray(total)
+      buf = Buffer.alloc(0)
+      socket.off('data', onData)
+      socket.setTimeout(0)
+      socket.removeListener('error', fail)
+      if (rest.length) socket.unshift(rest)
+      resolve(socket)
+    }
+    socket.on('data', onData)
+  })
 }
 
 /** 有序头列表 → Node 请求头对象；重名合并为数组，保持可读 */
@@ -196,12 +288,15 @@ function openTunnel(
   return new Promise((resolve, reject) => {
     const started = Date.now()
     let connectMs = 0
+    const connectHeaders: Record<string, string> = { Host: `${host}:${port}` }
+    const auth = proxyAuthHeader(proxy)
+    if (auth) connectHeaders[auth[0]] = auth[1]
     const req = http.request({
       host: proxy.hostname,
       port: Number(proxy.port),
       method: 'CONNECT',
       path: `${host}:${port}`,
-      headers: { Host: `${host}:${port}` },
+      headers: connectHeaders,
       agent: false,
       timeout: timeoutMs,
     })
@@ -235,14 +330,21 @@ function openTunnel(
 }
 
 /** 把已建立的隧道 socket 交给 node 的 http 客户端复用（避免自己写 HTTP 报文解析） */
-function tunnelAgent(socket: tls.TLSSocket): http.Agent {
+function tunnelAgent(socket: net.Socket): http.Agent {
   const agent = new http.Agent({ keepAlive: false, maxSockets: 1 })
   // createConnection 是 node 内部约定回调，类型声明与实现签名不一致，这里显式改写
   const patched = agent as unknown as {
-    createConnection: (options: unknown, callback: (err: Error | null, stream?: tls.TLSSocket) => void) => void
+    createConnection: (options: unknown, callback: (err: Error | null, stream?: net.Socket) => void) => void
   }
   patched.createConnection = (_options, callback) => callback(null, socket)
   return agent
+}
+
+/** 代理认证头（http://user:pass@host:port 形式） */
+function proxyAuthHeader(proxy: URL | null): [string, string] | null {
+  if (!proxy || !proxy.username) return null
+  const raw = `${decodeURIComponent(proxy.username)}:${decodeURIComponent(proxy.password || '')}`
+  return ['Proxy-Authorization', `Basic ${Buffer.from(raw, 'utf8').toString('base64')}`]
 }
 
 /** 发出单跳请求（不含重定向） */
@@ -311,9 +413,56 @@ function sendHop(o: HopOptions): Promise<HopResult> {
       reject(Object.assign(err, { tls: tlsInfo }))
     }
 
+    if (proxy && isSocksProxy(proxy)) {
+      // SOCKS5：先握手开一条到目标的透明 TCP 通道，https 再在通道里套 TLS
+      const targetPort = Number(url.port || (isHttps ? 443 : 80))
+      openSocksTunnel(proxy, url.hostname, targetPort, o.timeoutMs)
+        .then((raw) => {
+          const sendOver = (socket: net.Socket): void => {
+            const req = http.request({
+              host: url.hostname,
+              port: targetPort,
+              method,
+              path: url.pathname + url.search,
+              headers,
+              agent: tunnelAgent(socket),
+              timeout: o.timeoutMs,
+              setHost: true,
+            })
+            req.on('timeout', () => req.destroy(Object.assign(new Error(`请求超时 (${o.timeoutMs}ms)`), { code: 'ETIMEDOUT' })))
+            req.on('error', handleError)
+            req.on('response', collect)
+            finish(req)
+          }
+          if (!isHttps) {
+            sendOver(raw)
+            return
+          }
+          const tlsStarted = Date.now()
+          const tlsSocket = tls.connect({
+            socket: raw,
+            servername: url.hostname,
+            rejectUnauthorized: o.rejectUnauthorized,
+            ALPNProtocols: ['http/1.1'],
+          })
+          tlsSocket.once('secureConnect', () => {
+            tlsMs = Date.now() - tlsStarted
+            tlsInfo = describeTls(tlsSocket)
+            sendOver(tlsSocket)
+          })
+          tlsSocket.once('error', handleError)
+        })
+        .catch(handleError)
+      return
+    }
+
     if (proxy && !isHttps) {
       // 明文 http 经代理：请求行使用绝对 URI
       const headersWithHost = { ...headers }
+      const auth = proxyAuthHeader(proxy)
+      if (auth && !Object.keys(headersWithHost).some((k) => k.toLowerCase() === auth[0].toLowerCase())) {
+        headersWithHost[auth[0]] = auth[1]
+      }
       if (!Object.keys(headersWithHost).some((k) => k.toLowerCase() === 'host')) {
         headersWithHost.Host = url.host
       }

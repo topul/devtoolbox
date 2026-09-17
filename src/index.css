@@ -144,6 +144,16 @@ textarea:focus, input:focus, select:focus, button:focus-visible {
   outline-offset: -1px;
 }
 
+/* ==================== 宽屏适配 ==================== */
+
+/* 大屏上等比放大内容：字号与间距一起变大，避免「元素偏小」；
+   宽度限制在 App.tsx 的容器上（max-w + mx-auto），这里只管缩放。 */
+.content-zoom { zoom: var(--ui-zoom, 1); }
+@media (min-width: 1440px) { :root { --ui-zoom: 1.06; } }
+@media (min-width: 1600px) { :root { --ui-zoom: 1.1; } }
+@media (min-width: 1900px) { :root { --ui-zoom: 1.16; } }
+@media (min-width: 2300px) { :root { --ui-zoom: 1.22; } }
+
 /* ==================== Animations ==================== */
 
 @keyframes blink {

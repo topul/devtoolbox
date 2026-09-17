@@ -28,6 +28,8 @@ export interface UIStrings {
   themeLight: string
   themeDark: string
   searchToolsAria: string
+  zoomAuto: string
+  zoomTip: string
   heroChips: string[]
   updateChecking: string
   updateNone: string
@@ -62,6 +64,8 @@ export const UI: Record<Locale, UIStrings> = {
     themeLight: '◐ 亮',
     themeDark: '◑ 暗',
     searchToolsAria: '搜索工具',
+    zoomAuto: '自动',
+    zoomTip: '界面缩放：自动 = 跟随屏幕宽度，宽屏自动放大',
     heroChips: ['JSON', 'JWT', '反弹 Shell', 'Payload', '哈希', '子网'],
     // 自动升级
     updateChecking: '正在检查更新...',
@@ -95,6 +99,8 @@ export const UI: Record<Locale, UIStrings> = {
     themeLight: '◐ Light',
     themeDark: '◑ Dark',
     searchToolsAria: 'Search tools',
+    zoomAuto: 'Auto',
+    zoomTip: 'UI scale: Auto follows screen width and enlarges on large displays',
     heroChips: ['JSON', 'JWT', 'Reverse Shell', 'Payload', 'Hash', 'Subnet'],
     updateChecking: 'Checking for updates...',
     updateNone: 'You are up to date',

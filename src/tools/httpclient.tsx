@@ -69,6 +69,7 @@ const BODY_CT: Record<BodyMode, string> = {
 
 const HISTORY_KEY = 'devtoolbox-http-history'
 const SAVED_KEY = 'devtoolbox-http-saved'
+const DRAFT_KEY = 'devtoolbox-http-draft'
 const MAX_HISTORY = 50
 
 /** 词条对象类型：zh / en 结构一致，取 zh 分支即可 */
@@ -159,15 +160,17 @@ function HeaderSuggestList() {
 
 export function HttpClientTool() {
   const l = useLocalized(httpClientL)
-  const [method, setMethod] = useState('GET')
-  const [url, setUrl] = useState('https://httpbin.org/get?limit=10')
+  /** 上次未发出去的请求草稿（代理等配置随它一起记住） */
+  const [restored] = useState<Draft | null>(() => U.loadJson<Draft | null>(DRAFT_KEY, null))
+  const [method, setMethod] = useState(() => restored?.method ?? 'GET')
+  const [url, setUrl] = useState(() => restored?.url ?? 'https://httpbin.org/get?limit=10')
   const [params, setParams] = useState<Row[]>([])
-  const [headers, setHeaders] = useState<Row[]>([row('Accept', 'application/json')])
-  const [bodyMode, setBodyMode] = useState<BodyMode>('none')
-  const [bodyRaw, setBodyRaw] = useState('')
-  const [fields, setFields] = useState<Row[]>([])
-  const [auth, setAuth] = useState<AuthState>(DEFAULT_AUTH)
-  const [options, setOptions] = useState<OptState>(DEFAULT_OPTIONS)
+  const [headers, setHeaders] = useState<Row[]>(() => (restored?.headers?.length ? restored.headers : [row('Accept', 'application/json')]))
+  const [bodyMode, setBodyMode] = useState<BodyMode>(() => (restored?.bodyMode as BodyMode) ?? 'none')
+  const [bodyRaw, setBodyRaw] = useState(() => restored?.bodyRaw ?? '')
+  const [fields, setFields] = useState<Row[]>(() => restored?.fields ?? [])
+  const [auth, setAuth] = useState<AuthState>(() => restored?.auth ?? DEFAULT_AUTH)
+  const [options, setOptions] = useState<OptState>(() => ({ ...DEFAULT_OPTIONS, ...(restored?.options ?? {}) }))
   const [tab, setTab] = useState<Tab>('params')
   const [respTab, setRespTab] = useState<RespTab>('body')
   const [view, setView] = useState<ViewMode>('pretty')
@@ -186,6 +189,12 @@ export function HttpClientTool() {
       .then((s) => setProxyInfo({ running: s.running, port: s.port }))
       .catch(() => setProxyInfo(null))
   }, [])
+
+  /* ---- 当前草稿持久化：代理、超时、请求头等配置重启后仍在 ---- */
+  const draftSnapshot = useMemo(() => ({ method, url, headers, bodyMode, bodyRaw, fields, auth, options }), [method, url, headers, bodyMode, bodyRaw, fields, auth, options])
+  useEffect(() => {
+    U.saveJson(DRAFT_KEY, { ...draftSnapshot, id: 'draft', at: Date.now() })
+  }, [draftSnapshot])
 
   useEffect(() => {
     U.saveJson(HISTORY_KEY, history.slice(0, MAX_HISTORY))
@@ -361,6 +370,14 @@ export function HttpClientTool() {
     return () => window.removeEventListener('keydown', onKey)
   }, [send])
 
+  /** 一键把出口切到内置抓包代理（跑起来的话） */
+  const useBuiltinProxy = useCallback(async () => {
+    const s = await window.electronAPI?.proxy.state()
+    if (!s) return
+    setProxyInfo({ running: s.running, port: s.port })
+    setOptions((o) => ({ ...o, useProxy: true, proxy: `http://127.0.0.1:${s.port}` }))
+  }, [])
+
   const desktop = typeof window !== 'undefined' && !!window.electronAPI
 
   return (
@@ -388,6 +405,38 @@ export function HttpClientTool() {
         </Btn>
       </div>
       <div className="text-[10.5px] text-muted">{l.misc.sendTip}</div>
+
+      {/* ===== 出口代理（常驻，直连不通时直接填这里） ===== */}
+      <div className={`flex flex-col lg:flex-row lg:items-center gap-2 border px-2.5 py-2 ${options.useProxy ? 'border-phosphor/40 bg-phosphor-faint' : 'border-line-soft bg-panel-2'}`}>
+        <label className="flex items-center gap-1.5 text-[12.5px] shrink-0 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={options.useProxy}
+            onChange={(e) => setOptions((o) => ({ ...o, useProxy: e.target.checked }))}
+            className="accent-[color:var(--c-phosphor)]"
+          />
+          {l.options.proxyEnable}
+        </label>
+        <input
+          value={options.proxy}
+          onChange={(e) => setOptions((o) => ({ ...o, proxy: e.target.value, useProxy: true }))}
+          placeholder={l.options.proxyPlaceholder}
+          spellCheck={false}
+          className="flex-1 min-w-0 bg-panel border border-line-soft px-2 py-1 text-[12.5px] text-bright placeholder:text-muted/50 focus:border-phosphor/40"
+        />
+        <Btn
+          variant="ghost"
+          className="shrink-0"
+          onClick={() => void useBuiltinProxy()}
+          title={proxyInfo?.running ? l.options.capturedTip : l.options.capturedUnavailable}
+        >
+          {l.options.useCaptured}{proxyInfo?.running ? ` :${proxyInfo.port}` : ''}
+        </Btn>
+        <span className="text-[11px] text-muted">{options.useProxy ? l.options.proxyHint : l.options.proxyRemember}</span>
+      </div>
+
+      <div className="space-y-3 min-[1700px]:grid min-[1700px]:grid-cols-2 min-[1700px]:items-start min-[1700px]:gap-3 min-[1700px]:space-y-0">
+        <div className="space-y-3">
 
       {/* ===== 请求配置 ===== */}
       <Panel
@@ -529,30 +578,14 @@ export function HttpClientTool() {
               <Check label={l.options.verifyTls} checked={options.verifyTls} onChange={(v) => setOptions((o) => ({ ...o, verifyTls: v }))} />
             </div>
             {!options.verifyTls && <div className="text-[11px] text-amber">{l.options.tlsNote}</div>}
-            <div className="space-y-1.5">
-              <Check label={l.options.proxy} checked={options.useProxy} onChange={(v) => setOptions((o) => ({ ...o, useProxy: v }))} />
-              {options.useProxy && (
-                <>
-                  <Input value={options.proxy} onChange={(v) => setOptions((o) => ({ ...o, proxy: v }))} placeholder={l.options.proxyPlaceholder} />
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <Btn
-                      variant="ghost"
-                      onClick={() => { setProxyInfo(proxyInfo); void window.electronAPI?.proxy.state().then((s) => { setProxyInfo({ running: s.running, port: s.port }); setOptions((o) => ({ ...o, proxy: `http://127.0.0.1:${s.port}` })) }) }}
-                    >
-                      {l.options.useCaptured}{proxyInfo?.running ? ` :${proxyInfo.port}` : ''}
-                    </Btn>
-                    <span className="text-[11px] text-muted">
-                      {proxyInfo?.running ? l.options.capturedTip : l.options.capturedUnavailable}
-                    </span>
-                  </div>
-                </>
-              )}
-            </div>
           </div>
         )}
       </Panel>
 
       {error && <ErrorNote msg={error} />}
+        </div>
+
+        <div className="space-y-3">
 
       {/* ===== 响应 ===== */}
       {!response ? (
@@ -585,6 +618,8 @@ export function HttpClientTool() {
           />
         </Panel>
       )}
+        </div>
+      </div>
 
       {/* ===== 历史 / 收藏 ===== */}
       <HistoryPanel
