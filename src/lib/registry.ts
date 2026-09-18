@@ -1,5 +1,5 @@
 import React from 'react'
-import { TOOLS_L, CATEGORY_L, type ToolId } from './locales/registry'
+import { TOOLS_L, CATEGORY_L, SECTION_L, type ToolId } from './locales/registry'
 import { Base64Tool, UrlTool, UnicodeTool, RadixTool, HtmlEntityTool, MorseTool } from '../tools/encoding'
 import { JsonTool, SqlTool, XmlTool, MarkdownTool } from '../tools/format'
 import { UuidTool, PasswordTool, QrTool, FakeDataTool } from '../tools/generators'
@@ -13,10 +13,15 @@ import { UrlParserTool, UserAgentTool, IpIntTool, CookieTool } from '../tools/ne
 import { HttpClientTool } from '../tools/httpclient'
 import { TrafficProxyTool } from '../tools/proxy'
 import { XorTool, RotTool, VigenereTool, PrivescTool } from '../tools/offsec'
+import { McpTool } from '../tools/mcp'
+import { ChatTool } from '../tools/chat'
+import { McpInspectorTool } from '../tools/mcpclient'
+import { ToolSchemaTool } from '../tools/schema'
+import { AgentRulesTool } from '../tools/agentrules'
 
 export type CategoryId =
   | 'encoding' | 'format' | 'generators' | 'crypto' | 'text'
-  | 'datetime' | 'network' | 'http' | 'offsec' | 'reference'
+  | 'datetime' | 'network' | 'http' | 'offsec' | 'reference' | 'ai'
 
 export interface ToolDef {
   /** Stable tool id, also the key in TOOLS_L */
@@ -39,7 +44,92 @@ export const CATEGORIES: CategoryId[] = [
   'http',
   'offsec',
   'reference',
+  'ai',
 ] as const
+
+/* ================= 导航分组 ================= */
+
+/**
+ * 侧栏与首页按「组」组织，而不是直接把 11 个分类平铺出来 ——
+ * 54 个工具全摊在导航里，找东西反而变慢。
+ *
+ * 分组只影响**组织与排序**，不改变 `category` 的定义：
+ * 分类仍是工具的稳定属性（搜索、面包屑、卡片都还按它来），
+ * 这里只是给导航加一层聚合。
+ *
+ * 顺序即优先级：第一个是 AI —— 现在这个工具箱最常用的部分。
+ */
+export type SectionId = 'ai' | 'codec' | 'security' | 'network' | 'content' | 'misc'
+
+export interface SectionDef {
+  id: SectionId
+  categories: CategoryId[]
+}
+
+export const SECTIONS: SectionDef[] = [
+  { id: 'ai', categories: ['ai'] },
+  { id: 'codec', categories: ['encoding', 'format'] },
+  { id: 'security', categories: ['crypto', 'offsec'] },
+  { id: 'network', categories: ['network', 'http'] },
+  { id: 'content', categories: ['generators', 'text'] },
+  { id: 'misc', categories: ['datetime', 'reference'] },
+]
+
+/**
+ * 分类 → 分组。写成显式 `Record<CategoryId, SectionId>` 是**故意的**：
+ * 以后新增分类却忘了归组时，这里会直接编译报错，而不是让它在导航里悄悄消失。
+ */
+const SECTION_OF: Record<CategoryId, SectionId> = {
+  ai: 'ai',
+  encoding: 'codec',
+  format: 'codec',
+  crypto: 'security',
+  offsec: 'security',
+  network: 'network',
+  http: 'network',
+  generators: 'content',
+  text: 'content',
+  datetime: 'misc',
+  reference: 'misc',
+}
+
+export function sectionOf(cat: CategoryId): SectionId {
+  return SECTION_OF[cat]
+}
+
+/** 某个组下的全部工具（按组内分类顺序、组内自然顺序） */
+export function toolsInSection(id: SectionId): ToolDef[] {
+  const sec = SECTIONS.find((s) => s.id === id)
+  if (!sec) return []
+  return sec.categories.flatMap((cat) => TOOLS.filter((t) => t.category === cat))
+}
+
+/** 一个组里的工具数量（导航里显示计数用） */
+export function sectionToolCount(id: SectionId): number {
+  return toolsInSection(id).length
+}
+
+/**
+ * 导航结构自检：`SECTIONS` 与 `SECTION_OF` 是两处手写，靠它防止走样。
+ * 返回问题列表（空数组即正常）。`npm run smoke:render` 会断言它为空。
+ */
+export function verifyNavigation(): string[] {
+  const problems: string[] = []
+  const seen = new Set<CategoryId>()
+  for (const sec of SECTIONS) {
+    for (const cat of sec.categories) {
+      if (seen.has(cat)) problems.push(`分类 ${cat} 出现在多个分组里`)
+      seen.add(cat)
+      if (SECTION_OF[cat] !== sec.id) {
+        problems.push(`分类 ${cat}：SECTIONS 归入 ${sec.id}，SECTION_OF 却是 ${SECTION_OF[cat]}`)
+      }
+    }
+  }
+  for (const cat of CATEGORIES) {
+    if (!seen.has(cat)) problems.push(`分类 ${cat} 没有归入任何分组`)
+  }
+  return problems
+}
 
 export const TOOLS: ToolDef[] = [
   // Encoding
@@ -113,6 +203,12 @@ export const TOOLS: ToolDef[] = [
   { id: 'http-status', category: 'reference', keywords: ['http', '状态码', '404', '500'], component: HttpStatusTool },
   { id: 'subnet', category: 'reference', keywords: ['subnet', '子网', 'cidr', 'ip', '掩码'], component: SubnetTool },
   { id: 'chmod', category: 'reference', keywords: ['chmod', '权限', '755', 'linux'], component: ChmodTool },
+
+  // AI 接入
+  { id: 'mcp-server', category: 'ai', keywords: ['mcp', 'ai', 'agent', '智能体', '大模型', 'claude', 'cursor', '接入', '工具调用'], hot: true, component: McpTool },
+  { id: 'mcp-inspector', category: 'ai', keywords: ['mcp', 'inspector', '客户端', '连接', '调用', '工具调用', 'jsonrpc', 'stdio', '调试'], hot: true, component: McpInspectorTool },
+  { id: 'tool-schema', category: 'ai', keywords: ['schema', 'json schema', '工具定义', '函数调用', 'function calling', 'typescript', 'pydantic', 'openai', 'mcp', '转换', '校验'], hot: true, component: ToolSchemaTool },
+  { id: 'agent-rules', category: 'ai', keywords: ['agents.md', 'agents', 'cursorrules', 'claude', '规则文件', '项目说明', '扫描', '仓库结构', 'onboarding', 'ai 协作'], hot: true, component: AgentRulesTool },
 ]
 
 /**
@@ -129,6 +225,7 @@ export function searchTools(q: string): ToolDef[] {
     const haystack = [
       zh.name, zh.desc, en.name, en.desc,
       CATEGORY_L.zh[t.category], CATEGORY_L.en[t.category],
+      SECTION_L.zh[sectionOf(t.category)], SECTION_L.en[sectionOf(t.category)],
       ...t.keywords,
     ]
     return haystack.some(s => s.toLowerCase().includes(query))

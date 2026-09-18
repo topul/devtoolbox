@@ -24,6 +24,70 @@ export function Panel({ title, children, right, className = '' }: {
   )
 }
 
+/**
+ * 工具页顶部的「怎么用」引导条。
+ *
+ * 起因很具体：功能一多，页面就变成一堆面板往下堆，进来的人不知道先看哪、要干什么。
+ * 所以每个 AI 工具的开头放一段固定的三步说明 —— 先说做什么，再谈参数。
+ */
+export function ToolGuide({ title, steps, note }: {
+  title: string
+  steps: string[]
+  note?: string
+}) {
+  return (
+    <div className="border border-phosphor/25 bg-phosphor-faint/30 px-4 py-3 mb-3">
+      <div className="text-[10px] uppercase tracking-[0.2em] text-phosphor/70 mb-2 select-none">{title}</div>
+      <ol className="space-y-1.5">
+        {steps.map((s, i) => (
+          <li key={i} className="flex gap-2 text-[12.5px] text-bright leading-relaxed">
+            <span className="shrink-0 font-mono text-phosphor/70">{i + 1}.</span>
+            <span>{s}</span>
+          </li>
+        ))}
+      </ol>
+      {note && (
+        <p className="mt-2.5 pt-2 border-t border-phosphor/15 text-[11.5px] text-amber leading-relaxed">
+          <span aria-hidden>⚠ </span>{note}
+        </p>
+      )}
+    </div>
+  )
+}
+
+/**
+ * 可折叠区块：把「参考性内容」收起来，需要时再展开。
+ * 默认收起 —— 一屏里能看见的东西越少，越知道重点在哪。
+ */
+export function Collapse({ title, hint, right, defaultOpen = false, children }: {
+  title: string
+  hint?: string
+  right?: React.ReactNode
+  defaultOpen?: boolean
+  children: React.ReactNode
+}) {
+  const [open, setOpen] = useState(defaultOpen)
+  return (
+    <div className="border border-line bg-panel">
+      <div className={`flex items-center gap-2 px-3 py-2 ${open ? 'border-b border-line-soft' : ''}`}>
+        <button
+          onClick={() => setOpen((o) => !o)}
+          aria-expanded={open}
+          className="flex items-center gap-2 flex-1 min-w-0 text-left"
+        >
+          <span className="text-muted/70 text-[9px] w-2 shrink-0">{open ? '▾' : '▸'}</span>
+          <span className="text-[11px] uppercase tracking-[0.18em] text-muted select-none truncate hover:text-bright">
+            {title}
+          </span>
+          {hint && <span className="text-[10px] text-muted/50 shrink-0">{hint}</span>}
+        </button>
+        {right}
+      </div>
+      {open && <div className="p-3">{children}</div>}
+    </div>
+  )
+}
+
 export function Btn({ children, onClick, variant = 'default', disabled, className = '', title }: {
   children: React.ReactNode
   onClick?: () => void

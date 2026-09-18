@@ -253,6 +253,19 @@ function describeTls(s: tls.TLSSocket, err?: Error): TlsInfo | null {
   }
 }
 
+/**
+ * 流式消费响应：给 SSE / 逐字输出用。
+ * 提供后单跳请求不再缓冲 body，响应对象直接交给调用方，各回调用时触发。
+ */
+export interface HopStreamHooks {
+  /** 响应头到达（ttfbMs 自请求发出算起） */
+  onHeaders: (res: http.IncomingMessage, ttfbMs: number) => void
+  /** 出错；已取消也会走这里（错误码为 ABORTED，调用方自行判断是否忽略） */
+  onError: (err: Error & { code?: string; tls?: TlsInfo | null }) => void
+  /** 拿到 ClientRequest，便于外部 abort */
+  onRequest?: (req: http.ClientRequest) => void
+}
+
 interface HopOptions {
   url: URL
   method: string
@@ -263,6 +276,8 @@ interface HopOptions {
   proxy: URL | null
   passthrough: boolean
   isHttps: boolean
+  /** 存在即为流式模式 */
+  stream?: HopStreamHooks
 }
 
 interface HopResult {
@@ -377,11 +392,19 @@ function sendHop(o: HopOptions): Promise<HopResult> {
 
     const finish = (req: http.ClientRequest) => {
       req.on('response', () => { ttfbMs = Date.now() - started })
+      o.stream?.onRequest?.(req)
       if (body && body.length) req.write(body)
       req.end()
     }
 
     const collect = (res: http.IncomingMessage) => {
+      if (o.stream) {
+        // 流式：这里只交付响应头，body 由调用方边收边处理。
+        // TTFB 就地算，不依赖上面那个监听器的执行顺序。
+        o.stream.onHeaders(res, Math.max(Date.now() - started, 0))
+        res.on('error', (e) => o.stream!.onError(e as Error))
+        return
+      }
       const chunks: Buffer[] = []
       let size = 0
       res.on('data', (c: Buffer) => { chunks.push(c); size += c.length })
@@ -410,7 +433,10 @@ function sendHop(o: HopOptions): Promise<HopResult> {
     const handleError = (err: Error & { code?: string }) => {
       const s = socketRef as tls.TLSSocket | null
       if (s && typeof s.getPeerCertificate === 'function' && !tlsInfo) tlsInfo = describeTls(s, err)
-      reject(Object.assign(err, { tls: tlsInfo }))
+      const wrapped = Object.assign(err, { tls: tlsInfo })
+      // 流式模式下错误经回调转发；同时 reject，让 streamHop 能挂一个兜底的 catch 防未处理拒绝
+      if (o.stream) o.stream.onError(wrapped)
+      reject(wrapped)
     }
 
     if (proxy && isSocksProxy(proxy)) {
@@ -529,6 +555,34 @@ function sendHop(o: HopOptions): Promise<HopResult> {
     req.on('response', collect)
     finish(req)
   })
+}
+
+/**
+ * 流式发起单跳请求（不跟随重定向）。
+ * 与 performRequest 共用同一套连接选择逻辑（直连 / 明文代理 / CONNECT 隧道 / SOCKS5），
+ * 区别只是把响应体交还给调用方边收边处理 —— SSE、逐字输出这类场景用。
+ * 返回的 abort() 用于中途取消（例如用户点了「停止」）。
+ */
+export function streamHop(o: Omit<HopOptions, 'stream'>, hooks: HopStreamHooks): { abort: () => void } {
+  let reqRef: http.ClientRequest | null = null
+  void sendHop({
+    ...o,
+    stream: {
+      ...hooks,
+      onRequest: (req) => {
+        reqRef = req
+        hooks.onRequest?.(req)
+      },
+    },
+  }).catch(() => {
+    // 错误已经通过 hooks.onError 转发过一次，这里吞掉 promise 拒绝即可
+  })
+  return {
+    abort: () => {
+      // destroy 会触发 error 事件；带上 ABORTED 错误码，调用方据此区分「取消」与「真失败」
+      reqRef?.destroy(Object.assign(new Error('ABORTED'), { code: 'ABORTED' }))
+    },
+  }
 }
 
 function isRedirect(status: number): boolean {

@@ -2,15 +2,24 @@ import React, { useState, useMemo } from 'react'
 import { Panel, Btn, TA, Input, Select, ErrorNote, CopyBtn } from '../components/ui'
 import { useLocalized } from '../lib/i18n'
 import { encodingL } from '../lib/locales/encoding'
+import {
+  base64ToUtf8,
+  decodeMorse,
+  decodeUrlComponent,
+  encodeMorse,
+  encodeUrlComponent,
+  encodeUrlFull,
+  escapeUnicode,
+  htmlEntityDecode,
+  htmlEntityEncode,
+  radixConvert,
+  unescapeUnicode,
+  utf8ToBase64,
+} from '../lib/toolkit'
+
+/* 实现全部来自 src/lib/toolkit —— 与 MCP 服务端共用同一份代码，别在这里就地重写算法。 */
 
 /* ================= Base64 ================= */
-
-function utf8ToB64(s: string): string {
-  return btoa(unescape(encodeURIComponent(s)))
-}
-function b64ToUtf8(s: string): string {
-  return decodeURIComponent(escape(atob(s.replace(/\s/g, ''))))
-}
 
 export function Base64Tool() {
   const l = useLocalized(encodingL).base64
@@ -20,7 +29,7 @@ export function Base64Tool() {
   const run = (mode: 'enc' | 'dec') => {
     try {
       setErr(null)
-      setOutput(mode === 'enc' ? utf8ToB64(input) : b64ToUtf8(input))
+      setOutput(mode === 'enc' ? utf8ToBase64(input) : base64ToUtf8(input))
     } catch {
       setErr(l.err)
     }
@@ -49,9 +58,9 @@ export function UrlTool() {
   const run = (mode: 'enc' | 'encAll' | 'dec') => {
     try {
       setErr(null)
-      if (mode === 'enc') setOutput(encodeURIComponent(input))
-      else if (mode === 'encAll') setOutput(encodeURI(input))
-      else setOutput(decodeURIComponent(input))
+      if (mode === 'enc') setOutput(encodeUrlComponent(input))
+      else if (mode === 'encAll') setOutput(encodeUrlFull(input))
+      else setOutput(decodeUrlComponent(input))
     } catch {
       setErr(l.err)
     }
@@ -76,13 +85,8 @@ export function UnicodeTool() {
   const l = useLocalized(encodingL).unicode
   const [input, setInput] = useState('')
   const [output, setOutput] = useState('')
-  const toUnicode = () =>
-    setOutput(input.split('').map(c => {
-      const code = c.codePointAt(0)!
-      return code > 127 ? '\\u' + code.toString(16).padStart(4, '0') : c
-    }).join(''))
-  const fromUnicode = () =>
-    setOutput(input.replace(/\\u([0-9a-fA-F]{4})/g, (_, h) => String.fromCharCode(parseInt(h, 16))))
+  const toUnicode = () => setOutput(escapeUnicode(input))
+  const fromUnicode = () => setOutput(unescapeUnicode(input))
   return (
     <div className="space-y-3">
       <TA value={input} onChange={setInput} label={l.input} placeholder={l.inputPh} rows={5} />
@@ -103,13 +107,10 @@ export function RadixTool() {
   const [from, setFrom] = useState('10')
   const result = useMemo(() => {
     if (!input.trim()) return null
-    const n = parseInt(input.trim().replace(/^0x/i, ''), parseInt(from))
-    if (isNaN(n)) return { error: l.err }
-    return {
-      bin: n.toString(2),
-      oct: n.toString(8),
-      dec: n.toString(10),
-      hex: n.toString(16).toUpperCase(),
+    try {
+      return radixConvert(input, parseInt(from))
+    } catch {
+      return { error: l.err }
     }
   }, [input, from, l])
   return (
@@ -142,14 +143,8 @@ export function HtmlEntityTool() {
   const l = useLocalized(encodingL).htmlEntity
   const [input, setInput] = useState('')
   const [output, setOutput] = useState('')
-  const encode = () => setOutput(input.replace(/[&<>"']/g, c => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
-  }[c]!)))
-  const decode = () => {
-    const el = document.createElement('textarea')
-    el.innerHTML = input
-    setOutput(el.value)
-  }
+  const encode = () => setOutput(htmlEntityEncode(input))
+  const decode = () => setOutput(htmlEntityDecode(input))
   return (
     <div className="space-y-3">
       <TA value={input} onChange={setInput} label={l.input} placeholder={'<script>alert(1)</script> → &lt;script&gt;...'} rows={5} />
@@ -164,26 +159,12 @@ export function HtmlEntityTool() {
 
 /* ================= Morse Code ================= */
 
-const MORSE: Record<string, string> = {
-  A: '.-', B: '-...', C: '-.-.', D: '-..', E: '.', F: '..-.', G: '--.', H: '....',
-  I: '..', J: '.---', K: '-.-', L: '.-..', M: '--', N: '-.', O: '---', P: '.--.',
-  Q: '--.-', R: '.-.', S: '...', T: '-', U: '..-', V: '...-', W: '.--', X: '-..-',
-  Y: '-.--', Z: '--..', '0': '-----', '1': '.----', '2': '..---', '3': '...--',
-  '4': '....-', '5': '.....', '6': '-....', '7': '--...', '8': '---..', '9': '----.',
-  '.': '.-.-.-', ',': '--..--', '?': '..--..', '!': '-.-.--', '/': '-..-.', '@': '.--.-.',
-}
-const MORSE_REV = Object.fromEntries(Object.entries(MORSE).map(([k, v]) => [v, k]))
-
 export function MorseTool() {
   const l = useLocalized(encodingL).morse
   const [input, setInput] = useState('')
   const [output, setOutput] = useState('')
-  const encode = () => setOutput(
-    input.toUpperCase().split('').map(c => c === ' ' ? '/' : (MORSE[c] ?? c)).join(' ')
-  )
-  const decode = () => setOutput(
-    input.trim().split(/\s+/).map(t => t === '/' ? ' ' : (MORSE_REV[t] ?? t)).join('')
-  )
+  const encode = () => setOutput(encodeMorse(input))
+  const decode = () => setOutput(decodeMorse(input))
   return (
     <div className="space-y-3">
       <TA value={input} onChange={setInput} label={l.input} placeholder={l.ph} rows={4} />

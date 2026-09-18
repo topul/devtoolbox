@@ -13,6 +13,7 @@ export const CATEGORY_L = {
     http: 'HTTP 调试',
     offsec: '渗透测试',
     reference: '参考速查',
+    ai: 'AI 工作台',
   },
   en: {
     encoding: 'Encoding',
@@ -25,6 +26,47 @@ export const CATEGORY_L = {
     http: 'HTTP Tools',
     offsec: 'Offensive Sec',
     reference: 'Reference',
+    ai: 'AI Workspace',
+  },
+}
+
+/** 导航分组名（侧栏与首页的顶层组织）。分组只做聚合，不改变分类定义。 */
+export const SECTION_L = {
+  zh: {
+    ai: 'AI 工作台',
+    codec: '编解码与格式',
+    security: '加密与安全',
+    network: '网络与调试',
+    content: '生成与文本',
+    misc: '时间与参考',
+  },
+  en: {
+    ai: 'AI Workspace',
+    codec: 'Encoding & Format',
+    security: 'Crypto & Security',
+    network: 'Network & Debug',
+    content: 'Generate & Text',
+    misc: 'Time & Reference',
+  },
+}
+
+/** 分组的一句话说明（首页分区标题右侧用） */
+export const SECTION_DESC_L = {
+  zh: {
+    ai: '对话调试、MCP 接入与调用、工具定义与规则文件 —— 最常用的都在这里',
+    codec: '编码解码、序列化与格式美化',
+    security: '哈希、对称加密与渗透测试常用',
+    network: 'HTTP 调试、抓包与网络计算',
+    content: '随机数据生成与文本处理',
+    misc: '时间计算与速查表',
+  },
+  en: {
+    ai: 'Chat debugging, MCP wiring and inspection, tool schemas and rule files',
+    codec: 'Encoding, serialisation and formatting',
+    security: 'Hashing, symmetric crypto and offensive-security staples',
+    network: 'HTTP debugging, traffic capture and network math',
+    content: 'Random data generation and text processing',
+    misc: 'Date math and quick reference tables',
   },
 }
 
@@ -79,6 +121,10 @@ export const TOOLS_L = {
     'http-status': { name: 'HTTP 状态码', desc: '1xx-5xx 状态码完整速查' },
     'subnet': { name: '子网计算器', desc: 'CIDR 计算网络地址 / 广播 / 可用主机范围' },
     'chmod': { name: 'chmod 计算器', desc: 'Linux 权限八进制与符号表示互转' },
+    'mcp-server': { name: 'AI 能力接入 (MCP)', desc: '把本地的编解码/哈希/JSON/时间/HTTP 等能力挂到 Claude / Cursor / WorkBuddy，也能命令行直接调用' },
+    'mcp-inspector': { name: 'MCP 客户端调试', desc: '连任意 MCP 服务端（含本机自己）：看能力清单、直接调工具、逐帧看 JSON-RPC' },
+    'tool-schema': { name: '工具定义互转', desc: 'OpenAI tools / MCP / JSON Schema ⇄ TypeScript / Pydantic，并体检 schema 写法' },
+    'agent-rules': { name: 'Agent 规则文件生成', desc: '扫一遍项目，按真实命令与结构生成 AGENTS.md / .cursorrules / CLAUDE.md' },
   },
   en: {
     'base64': { name: 'Base64 Codec', desc: 'Text ↔ Base64, UTF-8 safe' },
@@ -130,6 +176,10 @@ export const TOOLS_L = {
     'http-status': { name: 'HTTP Status Codes', desc: 'Full 1xx-5xx status code reference' },
     'subnet': { name: 'Subnet Calculator', desc: 'CIDR network / broadcast / host range' },
     'chmod': { name: 'chmod Calculator', desc: 'Linux perms: octal ↔ symbolic' },
+    'mcp-server': { name: 'AI Access (MCP)', desc: 'Expose local encoding / hashing / JSON / time / HTTP capabilities to Claude, Cursor or WorkBuddy — or call them from a shell' },
+    'mcp-inspector': { name: 'MCP Client Debugger', desc: 'Connect to any MCP server (including this app): list capabilities, call tools, inspect every JSON-RPC frame' },
+    'tool-schema': { name: 'Tool Schema Converter', desc: 'OpenAI tools / MCP / JSON Schema ⇄ TypeScript / Pydantic, with a schema lint' },
+    'agent-rules': { name: 'Agent Rules Generator', desc: 'Scan a project and draft AGENTS.md / .cursorrules / CLAUDE.md from its real commands and structure' },
   },
 }
 

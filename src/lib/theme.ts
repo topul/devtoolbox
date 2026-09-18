@@ -37,16 +37,19 @@ export function useTheme() {
     setThemeState(stored)
     applyTheme(stored)
 
-    // Electron: mirror the choice into nativeTheme and follow OS theme changes
+    // Electron: mirror the choice into nativeTheme and follow OS theme changes.
+    // 退订函数必须还回去 —— 否则每次挂载都留下一个 ipcRenderer 监听器（HMR 下会累积成告警）。
+    let off: (() => void) | undefined
     if (window.electronAPI) {
       window.electronAPI.setTheme(stored)
-      window.electronAPI.onThemeChanged((changed) => {
+      off = window.electronAPI.onThemeChanged((changed) => {
         setThemeState(changed)
         applyTheme(changed)
       })
     }
 
     setReady(true)
+    return () => off?.()
   }, [])
 
   const toggleTheme = useCallback(async () => {

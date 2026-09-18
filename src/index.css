@@ -1,4 +1,18 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap');
+/*
+ * 字体本地化。
+ *
+ * 原先是从 fonts.googleapis.com 拉的 —— 对一个「全部本地运算、数据不出本机」的
+ * 桌面工具来说不合适：断网/内网环境会静默回落到系统字体，而且启动就向第三方发请求。
+ * 现在这些 woff2 由打包器直接输出到 assets/，CSP 不必为字体开口子。
+ * 只取 latin 子集：界面是中文 + 英文，汉字本来就走系统字体回落，
+ * 带上西里尔/希腊等子集（每个字重 6 份）纯属浪费。
+ */
+@import '@fontsource/jetbrains-mono/latin-300.css';
+@import '@fontsource/jetbrains-mono/latin-400.css';
+@import '@fontsource/jetbrains-mono/latin-400-italic.css';
+@import '@fontsource/jetbrains-mono/latin-500.css';
+@import '@fontsource/jetbrains-mono/latin-600.css';
+@import '@fontsource/jetbrains-mono/latin-700.css';
 
 @tailwind base;
 @tailwind components;

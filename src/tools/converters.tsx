@@ -2,6 +2,7 @@ import React, { useState, useMemo, useRef } from 'react'
 import { Btn, TA, Input, ErrorNote, CopyBtn, Select } from '../components/ui'
 import { useLocalized } from '../lib/i18n'
 import { convertersL } from '../lib/locales/converters'
+import { CHAIN_CODECS, chainDecode, chainEncode, type ChainCodec } from '../lib/toolkit'
 
 /* ================= Color Converter ================= */
 
@@ -178,26 +179,7 @@ export function ImgBase64Tool() {
 
 /* ================= Multi-Encode Chain ================= */
 
-const ENCODERS: Record<string, { enc: (s: string) => string; dec: (s: string) => string }> = {
-  url: { enc: s => encodeURIComponent(s), dec: s => decodeURIComponent(s) },
-  doubleUrl: { enc: s => encodeURIComponent(encodeURIComponent(s)), dec: s => decodeURIComponent(decodeURIComponent(s)) },
-  html: {
-    enc: s => s.split('').map(c => '&#' + c.charCodeAt(0) + ';').join(''),
-    dec: s => s.replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCharCode(parseInt(h, 16))).replace(/&#(\d+);/g, (_, d) => String.fromCharCode(parseInt(d))),
-  },
-  unicode: {
-    enc: s => s.split('').map(c => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0')).join(''),
-    dec: s => s.replace(/\\u([0-9a-f]{4})/gi, (_, h) => String.fromCharCode(parseInt(h, 16))),
-  },
-  hex: {
-    enc: s => s.split('').map(c => '0x' + c.charCodeAt(0).toString(16).padStart(2, '0')).join(','),
-    dec: s => s.split(',').map(h => String.fromCharCode(parseInt(h.trim(), 16))).join(''),
-  },
-  base64: {
-    enc: s => btoa(unescape(encodeURIComponent(s))),
-    dec: s => decodeURIComponent(escape(atob(s.replace(/\s/g, '')))),
-  },
-}
+/* 编码链的实现来自 src/lib/toolkit（chainEncode / chainDecode），与 MCP 服务端共用。 */
 
 export function StringEscapeTool() {
   const l = useLocalized(convertersL).strEscape
@@ -214,10 +196,10 @@ export function StringEscapeTool() {
     base64: l.base64Name,
   }
 
-  const run = (key: string, mode: 'enc' | 'dec') => {
+  const run = (key: ChainCodec, mode: 'enc' | 'dec') => {
     setErr(null)
     try {
-      setOutput(ENCODERS[key][mode](input))
+      setOutput(mode === 'enc' ? chainEncode(key, input) : chainDecode(key, input))
     } catch {
       setErr(l.error)
     }
@@ -227,7 +209,7 @@ export function StringEscapeTool() {
     <div className="space-y-3">
       <TA value={input} onChange={setInput} label={l.inputLabel} rows={4} />
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-        {Object.entries(ENCODERS).map(([key, e]) => (
+        {CHAIN_CODECS.map((key) => (
           <div key={key} className="border border-line-soft bg-panel-2 px-2.5 py-2 flex flex-col gap-1.5">
             <span className="text-[11px] text-muted">{names[key]}</span>
             <div className="flex gap-1.5">

@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react'
 import { Panel, Btn, TA, Input, Select, ErrorNote, KV, CopyBtn, Stat } from '../components/ui'
 import { securityL } from '../lib/locales/security'
 import { useLocalized } from '../lib/i18n'
+import { chmodFromBits, chmodFromOctal, cidrInfo, type ChmodPerm } from '../lib/toolkit'
 
 /* ================= Reverse Shell Generator ================= */
 
@@ -144,46 +145,16 @@ export function HttpStatusTool() {
 
 /* ================= Subnet Calculator ================= */
 
-function ipToInt(ip: string): number | null {
-  const parts = ip.trim().split('.')
-  if (parts.length !== 4) return null
-  let n = 0
-  for (const p of parts) {
-    const v = parseInt(p)
-    if (isNaN(v) || v < 0 || v > 255 || String(v) !== p.trim()) return null
-    n = (n << 8) | v
-  }
-  return n >>> 0
-}
-function intToIp(n: number): string {
-  return [(n >>> 24) & 255, (n >>> 16) & 255, (n >>> 8) & 255, n & 255].join('.')
-}
-
 export function SubnetTool() {
   const l = useLocalized(securityL).subnet
   const [input, setInput] = useState('192.168.1.10/24')
 
   const r = useMemo(() => {
-    const m = input.trim().match(/^([\d.]+)\s*\/\s*(\d{1,2})$/)
-    if (!m) return null
-    const ip = ipToInt(m[1])
-    const cidr = parseInt(m[2])
-    if (ip === null || cidr < 0 || cidr > 32) return { error: l.formatError }
-    const mask = cidr === 0 ? 0 : (0xFFFFFFFF << (32 - cidr)) >>> 0
-    const network = (ip & mask) >>> 0
-    const broadcast = (network | (~mask >>> 0)) >>> 0
-    const hostCount = cidr >= 31 ? (cidr === 31 ? 2 : 1) : Math.max(broadcast - network - 1, 0)
-    return {
-      ip: intToIp(ip), cidr, mask: intToIp(mask),
-      wildcard: intToIp(~mask >>> 0),
-      network: intToIp(network),
-      broadcast: intToIp(broadcast),
-      firstHost: cidr >= 31 ? intToIp(network) : intToIp(network + 1),
-      lastHost: cidr >= 31 ? intToIp(broadcast) : intToIp(broadcast - 1),
-      hosts: hostCount,
-      ipClass: (ip >>> 24) < 128 ? 'A' : (ip >>> 24) < 192 ? 'B' : (ip >>> 24) < 224 ? 'C' : ((ip >>> 24) < 240 ? 'D' : 'E'),
-      isPrivate: (ip >>> 24) === 10 || ((ip >>> 20) & 0xFFF) === 0xAC1 || (ip >>> 16) === 0xC0A8,
-      binMask: intToIp(mask).split('.').map(o => parseInt(o).toString(2).padStart(8, '0')).join('.'),
+    if (!input.trim()) return null
+    try {
+      return cidrInfo(input)
+    } catch {
+      return { error: l.formatError }
     }
   }, [input, l])
 
@@ -218,39 +189,24 @@ export function SubnetTool() {
 
 export function ChmodTool() {
   const l = useLocalized(securityL).chmod
-  const [perm, setPerm] = useState({ ur: true, uw: true, ux: true, gr: true, gw: false, gx: true, or: true, ow: false, ox: true })
+  const [perm, setPerm] = useState<ChmodPerm>({ ur: true, uw: true, ux: true, gr: true, gw: false, gx: true, or: true, ow: false, ox: true })
   const [octalInput, setOctalInput] = useState('')
 
-  const calc = (p: typeof perm) => {
-    const digit = (r: boolean, w: boolean, x: boolean) => (r ? 4 : 0) + (w ? 2 : 0) + (x ? 1 : 0)
-    const oct = `${digit(p.ur, p.uw, p.ux)}${digit(p.gr, p.gw, p.gx)}${digit(p.or, p.ow, p.ox)}`
-    const sym = ['u', 'g', 'o'].map((who, i) => {
-      const r = i === 0 ? p.ur : i === 1 ? p.gr : p.or
-      const w = i === 0 ? p.uw : i === 1 ? p.gw : p.ow
-      const x = i === 0 ? p.ux : i === 1 ? p.gx : p.ox
-      return `${r ? 'r' : '-'}${w ? 'w' : '-'}${x ? 'x' : '-'}`
-    }).join('')
-    return { oct, sym }
-  }
-
-  const { oct, sym } = calc(perm)
+  const { octal: oct, symbolic: sym } = chmodFromBits(perm)
 
   const applyOctal = (v: string) => {
     setOctalInput(v)
-    if (/^[0-7]{3}$/.test(v)) {
-      const d = v.split('').map(Number)
-      setPerm({
-        ur: !!(d[0] & 4), uw: !!(d[0] & 2), ux: !!(d[0] & 1),
-        gr: !!(d[1] & 4), gw: !!(d[1] & 2), gx: !!(d[1] & 1),
-        or: !!(d[2] & 4), ow: !!(d[2] & 2), ox: !!(d[2] & 1),
-      })
+    try {
+      setPerm(chmodFromOctal(v))
+    } catch {
+      // 尚未凑满三位时保持当前勾选状态
     }
   }
 
-  const toggle = (k: keyof typeof perm) => {
+  const toggle = (k: keyof ChmodPerm) => {
     const np = { ...perm, [k]: !perm[k] }
     setPerm(np)
-    setOctalInput(calc(np).oct)
+    setOctalInput(chmodFromBits(np).octal)
   }
 
   const rows = l.rows

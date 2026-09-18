@@ -45,6 +45,15 @@ jobs:
       - name: Check main-process imports (smoke:main)
         run: npm run smoke:main
 
+      # 渲染层不能依赖外部资源：生产构建注入了严格 CSP，外链字体/CDN 会被静默挡掉，
+      # 表现成「字体变了、图标没了」，很难联想到 CSP。这里把它变成构建期的一行红字。
+      - name: Check built assets (smoke:assets)
+        run: npm run smoke:assets
+
+      # IPC 通道名是字符串，写错只在用户点那个功能时炸 —— 这里静态对齐两侧
+      - name: Check IPC channels (smoke:ipc)
+        run: npm run smoke:ipc
+
       # tag 构建：直接发布到 GitHub Release（生成 latest.yml 等自动升级元数据）
       # 手动触发：只打包不上传
       - name: Package & Publish (${{ matrix.platform }})

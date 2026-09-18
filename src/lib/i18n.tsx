@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react'
-import { TOOLS_L, CATEGORY_L, type ToolId } from './locales/registry'
+import { TOOLS_L, CATEGORY_L, SECTION_L, SECTION_DESC_L, type ToolId } from './locales/registry'
 import { UI, COMMON, type UIStrings, type Locale } from './locales/ui'
-import type { CategoryId } from './registry'
+import type { CategoryId, SectionId } from './registry'
 
 export type { Locale } from './locales/ui'
 
@@ -26,6 +26,10 @@ interface I18nCtx {
   toolDesc: (tool: { id: ToolId }) => string
   /** Display name of a category, resolved from the language-neutral category id */
   catName: (cat: CategoryId) => string
+  /** 导航分组名（侧栏/首页顶层） */
+  sectionName: (id: SectionId) => string
+  /** 分组的一句话说明 */
+  sectionDesc: (id: SectionId) => string
 }
 
 const Ctx = createContext<I18nCtx | null>(null)
@@ -51,7 +55,10 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   const catName = useCallback((cat: CategoryId) =>
     CATEGORY_L[locale][cat] ?? cat, [locale])
 
-  const value: I18nCtx = { locale, setLocale, t: UI[locale], toolName, toolDesc, catName }
+  const sectionName = useCallback((id: SectionId) => SECTION_L[locale][id], [locale])
+  const sectionDesc = useCallback((id: SectionId) => SECTION_DESC_L[locale][id], [locale])
+
+  const value: I18nCtx = { locale, setLocale, t: UI[locale], toolName, toolDesc, catName, sectionName, sectionDesc }
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }
 

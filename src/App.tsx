@@ -1,12 +1,13 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react'
 import MatrixRain from './components/MatrixRain'
-import { TOOLS, CATEGORIES, searchTools, ToolDef, CategoryId } from './lib/registry'
+import { TOOLS, SECTIONS, sectionOf, searchTools, ToolDef, CategoryId, SectionId } from './lib/registry'
 import { useTheme } from './lib/theme'
 import { useUiZoom } from './lib/uiZoom'
-import { useSidebarCollapsed } from './lib/sidebar'
+import { useSidebarCollapsed, useOpenSections } from './lib/sidebar'
 import { useI18n, I18nProvider } from './lib/i18n'
 import { getVersion } from './lib/version'
 import { UpdateToast, useUpdater } from './components/Updater'
+import { ChatTool } from './tools/chat'
 
 const ASCII_LOGO = `
  ▄▄▄▄·       ▄▄ • ▄• ▄▌ ▄▄· ▄ •▄ ▄▄▄▄·       ▐▄• ▄
@@ -16,10 +17,13 @@ const ASCII_LOGO = `
  ·▀▀▀▀  ▀█▄▀▪·▀▀▀▀  ▀▀▀ ·▀▀▀ ·▀  ▀·▀▀▀▀   ▀█▄▀▪•▀▀ ▀▀
 `.trim()
 
-const CAT_ICONS: Record<string, string> = {
-  encoding: '⇄', format: '≡', generators: '⚙', crypto: '⚿',
-  text: '¶', datetime: '◷', network: '⌁', http: '⇅', offsec: '☠', reference: '▤',
+/** 导航分组的图标：侧栏窄栏、侧栏展开态、首页分区共用一套 */
+const SECTION_ICONS: Record<SectionId, string> = {
+  ai: '✦', codec: '⇄', security: '⚿', network: '⌁', content: '⚙', misc: '▤',
 }
+
+/** 首页与侧栏共用的分组内容：组 → 其下的工具（按分类顺序） */
+type SectionGroup = { tools: ToolDef[]; cats: Map<CategoryId, ToolDef[]> }
 
 export default function App() {
   return (
@@ -30,7 +34,7 @@ export default function App() {
 }
 
 function AppInner() {
-  const { locale, setLocale, t, toolName, catName } = useI18n()
+  const { locale, setLocale, t, toolName, catName, sectionName } = useI18n()
   const [query, setQuery] = useState('')
   const [activeId, setActiveId] = useState<string | null>(() => location.hash.replace('#', '') || null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -38,6 +42,7 @@ function AppInner() {
   const { theme, toggleTheme } = useTheme()
   const zoom = useUiZoom()
   const sidebar = useSidebarCollapsed()
+  const openSections = useOpenSections()
   const updater = useUpdater()
   const searchRef = React.useRef<HTMLInputElement>(null)
 
@@ -56,11 +61,11 @@ function AppInner() {
     window.scrollTo({ top: 0 })
   }, [])
 
-  /** 窄栏里点分类图标：回到首页并滚到对应分区（收起状态下也能快速跳转） */
-  const jumpToCategory = useCallback((cat: CategoryId) => {
+  /** 窄栏里点分组图标：回到首页并滚到对应分区（收起状态下也能快速跳转） */
+  const jumpToSection = useCallback((sec: SectionId) => {
     openTool(null)
     setTimeout(() => {
-      document.getElementById(`cat-${cat}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      document.getElementById(`sec-${sec}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }, 80)
   }, [openTool])
 
@@ -79,14 +84,35 @@ function AppInner() {
   const results = useMemo(() => searchTools(query), [query])
   const active = TOOLS.find(t => t.id === activeId) ?? null
 
+  /**
+   * 视图路由：打开应用就是对话 —— 这是「AI 优先」的落点，工具箱退居其次。
+   * hash 为空 = 对话；#home = 工具网格；#<tool-id> = 具体工具。
+   */
+  const view: 'chat' | 'home' | 'tool' = active ? 'tool' : activeId === 'home' ? 'home' : 'chat'
+
+  /** 结果按「分组」聚合；组内再按分类细分（组里只有一个分类时不显示分类小标题） */
   const grouped = useMemo(() => {
-    const map = new Map<CategoryId, ToolDef[]>()
-    for (const cat of CATEGORIES) {
-      const items = results.filter(t => t.category === cat)
-      if (items.length) map.set(cat, items)
+    const map = new Map<SectionId, SectionGroup>()
+    for (const sec of SECTIONS) {
+      const tools = results.filter(t => sectionOf(t.category) === sec.id)
+      if (!tools.length) continue
+      const cats = new Map<CategoryId, ToolDef[]>()
+      for (const cat of sec.categories) {
+        const items = tools.filter(t => t.category === cat)
+        if (items.length) cats.set(cat, items)
+      }
+      map.set(sec.id, { tools, cats })
     }
     return map
   }, [results])
+
+  const searching = query.trim().length > 0
+
+  // 当前工具所在的分组自动展开：否则选中项藏在折叠区里，侧栏看不出你在哪
+  const ensureSectionOpen = openSections.ensureOpen
+  useEffect(() => {
+    if (active) ensureSectionOpen(sectionOf(active.category))
+  }, [active, ensureSectionOpen])
 
   return (
     <div className="scanlines min-h-screen bg-terminal flex">
@@ -103,10 +129,16 @@ function AppInner() {
           <div data-sb-rail className="hidden lg:flex flex-col flex-1 min-h-0">
             <button
               onClick={() => openTool(null)}
-              className="py-3 text-phosphor font-bold text-[12px] tracking-wider glow hover:text-phosphor-glow !min-h-0"
-              title={`${t.allTools} (${TOOLS.length})`}
-              aria-label={t.allTools}
-            >&gt;_</button>
+              className="py-3 text-phosphor font-bold text-[13px] tracking-wider glow hover:text-phosphor-glow !min-h-0"
+              title={t.chatNav}
+              aria-label={t.chatNav}
+            >✦</button>
+            <button
+              onClick={() => openTool('home')}
+              className="py-2 text-muted hover:text-phosphor text-[13px] !min-h-0"
+              title={t.homeNav}
+              aria-label={t.homeNav}
+            >≡</button>
             <button
               onClick={sidebar.toggle}
               className="py-2 border-y border-line-soft text-muted hover:text-phosphor text-[13px] !min-h-0"
@@ -121,14 +153,16 @@ function AppInner() {
             >⌕</button>
 
             <div className="flex-1 min-h-0 overflow-y-auto py-1">
-              {CATEGORIES.map((cat) => (
+              {SECTIONS.map((sec) => (
                 <button
-                  key={cat}
-                  onClick={() => jumpToCategory(cat)}
-                  className="w-full py-2 text-[14px] text-dim hover:text-phosphor hover:bg-phosphor-faint/50 transition-colors !min-h-0"
-                  title={`${t.jumpToCategory}: ${catName(cat)}`}
-                  aria-label={catName(cat)}
-                >{CAT_ICONS[cat]}</button>
+                  key={sec.id}
+                  onClick={() => jumpToSection(sec.id)}
+                  className={`w-full py-2 text-[14px] hover:bg-phosphor-faint/50 transition-colors !min-h-0 ${
+                    sec.id === 'ai' ? 'text-phosphor/70 hover:text-phosphor' : 'text-dim hover:text-phosphor'
+                  }`}
+                  title={`${t.jumpToSection}: ${sectionName(sec.id)}`}
+                  aria-label={sectionName(sec.id)}
+                >{SECTION_ICONS[sec.id]}</button>
               ))}
             </div>
 
@@ -193,31 +227,72 @@ function AppInner() {
           <nav className="flex-1 overflow-y-auto py-2">
             <button
               onClick={() => openTool(null)}
-              className={`w-full text-left px-4 py-2.5 lg:py-1.5 text-[13px] lg:text-[12px] transition-colors ${!active ? 'text-phosphor bg-phosphor-faint border-r-2 border-phosphor' : 'text-muted hover:text-bright'}`}
+              className={`w-full text-left px-4 py-2.5 lg:py-1.5 text-[13px] lg:text-[12px] transition-colors ${
+                view === 'chat' ? 'text-phosphor bg-phosphor-faint border-r-2 border-phosphor' : 'text-muted hover:text-bright'
+              }`}
             >
-              [ ~ ] {t.allTools} <span className="text-muted/50 text-[10px]">({TOOLS.length})</span>
+              ✦ {t.chatNav}
             </button>
-            {[...grouped.entries()].map(([cat, items]) => (
-              <div key={cat} className="mt-3">
-                <div className="px-4 pb-1 text-[10px] uppercase tracking-[0.2em] text-muted/70 select-none">
-                  {CAT_ICONS[cat]} {catName(cat)}
-                </div>
-                {items.map(t => (
+            <button
+              onClick={() => openTool('home')}
+              className={`w-full text-left px-4 py-2.5 lg:py-1.5 text-[13px] lg:text-[12px] transition-colors ${
+                view === 'home' ? 'text-phosphor bg-phosphor-faint border-r-2 border-phosphor' : 'text-muted hover:text-bright'
+              }`}
+            >
+              [ ~ ] {t.homeNav} <span className="text-muted/50 text-[10px]">({TOOLS.length})</span>
+            </button>
+
+            {[...grouped.entries()].map(([sec, entry]) => {
+              // 搜索时强制展开：结果是过滤过的，再折叠起来就白搜了
+              const open = searching || openSections.isOpen(sec)
+              const multiCat = entry.cats.size > 1
+              return (
+                <div key={sec} className="mt-1.5">
                   <button
-                    key={t.id}
-                    onClick={() => openTool(t.id)}
-                    className={`w-full text-left px-4 py-2.5 lg:py-1.5 text-[13px] lg:text-[12px] transition-colors truncate
-                      ${active?.id === t.id
-                        ? 'text-phosphor bg-phosphor-faint border-r-2 border-phosphor'
-                        : 'text-dim hover:text-phosphor hover:bg-phosphor-faint/50'}`}
+                    onClick={() => openSections.toggle(sec)}
+                    disabled={searching}
+                    aria-expanded={open}
+                    className={`w-full flex items-center gap-2 px-4 py-2 lg:py-1.5 text-left transition-colors hover:bg-phosphor-faint/40 ${
+                      sec === 'ai' ? 'text-phosphor/80' : 'text-muted hover:text-bright'
+                    } ${searching ? 'cursor-default' : ''}`}
                   >
-                    <span className="text-phosphor/40 mr-1.5">{active?.id === t.id ? '[x]' : '[ ]'}</span>
-                    {toolName(t)}
-                    {t.hot && <span className="ml-1.5 text-[9px] text-amber">★</span>}
+                    <span className="text-muted/60 text-[9px] w-2 shrink-0">{open ? '▾' : '▸'}</span>
+                    <span className="text-[10px] uppercase tracking-[0.18em] truncate">
+                      {SECTION_ICONS[sec]} {sectionName(sec)}
+                    </span>
+                    <span className="ml-auto text-[10px] text-muted/50 shrink-0">{entry.tools.length}</span>
                   </button>
-                ))}
-              </div>
-            ))}
+
+                  {open && (
+                    <div className="pb-1.5">
+                      {[...entry.cats.entries()].map(([cat, items]) => (
+                        <div key={cat}>
+                          {multiCat && (
+                            <div className="pl-7 pr-4 pt-1.5 pb-0.5 text-[10px] text-muted/50 select-none truncate">
+                              {catName(cat)}
+                            </div>
+                          )}
+                          {items.map(t => (
+                            <button
+                              key={t.id}
+                              onClick={() => openTool(t.id)}
+                              className={`w-full text-left pl-8 pr-4 py-2 lg:py-1.5 text-[13px] lg:text-[12px] transition-colors truncate
+                                ${active?.id === t.id
+                                  ? 'text-phosphor bg-phosphor-faint border-r-2 border-phosphor'
+                                  : 'text-dim hover:text-phosphor hover:bg-phosphor-faint/50'}`}
+                            >
+                              <span className="text-phosphor/40 mr-1.5">{active?.id === t.id ? '[x]' : '[ ]'}</span>
+                              {toolName(t)}
+                              {t.hot && <span className="ml-1.5 text-[9px] text-amber">★</span>}
+                            </button>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
             {grouped.size === 0 && (
               <div className="px-4 py-6 text-center text-muted text-[12px]">
                 {t.noMatch}
@@ -276,7 +351,7 @@ function AppInner() {
       )}
 
       {/* ============ Main ============ */}
-      <main className="flex-1 min-w-0 content-zoom">
+      <main className={`flex-1 min-w-0 content-zoom ${view === 'chat' ? 'overflow-hidden' : ''}`}>
         {/* mobile topbar */}
         <div className="lg:hidden sticky top-0 z-30 flex items-center gap-1 border-b border-line bg-panel/95 backdrop-blur px-2 py-1.5 pt-safe">
           <button onClick={() => setSidebarOpen(true)} className="text-phosphor text-lg px-3 py-1" aria-label={t.openMenu}>☰</button>
@@ -284,7 +359,7 @@ function AppInner() {
             &gt;_ BUGBUCKET.BOX
           </button>
           <span className="flex-1 text-right text-[11px] text-muted truncate px-2">
-            {active ? `${CAT_ICONS[active.category]} ${toolName(active)}` : ''}
+            {active ? `${SECTION_ICONS[sectionOf(active.category)]} ${toolName(active)}` : ''}
           </span>
           <button
             onClick={toggleTheme}
@@ -299,7 +374,9 @@ function AppInner() {
           >⌕</button>
         </div>
 
-        {!active ? (
+        {view === 'chat' ? (
+          <ChatTool />
+        ) : !active ? (
           <HomeView grouped={grouped} onOpen={openTool} query={query} />
         ) : (
           <ToolView tool={active} onBack={() => openTool(null)} />
@@ -314,11 +391,11 @@ function AppInner() {
 /* ================= Home ================= */
 
 function HomeView({ grouped, onOpen, query }: {
-  grouped: Map<CategoryId, ToolDef[]>
+  grouped: Map<SectionId, SectionGroup>
   onOpen: (id: string) => void
   query: string
 }) {
-  const { t, catName, toolName, toolDesc } = useI18n()
+  const { t, catName, toolName, toolDesc, sectionName, sectionDesc } = useI18n()
   return (
     <div className="fade-in">
       {/* hero */}
@@ -340,31 +417,43 @@ function HomeView({ grouped, onOpen, query }: {
 
       {/* tool grid */}
       <div className="w-full mx-auto max-w-[1720px] px-4 md:px-8 xl:px-10 py-6 md:py-8 pb-12 pb-safe space-y-8">
-        {[...grouped.entries()].map(([cat, items]) => (
-          <section key={cat} id={`cat-${cat}`}>
-            <div className="flex items-baseline gap-3 mb-3">
-              <h2 className="text-[13px] text-phosphor tracking-wider">
-                <span className="text-muted">##</span> {CAT_ICONS[cat]} {catName(cat)}
+        {[...grouped.entries()].map(([sec, entry]) => (
+          <section key={sec} id={`sec-${sec}`}>
+            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-3">
+              <h2 className={`text-[13px] tracking-wider ${sec === 'ai' ? 'text-phosphor glow' : 'text-phosphor'}`}>
+                <span className="text-muted">##</span> {SECTION_ICONS[sec]} {sectionName(sec)}
               </h2>
-              <span className="text-[10px] text-muted/60">{t.toolsCount(items.length)}</span>
-              <div className="flex-1 border-t border-line-soft" />
+              <span className="text-[10px] text-muted/60">{t.toolsCount(entry.tools.length)}</span>
+              <span className="hidden md:inline text-[11px] text-muted/60">{sectionDesc(sec)}</span>
+              <div className="flex-1 border-t border-line-soft min-w-8" />
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-2.5">
-              {items.map(t => (
-                <button
-                  key={t.id}
-                  onClick={() => onOpen(t.id)}
-                  className="tool-grid-card text-left border border-line-soft bg-panel px-4 py-3 hover:border-phosphor/50 hover:bg-phosphor-faint"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="text-[13px] text-cardtext">{toolName(t)}</span>
-                    {t.hot && <span className="text-[9px] text-amber border border-amber/30 px-1">HOT</span>}
+
+            {/* 组内再按分类分小节；只有一个分类时（如 AI 组）不重复标题 */}
+            {[...entry.cats.entries()].map(([cat, items]) => (
+              <div key={cat} className={entry.cats.size > 1 ? 'mb-5 last:mb-0' : ''}>
+                {entry.cats.size > 1 && (
+                  <div className="text-[11px] text-muted/60 mb-2 tracking-wider select-none">
+                    · {catName(cat)}
                   </div>
-                  <div className="mt-1 text-[11.5px] text-muted leading-relaxed">{toolDesc(t)}</div>
-                  <div className="mt-2 text-[10px] text-phosphor/40">./run --tool={t.id} →</div>
-                </button>
-              ))}
-            </div>
+                )}
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-2.5">
+                  {items.map(tool => (
+                    <button
+                      key={tool.id}
+                      onClick={() => onOpen(tool.id)}
+                      className="tool-grid-card text-left border border-line-soft bg-panel px-4 py-3 hover:border-phosphor/50 hover:bg-phosphor-faint"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="text-[13px] text-cardtext">{toolName(tool)}</span>
+                        {tool.hot && <span className="text-[9px] text-amber border border-amber/30 px-1">HOT</span>}
+                      </div>
+                      <div className="mt-1 text-[11.5px] text-muted leading-relaxed">{toolDesc(tool)}</div>
+                      <div className="mt-2 text-[10px] text-phosphor/40">./run --tool={tool.id} →</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
           </section>
         ))}
         {grouped.size === 0 && (
@@ -386,13 +475,22 @@ function HomeView({ grouped, onOpen, query }: {
 /* ================= Tool view ================= */
 
 function ToolView({ tool, onBack }: { tool: ToolDef; onBack: () => void }) {
-  const { catName, toolName, toolDesc } = useI18n()
+  const { catName, toolName, toolDesc, sectionName } = useI18n()
   const C = tool.component
+  const sec = sectionOf(tool.category)
+  // 组里只有一个分类时（AI 组就是），面包屑不再重复一遍分类名
+  const showCat = (SECTIONS.find(s => s.id === sec)?.categories.length ?? 1) > 1
   return (
     <div className="fade-in w-full mx-auto max-w-[1720px] px-4 md:px-8 xl:px-10 py-4 md:py-6 pb-12 pb-safe">
       <div className="flex items-center gap-2 md:gap-3 text-[12px] text-muted mb-1">
         <button onClick={onBack} className="text-phosphor/70 hover:text-phosphor px-1.5 py-0.5 border border-line-soft lg:border-0 !min-h-0">← ~/</button>
-        <span className="shrink-0">{catName(tool.category)}</span>
+        <button onClick={onBack} className="shrink-0 hidden md:inline hover:text-phosphor !min-h-0">{SECTION_ICONS[sec]} {sectionName(sec)}</button>
+        {showCat && (
+          <>
+            <span className="text-muted/50 hidden md:inline">/</span>
+            <span className="shrink-0">{catName(tool.category)}</span>
+          </>
+        )}
         <span className="text-muted/50">/</span>
         <span className="text-bright truncate">{toolName(tool)}</span>
       </div>

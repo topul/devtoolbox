@@ -2,29 +2,19 @@ import React, { useState, useMemo } from 'react'
 import { Btn, TA, Input, ErrorNote, Panel, Stat, Select, CopyBtn } from '../components/ui'
 import { useLocalized } from '../lib/i18n'
 import { textL } from '../lib/locales/text'
+import {
+  applyLineOp,
+  convertCaseAll,
+  lineDiff,
+  regexTest,
+  textStats,
+  LINE_OPS,
+  type DiffLine,
+} from '../lib/toolkit'
+
+/* 实现全部来自 src/lib/toolkit —— 与 MCP 服务端共用同一份代码。 */
 
 /* ================= Text Diff ================= */
-
-type DiffLine = { type: 'same' | 'add' | 'del'; text: string }
-
-function lineDiff(a: string, b: string): DiffLine[] {
-  const al = a.split('\n'), bl = b.split('\n')
-  const m = al.length, n = bl.length
-  const dp: number[][] = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0))
-  for (let i = m - 1; i >= 0; i--)
-    for (let j = n - 1; j >= 0; j--)
-      dp[i][j] = al[i] === bl[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1])
-  const out: DiffLine[] = []
-  let i = 0, j = 0
-  while (i < m && j < n) {
-    if (al[i] === bl[j]) { out.push({ type: 'same', text: al[i] }); i++; j++ }
-    else if (dp[i + 1][j] >= dp[i][j + 1]) { out.push({ type: 'del', text: al[i] }); i++ }
-    else { out.push({ type: 'add', text: bl[j] }); j++ }
-  }
-  while (i < m) out.push({ type: 'del', text: al[i++] })
-  while (j < n) out.push({ type: 'add', text: bl[j++] })
-  return out
-}
 
 export function DiffTool() {
   const l = useLocalized(textL).diff
@@ -86,15 +76,7 @@ export function RegexTool() {
     setErr(null)
     if (!pattern) return null
     try {
-      const re = new RegExp(pattern, flags.includes('g') ? flags : flags + 'g')
-      const out: { match: string; index: number; groups: string[] }[] = []
-      let m: RegExpExecArray | null
-      let guard = 0
-      while ((m = re.exec(text)) && guard++ < 1000) {
-        out.push({ match: m[0], index: m.index, groups: m.slice(1) })
-        if (m[0] === '') re.lastIndex++
-      }
-      return out
+      return regexTest(pattern, flags, text)
     } catch (e) {
       setErr(l.errorPrefix + (e as Error).message)
       return null
@@ -146,22 +128,13 @@ export function RegexTool() {
 export function WordCountTool() {
   const l = useLocalized(textL).wordCount
   const [text, setText] = useState('')
-  const s = useMemo(() => {
-    const chars = text.length
-    const noSpace = text.replace(/\s/g, '').length
-    const cjk = (text.match(/[\u4e00-\u9fff\u3400-\u4dbf]/g) || []).length
-    const words = (text.replace(/[\u4e00-\u9fff\u3400-\u4dbf]/g, ' ').match(/[a-zA-Z0-9_'-]+/g) || []).length
-    const lines = text ? text.split('\n').length : 0
-    const bytes = new TextEncoder().encode(text).length
-    const paragraphs = text.split(/\n\s*\n/).filter(p => p.trim()).length
-    return { chars, noSpace, cjk, words, lines, bytes, paragraphs }
-  }, [text])
+  const s = useMemo(() => textStats(text), [text])
   return (
     <div className="space-y-3">
       <TA value={text} onChange={setText} label={l.label} rows={9} placeholder={l.ph} />
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2">
         <Stat label={l.chars} value={s.chars} />
-        <Stat label={l.noSpace} value={s.noSpace} />
+        <Stat label={l.noSpace} value={s.charsNoSpace} />
         <Stat label={l.cjk} value={s.cjk} />
         <Stat label={l.words} value={s.words} />
         <Stat label={l.lines} value={s.lines} />
@@ -174,40 +147,29 @@ export function WordCountTool() {
 
 /* ================= Case Converter ================= */
 
-function words(s: string): string[] {
-  return s
-    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
-    .replace(/[_\-\s]+/g, ' ')
-    .trim().toLowerCase().split(' ').filter(Boolean)
-}
+/** 展示名与编程风格的差异只在 SCREAMING 这一项，保持界面文案不变 */
+const STYLE_LABEL: Record<string, string> = { SCREAMING_SNAKE: 'SCREAMING' }
 
 export function CaseTool() {
   const l = useLocalized(textL).case
   const [input, setInput] = useState('')
   const out = useMemo(() => {
-    const w = words(input)
-    if (!w.length) return null
-    const camel = w[0] + w.slice(1).map(x => x[0].toUpperCase() + x.slice(1)).join('')
-    const pascal = w.map(x => x[0].toUpperCase() + x.slice(1)).join('')
-    const snake = w.join('_')
-    const screaming = w.join('_').toUpperCase()
-    const kebab = w.join('-')
-    const upper = input.toUpperCase()
-    const lower = input.toLowerCase()
-    return { camelCase: camel, PascalCase: pascal, snake_case: snake, SCREAMING: screaming, 'kebab-case': kebab, UPPERCASE: upper, lowercase: lower }
+    const rows = convertCaseAll(input)
+    if (!rows[0]?.value) return null
+    return rows
   }, [input])
   return (
     <div className="space-y-3">
       <Input value={input} onChange={setInput} label={l.label} placeholder={l.ph} />
       {out && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-          {Object.entries(out).map(([k, v]) => (
-            <div key={k} className="border border-line-soft bg-panel-2 px-3 py-2 flex items-center justify-between gap-2">
+          {out.map(({ style, value }) => (
+            <div key={style} className="border border-line-soft bg-panel-2 px-3 py-2 flex items-center justify-between gap-2">
               <div>
-                <div className="text-[10px] uppercase tracking-widest text-muted">{k}</div>
-                <div className="text-phosphor text-[13px] break-all">{v}</div>
+                <div className="text-[10px] uppercase tracking-widest text-muted">{STYLE_LABEL[style] ?? style}</div>
+                <div className="text-phosphor text-[13px] break-all">{value}</div>
               </div>
-              <CopyBtn text={v} />
+              <CopyBtn text={value} />
             </div>
           ))}
         </div>
@@ -223,26 +185,12 @@ export function LineOpsTool() {
   const [input, setInput] = useState('')
   const [output, setOutput] = useState('')
 
-  const fns: ((lines: string[]) => string[])[] = [
-    x => [...new Set(x)],
-    x => x.filter(v => v.trim()),
-    x => x.map(v => v.trim()),
-    x => [...x].sort(),
-    x => [...x].sort().reverse(),
-    x => [...x].sort((a, b) => parseFloat(a) - parseFloat(b)),
-    x => [...x].sort(() => Math.random() - 0.5),
-    x => [...x].reverse(),
-    x => x.map((v, i) => `${i + 1}. ${v}`),
-    x => x.map(v => `"${v}"`),
-    x => [x.join(',')],
-  ]
-
   return (
     <div className="space-y-3">
       <TA value={input} onChange={setInput} label={l.input} rows={7} />
       <div className="flex gap-2 flex-wrap">
         {l.ops.map((name, i) => (
-          <Btn key={name} onClick={() => setOutput(fns[i](input.split('\n')).join('\n'))}>{name}</Btn>
+          <Btn key={name} onClick={() => setOutput(applyLineOp(input, LINE_OPS[i]))}>{name}</Btn>
         ))}
       </div>
       <TA value={output} readOnly label={l.output} rows={7} />

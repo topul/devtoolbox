@@ -1,37 +1,38 @@
 import React, { useState, useMemo } from 'react'
-import CryptoJS from 'crypto-js'
 import { Panel, Btn, TA, Input, Select, ErrorNote, KV, CopyBtn } from '../components/ui'
 import { useLocalized, useI18n } from '../lib/i18n'
 import { cryptoL } from '../lib/locales/crypto'
+import {
+  aesDecrypt,
+  aesEncrypt,
+  digestAll,
+  hmacDigest,
+  jwtDecode,
+  jwtIsExpired,
+  type AesMode,
+  type HmacAlgo,
+} from '../lib/toolkit'
+
+/* 实现全部来自 src/lib/toolkit —— 与 MCP 服务端共用同一份代码。 */
 
 /* ================= Hash ================= */
 
 export function HashTool() {
   const l = useLocalized(cryptoL).hash
   const [input, setInput] = useState('')
-  const out = useMemo(() => {
-    if (!input) return null
-    return {
-      MD5: CryptoJS.MD5(input).toString(),
-      'SHA-1': CryptoJS.SHA1(input).toString(),
-      'SHA-256': CryptoJS.SHA256(input).toString(),
-      'SHA-512': CryptoJS.SHA512(input).toString(),
-      'SHA-3': CryptoJS.SHA3(input).toString(),
-      RIPEMD160: CryptoJS.RIPEMD160(input).toString(),
-    }
-  }, [input])
+  const out = useMemo(() => (input ? digestAll(input) : null), [input])
   return (
     <div className="space-y-3">
       <TA value={input} onChange={setInput} label={l.input} placeholder={l.inputPh} rows={4} />
       {out && (
         <div className="space-y-1.5">
-          {Object.entries(out).map(([k, v]) => (
-            <div key={k} className="border border-line-soft bg-panel-2 px-3 py-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3">
+          {out.map(({ label, value }) => (
+            <div key={label} className="border border-line-soft bg-panel-2 px-3 py-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3">
               <div className="min-w-0">
-                <div className="text-[10px] uppercase tracking-widest text-muted">{k}</div>
-                <div className="text-phosphor text-[12px] break-all">{v}</div>
+                <div className="text-[10px] uppercase tracking-widest text-muted">{label}</div>
+                <div className="text-phosphor text-[12px] break-all">{value}</div>
               </div>
-              <CopyBtn text={v} className="shrink-0 self-start" />
+              <CopyBtn text={value} className="shrink-0 self-start" />
             </div>
           ))}
         </div>
@@ -46,19 +47,20 @@ export function HmacTool() {
   const l = useLocalized(cryptoL).hmac
   const [input, setInput] = useState('')
   const [key, setKey] = useState('')
-  const [algo, setAlgo] = useState('SHA256')
+  const [algo, setAlgo] = useState<HmacAlgo>('SHA256')
   const out = useMemo(() => {
     if (!input || !key) return ''
     try {
-      const fn = (CryptoJS as any)['Hmac' + algo]
-      return fn(input, key).toString()
-    } catch { return '' }
+      return hmacDigest(algo, input, key)
+    } catch {
+      return ''
+    }
   }, [input, key, algo])
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <Input value={key} onChange={setKey} label={l.key} placeholder="secret" />
-        <Select value={algo} onChange={setAlgo} label={l.algo} options={[
+        <Select value={algo} onChange={v => setAlgo(v as HmacAlgo)} label={l.algo} options={[
           { value: 'MD5', label: 'HMAC-MD5' }, { value: 'SHA1', label: 'HMAC-SHA1' },
           { value: 'SHA256', label: 'HMAC-SHA256' }, { value: 'SHA512', label: 'HMAC-SHA512' },
         ]} />
@@ -75,28 +77,15 @@ export function AesTool() {
   const l = useLocalized(cryptoL).aes
   const [input, setInput] = useState('')
   const [key, setKey] = useState('')
-  const [mode, setMode] = useState('ECB')
+  const [mode, setMode] = useState<AesMode>('ECB')
   const [output, setOutput] = useState('')
   const [err, setErr] = useState<string | null>(null)
-
-  const getKey = () => CryptoJS.enc.Utf8.parse(key.padEnd(32, '\0').slice(0, 32))
-  const getIv = () => CryptoJS.enc.Utf8.parse(key.padEnd(16, '\0').split('').reverse().join('').slice(0, 16))
 
   const run = (op: 'enc' | 'dec') => {
     setErr(null)
     if (!key) { setErr(l.needKey); return }
     try {
-      const cfg: any = { mode: (CryptoJS.mode as any)[mode], padding: CryptoJS.pad.Pkcs7 }
-      if (mode !== 'ECB') cfg.iv = getIv()
-      if (op === 'enc') {
-        const r = CryptoJS.AES.encrypt(input, getKey(), cfg)
-        setOutput(r.toString())
-      } else {
-        const r = CryptoJS.AES.decrypt(input.trim(), getKey(), cfg)
-        const s = r.toString(CryptoJS.enc.Utf8)
-        if (!s) throw new Error('decrypt result empty')
-        setOutput(s)
-      }
+      setOutput(op === 'enc' ? aesEncrypt(input, key, mode) : aesDecrypt(input, key, mode))
     } catch {
       setErr(op === 'enc' ? l.encErr : l.decErr)
     }
@@ -106,7 +95,7 @@ export function AesTool() {
     <div className="space-y-3">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <Input value={key} onChange={setKey} label={l.key} placeholder="my-secret-key" />
-        <Select value={mode} onChange={setMode} label={l.mode} options={[
+        <Select value={mode} onChange={v => setMode(v as AesMode)} label={l.mode} options={[
           { value: 'ECB', label: 'ECB' }, { value: 'CBC', label: l.cbc },
         ]} />
       </div>
@@ -124,12 +113,6 @@ export function AesTool() {
 
 /* ================= JWT ================= */
 
-function b64urlDecode(s: string): string {
-  s = s.replace(/-/g, '+').replace(/_/g, '/')
-  while (s.length % 4) s += '='
-  return decodeURIComponent(escape(atob(s)))
-}
-
 export function JwtTool() {
   const { locale } = useI18n()
   const l = useLocalized(cryptoL).jwt
@@ -137,23 +120,20 @@ export function JwtTool() {
   const decoded = useMemo(() => {
     if (!token.trim()) return null
     try {
-      const parts = token.trim().split('.')
-      if (parts.length < 2) return { error: l.errFormat }
-      const header = JSON.stringify(JSON.parse(b64urlDecode(parts[0])), null, 2)
-      const payload = JSON.stringify(JSON.parse(b64urlDecode(parts[1])), null, 2)
-      let extra: [string, string][] = []
-      try {
-        const p = JSON.parse(b64urlDecode(parts[1]))
-        const loc = locale === 'en' ? 'en-US' : 'zh-CN'
-        if (p.exp) extra.push([l.exp, new Date(p.exp * 1000).toLocaleString(loc, { hour12: false }) + (p.exp * 1000 < Date.now() ? l.expired : l.valid)])
-        if (p.iat) extra.push([l.iat, new Date(p.iat * 1000).toLocaleString(loc, { hour12: false })])
-        if (p.nbf) extra.push([l.nbf, new Date(p.nbf * 1000).toLocaleString(loc, { hour12: false })])
-        if (p.iss) extra.push([l.iss, p.iss])
-        if (p.sub) extra.push([l.sub, p.sub])
-      } catch { /* ignore */ }
-      return { header, payload, signature: parts[2] || l.noSig, extra }
+      const d = jwtDecode(token)
+      const p = d.payloadObj
+      const loc = locale === 'en' ? 'en-US' : 'zh-CN'
+      const extra: [string, string][] = []
+      const at = (v: unknown): string => new Date((v as number) * 1000).toLocaleString(loc, { hour12: false })
+      if (p.exp) extra.push([l.exp, at(p.exp) + (jwtIsExpired(p) ? l.expired : l.valid)])
+      if (p.iat) extra.push([l.iat, at(p.iat)])
+      if (p.nbf) extra.push([l.nbf, at(p.nbf)])
+      if (p.iss) extra.push([l.iss, String(p.iss)])
+      if (p.sub) extra.push([l.sub, String(p.sub)])
+      return { header: d.header, payload: d.payload, signature: d.signed ? d.signature : l.noSig, extra }
     } catch (e) {
-      return { error: l.parseErr + (e as Error).message }
+      const msg = (e as Error).message
+      return { error: msg === 'BAD_FORMAT' ? l.errFormat : l.parseErr + msg }
     }
   }, [token, l, locale])
 

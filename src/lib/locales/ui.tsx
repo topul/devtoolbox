@@ -32,7 +32,9 @@ export interface UIStrings {
   zoomTip: string
   collapseSidebar: string
   expandSidebar: string
-  jumpToCategory: string
+  chatNav: string
+  homeNav: string
+  jumpToSection: string
   heroChips: string[]
   updateChecking: string
   updateNone: string
@@ -53,7 +55,7 @@ export const UI: Record<Locale, UIStrings> = {
     noMatchHome: (q: string) => <>没有找到匹配「{q}」的工具</>,
     disclaimer: '仅供授权测试与学习研究',
     localCompute: '所有计算均在本地完成',
-    hero: (n: number) => <>一个站点装下程序员与安全研究员的日常弹药库 — <span className="text-bright">{n} 个工具</span>，从 JSON 格式化到反弹 Shell 生成。全部本地运算，数据不出浏览器。</>,
+    hero: (n: number) => <>一个站点装下程序员与安全研究员的日常弹药库 — <span className="text-bright">{n} 个工具</span>，从 AI 对话调试、MCP 接入到 JSON 格式化与反弹 Shell。全部本地运算，数据不出浏览器。</>,
     legalTitle: '[!] 法律与道德声明：',
     legalBody: '本站渗透测试类工具（反弹 Shell、Payload 速查等）仅供安全研究、CTF 竞赛、授权渗透测试与防御学习使用。未经授权对他人系统发起测试属违法行为。所有运算均在本地浏览器完成，本站不收集任何输入数据。',
     toolsCount: (n: number) => `${n} 个工具`,
@@ -71,8 +73,10 @@ export const UI: Record<Locale, UIStrings> = {
     zoomTip: '界面缩放：自动 = 跟随屏幕宽度，宽屏自动放大',
     collapseSidebar: '收起侧边栏',
     expandSidebar: '展开侧边栏',
-    jumpToCategory: '跳到分类',
-    heroChips: ['JSON', 'JWT', '反弹 Shell', 'Payload', '哈希', '子网'],
+    chatNav: '对话',
+    homeNav: '工具箱',
+    jumpToSection: '跳到分组',
+    heroChips: ['MCP 服务端', '流式对话', '工具调用', 'Agent 规则', 'JSON', 'JWT'],
     // 自动升级
     updateChecking: '正在检查更新...',
     updateNone: '已是最新版本',
@@ -91,7 +95,7 @@ export const UI: Record<Locale, UIStrings> = {
     noMatchHome: (q: string) => <>No tools matching "{q}"</>,
     disclaimer: 'For authorized testing & research only',
     localCompute: 'All computation happens locally',
-    hero: (n: number) => <>An everyday arsenal for developers & security researchers — <span className="text-bright">{n} tools</span>, from JSON formatting to reverse shells. 100% local, data never leaves your machine.</>,
+    hero: (n: number) => <>An everyday arsenal for developers & security researchers — <span className="text-bright">{n} tools</span>, from AI chat debugging and MCP wiring to JSON formatting and reverse shells. 100% local, data never leaves your machine.</>,
     legalTitle: '[!] Legal & Ethics Notice:',
     legalBody: 'Offensive tools (reverse shells, payload cheat sheets) are provided for security research, CTF, authorized pentesting and defensive education only. Testing others\' systems without authorization is illegal. All computation runs locally; no input data is collected.',
     toolsCount: (n: number) => `${n} tools`,
@@ -109,8 +113,10 @@ export const UI: Record<Locale, UIStrings> = {
     zoomTip: 'UI scale: Auto follows screen width and enlarges on large displays',
     collapseSidebar: 'Collapse sidebar',
     expandSidebar: 'Expand sidebar',
-    jumpToCategory: 'Jump to category',
-    heroChips: ['JSON', 'JWT', 'Reverse Shell', 'Payload', 'Hash', 'Subnet'],
+    chatNav: 'Chat',
+    homeNav: 'Toolbox',
+    jumpToSection: 'Jump to group',
+    heroChips: ['MCP server', 'Streaming chat', 'Tool calling', 'Agent rules', 'JSON', 'JWT'],
     updateChecking: 'Checking for updates...',
     updateNone: 'You are up to date',
     updateFound: (v: string) => `New version v${v} found, downloading...`,

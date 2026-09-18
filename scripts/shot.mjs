@@ -28,7 +28,7 @@
 import { app, BrowserWindow, ipcMain } from 'electron'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { tmpdir } from 'node:os'
+import { homedir, tmpdir } from 'node:os'
 import fs from 'node:fs'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
@@ -56,6 +56,264 @@ ipcMain.handle('proxy:state', () => ({
   caInfo: null,
   systemProxy: { enabled: false, server: '', supported: true, managed: false, detail: '' },
 }))
+// 对话工具：桩里放一段确定性的合成流，用来体检「流式渲染 + 指标 + 费用」这整块界面的布局。
+// 主进程↔上游的真实链路由 npm run smoke:chat 断言，这里只负责把渲染层喂饱。
+let chatTimer = null
+ipcMain.handle('chat:send', (_e, spec) => {
+  if (chatTimer) clearInterval(chatTimer)
+  const requestId = spec?.requestId || 'shot-chat'
+  const win = BrowserWindow.getAllWindows()[0]
+  const push = (evt) => win?.webContents.send('chat:event', evt)
+  const reply = '这是用于布局体检的桩数据：界面应当逐字追加内容，并在结束后给出首字延迟、吞吐、token 与费用。'
+  const chars = [...reply]
+  const started = Date.now()
+  let i = 0
+  push({ type: 'start', requestId })
+
+  // 开了工具调用就顺带走一遍工具事件，否则工具块那块的布局体检不到
+  const withTools = !!spec?.tools
+  if (withTools) {
+    push({ type: 'toolsReady', requestId, tools: SHOT_MCP_TOOLS.map(([name, description]) => ({ name, description })) })
+    push({ type: 'round', requestId, round: 1, maxRounds: 8 })
+    push({ type: 'toolCall', requestId, round: 1, call: { id: 'call_cidr', name: 'cidr_info', args: '{"cidr":"10.0.0.1/22"}' } })
+    push({
+      type: 'toolResult',
+      requestId,
+      round: 1,
+      result: {
+        id: 'call_cidr',
+        name: 'cidr_info',
+        ok: true,
+        isError: false,
+        text: 'IP: 10.0.0.1\n网络地址: 10.0.0.0/22\n广播地址: 10.0.3.255\n子网掩码: 255.255.252.0\n可用主机数: 1022',
+        durationMs: 3,
+      },
+    })
+    push({ type: 'round', requestId, round: 2, maxRounds: 8 })
+  }
+
+  chatTimer = setInterval(() => {
+    if (i < chars.length) {
+      push({ type: 'delta', requestId, text: chars[i], kind: 'content', atMs: Date.now() })
+      i++
+      return
+    }
+    clearInterval(chatTimer)
+    chatTimer = null
+    push({
+      type: 'done',
+      requestId,
+      rounds: withTools ? 2 : 1,
+      meta: {
+        ttfbMs: 18,
+        firstTokenMs: 42,
+        totalMs: Date.now() - started,
+        chunks: chars.length,
+        chars: reply.length,
+        reasoningChars: 0,
+        usage: { promptTokens: 96, completionTokens: 52, totalTokens: 148 },
+        finishReason: 'stop',
+        model: 'deepseek-chat',
+        toolCalls: [],
+      },
+    })
+  }, 20)
+  return { ok: true, requestId }
+})
+ipcMain.handle('chat:abort', () => {
+  if (chatTimer) {
+    clearInterval(chatTimer)
+    chatTimer = null
+  }
+  return true
+})
+// MCP Inspector：桩里给一份确定性的服务端信息与能力清单，用来体检「表单 + 清单 + 调用结果 + 帧日志」的布局。
+// 真实协议行为由 npm run smoke:mcpclient 覆盖（73 条断言，被测目标就是本仓库自己的 MCP 服务端）。
+const SHOT_MCP_TOOLS = [
+  ['base64_encode', 'UTF-8 文本 → Base64。urlSafe=true 时用 -_ 替代 +/ 并去掉补位 =，适合放进 URL 或 JWT。', { text: 'string', urlSafe: 'boolean' }],
+  ['hash', '文本摘要，支持 MD5 / SHA1 / SHA256 / SHA512 / SHA3 / RIPEMD160。', { text: 'string', algorithm: 'string' }],
+  ['timestamp_convert', '时间戳与日期互转，同时给出本地时间、UTC、ISO 与秒/毫秒双表示。', { timestamp: 'string' }],
+  ['cidr_info', '算出网络地址、广播地址、掩码、可用主机范围与主机数。', { cidr: 'string' }],
+  ['json_query', '按 JSONPath 取值，支持递归下降。', { json: 'string', path: 'string' }],
+  ['http_request', '发任意 HTTP 请求，支持上游代理、关闭 TLS 校验、自动解压。', { url: 'string', method: 'string' }],
+  ['regex_test', '在文本上跑正则，返回位置、内容与捕获组。', { pattern: 'string', text: 'string' }],
+  ['uuid_generate', '生成真随机的 UUID v4。', { count: 'number' }],
+]
+ipcMain.handle('mcpclient:connect', (_e, spec) => {
+  const win = BrowserWindow.getAllWindows()[0]
+  // 必须回显调用方的 id：渲染层按 id 过滤事件，桩里写死 id 会导致事件全被丢掉
+  const id = spec?.id ?? 'shot-mcp'
+  const push = (evt) => win?.webContents.send('mcpclient:event', evt)
+  push({ type: 'status', id, status: 'connecting' })
+  const frames = [
+    { dir: 'send', payload: '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","clientInfo":{"name":"devtoolbox-inspector"}}}' },
+    { dir: 'recv', payload: '{"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-06-18","capabilities":{"tools":{}},"serverInfo":{"name":"devtoolbox","version":"1.2.2"}}}' },
+    { dir: 'send', payload: '{"jsonrpc":"2.0","method":"notifications/initialized"}' },
+    { dir: 'send', payload: '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' },
+    { dir: 'recv', payload: `{"jsonrpc":"2.0","id":2,"result":{"tools":[${SHOT_MCP_TOOLS.length} 项]}}` },
+    { dir: 'send', payload: '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"base64_encode","arguments":{"text":"你好"}}}' },
+    { dir: 'recv', payload: '{"jsonrpc":"2.0","id":3,"result":{"content":[{"type":"text","text":"5L2g5aW9"}]}}' },
+  ]
+  for (const f of frames) push({ type: 'frame', id, dir: f.dir, payload: f.payload, ok: true })
+  push({ type: 'log', id, source: 'stderr', text: 'devtoolbox-mcp 1.2.2 已就绪，工具 34 个，协议 2025-06-18\n' })
+  const info = { name: 'devtoolbox', version: '1.2.2', protocolVersion: '2025-06-18', capabilities: { tools: {} } }
+  push({ type: 'serverInfo', id, info })
+  push({ type: 'status', id, status: 'connected' })
+  return {
+    ok: true,
+    info,
+    catalog: {
+      tools: SHOT_MCP_TOOLS.map(([name, description, props]) => ({
+        name,
+        description,
+        inputSchema: { type: 'object', properties: props, required: [Object.keys(props)[0]] },
+      })),
+      resources: [],
+      prompts: [],
+      declared: { tools: true, resources: false, prompts: false },
+    },
+  }
+})
+ipcMain.handle('mcpclient:call', (_e, arg) => ({
+  ok: true,
+  isError: false,
+  text: arg?.name === 'cidr_info'
+    ? 'IP: 10.0.0.1\n网络地址: 10.0.0.0/22\n广播地址: 10.0.3.255\n子网掩码: 255.255.252.0\n可用主机范围: 10.0.0.1 - 10.0.3.254\n可用主机数: 1022\n私有地址: 是'
+    : '5L2g5aW9',
+  raw: { content: [{ type: 'text', text: '5L2g5aW9' }] },
+  durationMs: 3,
+}))
+ipcMain.handle('mcpclient:read-resource', () => ({ ok: false, isError: false, text: '', raw: null, durationMs: 0, error: 'mock' }))
+ipcMain.handle('mcpclient:get-prompt', () => ({ ok: false, isError: false, text: '', raw: null, durationMs: 0, error: 'mock' }))
+ipcMain.handle('mcpclient:ping', () => ({ ok: true, ms: 1 }))
+ipcMain.handle('mcpclient:disconnect', () => true)
+
+// 会话存储：桩里给两条历史会话，截图才能看到「重启后还在」的效果
+const SHOT_SESSIONS = [
+  { id: 'sA1b2c3d4e5f67890', title: '10.0.0.0/22 的可用主机范围', createdAt: 1758000000000, updatedAt: 1758170000000, turnCount: 4 },
+  { id: 'sB2c3d4e5f6789012', title: 'MCP 工具调用排查', createdAt: 1757900000000, updatedAt: 1758080000000, turnCount: 6 },
+  { id: 'sC3d4e5f678901234', title: '写一个匹配日志行的正则', createdAt: 1757800000000, updatedAt: 1757990000000, turnCount: 2 },
+]
+const SHOT_TURNS = [
+  { id: 'u-shot-1', role: 'user', blocks: [{ kind: 'text', text: '帮我看看 10.0.0.0/22 的可用主机范围' }], status: 'done' },
+  {
+    id: 'a-shot-1',
+    role: 'assistant',
+    blocks: [
+      { kind: 'text', text: '我调用一下本机的 CIDR 工具，别自己算。' },
+      {
+        kind: 'tool',
+        call: { id: 'call_cidr', name: 'cidr_info', args: '{"cidr":"10.0.0.0/22"}' },
+        result: {
+          id: 'call_cidr', name: 'cidr_info', ok: true, isError: false, durationMs: 3,
+          text: 'IP: 10.0.0.1\n网络地址: 10.0.0.0/22\n广播地址: 10.0.3.255\n子网掩码: 255.255.252.0\n可用主机范围: 10.0.0.1 - 10.0.3.254\n可用主机数: 1022\n私有地址: 是',
+        },
+      },
+      { kind: 'text', text: '可用主机范围是 10.0.0.1 – 10.0.3.254，共 1022 个地址。' },
+    ],
+    status: 'done',
+    rounds: 2,
+    meta: {
+      ttfbMs: 24, firstTokenMs: 61, totalMs: 1840, chunks: 44, chars: 138, reasoningChars: 0,
+      usage: { promptTokens: 412, completionTokens: 76, totalTokens: 488 },
+      finishReason: 'stop', model: 'deepseek-chat',
+    },
+  },
+]
+ipcMain.handle('chatstore:list', () => ({ ok: true, activeId: SHOT_SESSIONS[0].id, sessions: SHOT_SESSIONS }))
+ipcMain.handle('chatstore:load', () => ({ ok: true, turns: SHOT_TURNS }))
+ipcMain.handle('chatstore:save', () => ({ ok: true }))
+ipcMain.handle('chatstore:remove', () => ({ ok: true }))
+ipcMain.handle('chatstore:set-active', () => ({ ok: true }))
+
+// 规则文件生成器：桩里按本仓库的真实 package.json 造一份扫描结果，
+// 这样截图中的命令清单是真的（布局体检才有意义）
+ipcMain.handle('agentrules:default-root', () => root)
+ipcMain.handle('agentrules:pick', () => root)
+ipcMain.handle('agentrules:save', (_e, _root, target) =>
+  ({ ok: true, path: join(root, target === 'cursor' ? '.cursorrules' : target === 'claude' ? 'CLAUDE.md' : 'AGENTS.md') }))
+ipcMain.handle('agentrules:scan', () => {
+  const pkg = JSON.parse(fs.readFileSync(join(root, 'package.json'), 'utf8'))
+  // 与 electron/main/agentrules.ts 的 SCRIPT_KINDS 保持一致；桩只用于布局体检
+  const kindOf = (n) =>
+    /^(dev|develop|serve|watch|preview|start:dev)/i.test(n) ? 'dev'
+    : /^(build|compile|dist|bundle|package|release)/i.test(n) ? 'build'
+    : /^(test|spec|e2e|smoke)/i.test(n) ? 'test'
+    : /^(lint|eslint|check:lint|i18n)/i.test(n) ? 'lint'
+    : /^(typecheck|type-check|tsc|check:types)/i.test(n) ? 'typecheck'
+    : /^(format|fmt|prettier|fix)/i.test(n) ? 'format'
+    : 'other'
+  const commands = [
+    { kind: 'install', name: 'npm', command: 'npm install', source: 'npm' },
+    ...Object.keys(pkg.scripts).slice(0, 11).map((n) => ({
+      kind: kindOf(n), name: n, command: `npm run ${n}`, source: 'package.json',
+    })),
+  ]
+  return {
+    ok: true,
+    facts: {
+      root,
+      rootName: 'pr-tools',
+      tree: [
+        '├── electron/',
+        '│   ├── main/',
+        '│   │   ├── http.ts',
+        '│   │   ├── chat.ts',
+        '│   │   ├── mcpclient.ts',
+        '│   │   └── agentrules.ts',
+        '│   └── preload/',
+        '│       └── index.ts',
+        '├── scripts/',
+        '│   ├── smoke-mcp.mjs',
+        '│   └── smoke-chat.ts',
+        '├── src/',
+        '│   ├── lib/',
+        '│   ├── tools/',
+        '│   └── App.tsx',
+        '├── index.html',
+        '├── package.json',
+        '├── tsconfig.json',
+        '└── vite.config.ts',
+      ].join('\n'),
+      stats: { files: 138, dirs: 24, truncated: false },
+      languages: ['TypeScript'],
+      frameworks: ['React', 'Electron', 'Vite', 'Tailwind CSS', 'TypeScript'],
+      packageManager: 'npm',
+      commands,
+      keyFiles: ['package.json', 'tsconfig.json', 'electron.vite.config.ts', 'README.md'],
+      signals: ['hasCi', 'hasDocker', 'hasLockfile', 'hasLinter', 'hasTests', 'hasTsconfig', 'hasReadme'],
+      notes: [],
+    },
+  }
+})
+
+// MCP 面板要展示本机启动路径，桩里按开发态还原一份，否则截图看不到配置区块（也就体检不到它的布局）
+ipcMain.handle('mcp:info', () => {
+  const serverPath = join(root, 'out/mcp/devtoolbox-mcp.cjs')
+  const version = JSON.parse(fs.readFileSync(join(root, 'package.json'), 'utf8')).version
+  const launch = {
+    serverPath,
+    command: process.execPath,
+    args: [serverPath],
+    env: { ELECTRON_RUN_AS_NODE: '1' },
+    serverPathExists: fs.existsSync(serverPath),
+    configJson: JSON.stringify(
+      { mcpServers: { devtoolbox: { command: process.execPath, args: [serverPath], env: { ELECTRON_RUN_AS_NODE: '1' } } } },
+      null,
+      2,
+    ),
+    packaged: false,
+    version,
+  }
+  return {
+    launch,
+    hints: [
+      { client: 'Claude Desktop', path: join(homedir(), 'Library/Application Support/Claude/claude_desktop_config.json') },
+      { client: 'Cursor', path: join(homedir(), '.cursor/mcp.json') },
+      { client: 'WorkBuddy', path: join(homedir(), '.workbuddy/mcp.json') },
+    ],
+  }
+})
 
 const lsSeed = process.env.DTB_SHOT_LS ? JSON.parse(process.env.DTB_SHOT_LS) : null
 

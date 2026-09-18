@@ -2,146 +2,11 @@ import React, { useState, useMemo } from 'react'
 import { Btn, TA, Input, ErrorNote, Select } from '../components/ui'
 import { useLocalized } from '../lib/i18n'
 import { dataformatsL } from '../lib/locales/dataformats'
+import { evalJsonPath, jsonToYaml, yamlToJson } from '../lib/toolkit'
 
-/* ================= YAML ↔ JSON (lightweight parser) ================= */
+/* YAML / JSONPath 的实现来自 src/lib/toolkit，与 MCP 服务端共用同一份代码。 */
 
-function parseScalar(v: string): any {
-  const t = v.trim()
-  if (t === '' || t === '~' || t === 'null') return null
-  if (t === 'true') return true
-  if (t === 'false') return false
-  if (/^-?\d+$/.test(t)) return parseInt(t)
-  if (/^-?\d*\.\d+$/.test(t)) return parseFloat(t)
-  if ((t.startsWith('"') && t.endsWith('"')) || (t.startsWith("'") && t.endsWith("'")))
-    return t.slice(1, -1)
-  if (t.startsWith('[') && t.endsWith(']')) {
-    const inner = t.slice(1, -1).trim()
-    if (!inner) return []
-    return inner.split(',').map(parseScalar)
-  }
-  return t
-}
-
-function parseYaml(src: string): any {
-  const lines = src.replace(/\t/g, '  ').split('\n').filter(l => l.trim() && !l.trim().startsWith('#'))
-
-  function block(startIdx: number, indent: number): [any, number] {
-    let i = startIdx
-    const firstLine = lines[i]
-    const isList = firstLine?.trim().startsWith('- ')
-    const result: any = isList ? [] : {}
-
-    while (i < lines.length) {
-      const raw = lines[i]
-      const curIndent = raw.length - raw.trimStart().length
-      if (curIndent < indent) break
-      const content = raw.trim()
-
-      if (content.startsWith('- ')) {
-        if (!Array.isArray(result)) break
-        const rest = content.slice(2)
-        if (rest.includes(':')) {
-          // inline map in list: - key: value
-          const sub: any = {}
-          const idx = rest.indexOf(':')
-          const k = rest.slice(0, idx).trim()
-          const v = rest.slice(idx + 1).trim()
-          if (v === '') {
-            const [child, next] = block(i + 1, curIndent + 2)
-            sub[k] = child
-            i = next
-          } else {
-            sub[k] = parseScalar(v)
-            i++
-          }
-          // merge following deeper-indented keys of same item
-          while (i < lines.length) {
-            const ni = lines[i].length - lines[i].trimStart().length
-            if (ni === curIndent + 2 && !lines[i].trim().startsWith('- ')) {
-              const c2 = lines[i].trim()
-              const i2 = c2.indexOf(':')
-              const k2 = c2.slice(0, i2).trim()
-              const v2 = c2.slice(i2 + 1).trim()
-              if (v2 === '') {
-                const [child, next] = block(i + 1, ni + 2)
-                sub[k2] = child
-                i = next
-              } else {
-                sub[k2] = parseScalar(v2)
-                i++
-              }
-            } else break
-          }
-          result.push(sub)
-        } else {
-          result.push(parseScalar(rest))
-          i++
-        }
-      } else {
-        const idx = content.indexOf(':')
-        if (idx < 0) { i++; continue }
-        const key = content.slice(0, idx).trim().replace(/^["']|["']$/g, '')
-        const val = content.slice(idx + 1).trim()
-        if (val === '') {
-          const next = lines[i + 1]
-          if (next && (next.length - next.trimStart().length) > curIndent) {
-            const [child, nextIdx] = block(i + 1, curIndent + 1)
-            result[key] = child
-            i = nextIdx
-          } else {
-            result[key] = null
-            i++
-          }
-        } else if (val === '|' || val === '>') {
-          // block scalar
-          const buf: string[] = []
-          i++
-          while (i < lines.length && (lines[i].length - lines[i].trimStart().length) > curIndent) {
-            buf.push(lines[i].trim())
-            i++
-          }
-          result[key] = val === '|' ? buf.join('\n') : buf.join(' ')
-        } else {
-          result[key] = parseScalar(val)
-          i++
-        }
-      }
-    }
-    return [result, i]
-  }
-
-  if (!lines.length) return null
-  return block(0, lines[0].length - lines[0].trimStart().length)[0]
-}
-
-function toYaml(obj: any, indent = 0): string {
-  const pad = '  '.repeat(indent)
-  if (Array.isArray(obj)) {
-    return obj.map(item => {
-      if (typeof item === 'object' && item !== null) {
-        const inner = toYaml(item, indent + 1)
-        return `${pad}-\n${inner}`.replace(`${pad}-\n${'  '.repeat(indent + 1)}`, `${pad}- `)
-      }
-      return `${pad}- ${fmtScalar(item)}`
-    }).join('\n')
-  }
-  if (typeof obj === 'object' && obj !== null) {
-    return Object.entries(obj).map(([k, v]) => {
-      if (typeof v === 'object' && v !== null) return `${pad}${k}:\n${toYaml(v, indent + 1)}`
-      return `${pad}${k}: ${fmtScalar(v)}`
-    }).join('\n')
-  }
-  return `${pad}${fmtScalar(obj)}`
-}
-
-function fmtScalar(v: any): string {
-  if (v === null || v === undefined) return 'null'
-  if (typeof v === 'string') {
-    if (v === '' || /[:#\[\]{}\n]|^\s|\s$|^[-?]/.test(v) || ['true', 'false', 'null', '~'].includes(v)) return JSON.stringify(v)
-    return v
-  }
-  return String(v)
-}
+/* ================= YAML ↔ JSON ================= */
 
 export function YamlTool() {
   const l = useLocalized(dataformatsL).yaml
@@ -152,8 +17,7 @@ export function YamlTool() {
   const run = (mode: 'y2j' | 'j2y') => {
     setErr(null)
     try {
-      if (mode === 'y2j') setOutput(JSON.stringify(parseYaml(input), null, 2))
-      else setOutput(toYaml(JSON.parse(input)))
+      setOutput(mode === 'y2j' ? yamlToJson(input, 2) : jsonToYaml(input))
     } catch (e) {
       setErr((mode === 'y2j' ? 'YAML' : 'JSON') + l.parseErr + (e as Error).message)
     }
@@ -176,58 +40,6 @@ export function YamlTool() {
 
 /* ================= JSONPath ================= */
 
-function evalJsonPath(obj: any, path: string): any[] {
-  // supports $.a.b[0].c, $..key (recursive descent), $['key']
-  let p = path.trim()
-  if (!p.startsWith('$')) throw new Error('NEED_DOLLAR')
-  p = p.slice(1)
-
-  const tokens: ({ key: string } | { idx: number } | { recursive: string })[] = []
-  const re = /(?:\.\.([A-Za-z_$][\w$-]*))|(?:\.([A-Za-z_$][\w$-]*))|(?:\['([^']+)'\])|(?:\[(\d+)\])|(?:\[\*\])/g
-  let m: RegExpExecArray | null
-  let consumed = ''
-  while ((m = re.exec(p))) {
-    consumed += m[0]
-    if (m[1] !== undefined) tokens.push({ recursive: m[1] })
-    else if (m[2] !== undefined) tokens.push({ key: m[2] })
-    else if (m[3] !== undefined) tokens.push({ key: m[3] })
-    else if (m[4] !== undefined) tokens.push({ idx: parseInt(m[4]) })
-    else tokens.push({ key: '*' })
-  }
-  if (consumed !== p) throw new Error('BAD_SEG:' + (p.slice(consumed.length) || p))
-
-  let current: any[] = [obj]
-  for (const t of tokens) {
-    const next: any[] = []
-    for (const node of current) {
-      if ('recursive' in t) {
-        const walk = (n: any) => {
-          if (typeof n !== 'object' || n === null) return
-          if (Array.isArray(n)) n.forEach(walk)
-          else {
-            Object.entries(n).forEach(([k, v]) => {
-              if (k === t.recursive) next.push(v)
-              walk(v)
-            })
-          }
-        }
-        walk(node)
-      } else if ('key' in t) {
-        if (t.key === '*') {
-          if (Array.isArray(node)) next.push(...node)
-          else if (typeof node === 'object' && node !== null) next.push(...Object.values(node))
-        } else if (typeof node === 'object' && node !== null && !Array.isArray(node) && t.key in node) {
-          next.push(node[t.key])
-        }
-      } else {
-        if (Array.isArray(node) && t.idx >= 0 && t.idx < node.length) next.push(node[t.idx])
-      }
-    }
-    current = next
-  }
-  return current
-}
-
 export function JsonPathTool() {
   const l = useLocalized(dataformatsL).jsonpath
   const [json, setJson] = useState(l.sample)
@@ -238,9 +50,7 @@ export function JsonPathTool() {
     setErr(null)
     if (!json.trim() || !path.trim()) return null
     try {
-      const obj = JSON.parse(json)
-      const r = evalJsonPath(obj, path)
-      return r
+      return evalJsonPath(JSON.parse(json), path)
     } catch (e) {
       const msg = (e as Error).message
       if (msg === 'NEED_DOLLAR') setErr(l.needDollar)

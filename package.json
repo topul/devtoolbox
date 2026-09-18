@@ -11,21 +11,32 @@
   "license": "MIT",
   "main": "./out/main/index.js",
   "scripts": {
-    "dev": "electron-vite dev",
+    "dev": "npm run build:mcp && electron-vite dev",
     "dev:web": "vite",
-    "build": "electron-vite build",
+    "build:app": "electron-vite build",
+    "build:mcp": "node scripts/build-mcp.mjs",
+    "build": "npm run build:app && npm run build:mcp",
     "build:web": "vite build",
     "preview": "vite preview",
-    "package": "electron-vite build && electron-builder",
-    "package:win": "electron-vite build && electron-builder --win",
-    "package:mac": "electron-vite build && electron-builder --mac",
-    "package:linux": "electron-vite build && electron-builder --linux",
-    "package:all": "electron-vite build && electron-builder -mwl",
-    "release": "electron-vite build && electron-builder --publish never",
+    "package": "npm run build && electron-builder",
+    "package:win": "npm run build && electron-builder --win",
+    "package:mac": "npm run build && electron-builder --mac",
+    "package:linux": "npm run build && electron-builder --linux",
+    "package:all": "npm run build && electron-builder -mwl",
+    "release": "npm run build && electron-builder --publish never",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json",
     "typecheck": "tsc --noEmit",
     "i18n:check": "esbuild src/lib/locales/*.ts --outdir=node_modules/.cache/locales --format=esm --out-extension:.js=.mjs --log-level=error && node scripts/check-locale-parity.mjs node_modules/.cache/locales",
+    "smoke:assets": "node scripts/check-built-assets.mjs",
     "smoke:main": "node scripts/check-main-imports.mjs out/main/index.js out/preload/index.cjs",
+    "smoke:ipc": "node scripts/check-ipc-channels.mjs",
+    "smoke:mcp": "node scripts/smoke-mcp.mjs",
+    "smoke:mcpclient": "esbuild scripts/smoke-mcpclient.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/smoke-mcpclient.mjs --log-level=error && node node_modules/.cache/smoke-mcpclient.mjs",
+    "smoke:chat": "esbuild scripts/smoke-chat.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/smoke-chat.mjs --log-level=error && node node_modules/.cache/smoke-chat.mjs",
+    "smoke:chatstore": "esbuild scripts/smoke-chatstore.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/smoke-chatstore.mjs --log-level=error && node node_modules/.cache/smoke-chatstore.mjs",
+    "smoke:schema": "esbuild scripts/smoke-schema.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/smoke-schema.mjs --log-level=error && node node_modules/.cache/smoke-schema.mjs",
+    "smoke:agentrules": "esbuild scripts/smoke-agentrules.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/smoke-agentrules.mjs --log-level=error && node node_modules/.cache/smoke-agentrules.mjs",
+    "smoke:chatagent": "esbuild scripts/smoke-chatagent.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/smoke-chatagent.mjs --log-level=error && node node_modules/.cache/smoke-chatagent.mjs",
     "smoke:preload": "electron scripts/check-preload.mjs",
     "shot": "electron scripts/shot.mjs",
     "smoke:render": "esbuild scripts/smoke-render.tsx --bundle --platform=node --format=esm --outfile=node_modules/.cache/smoke.mjs --loader:.tsx=tsx --jsx=automatic --log-level=error --external:qrcode --external:react --external:react-dom --external:react/jsx-runtime && node node_modules/.cache/smoke.mjs",
@@ -33,6 +44,7 @@
     "smoke:systemproxy": "esbuild scripts/check-systemproxy.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/check-systemproxy.mjs --log-level=error && node node_modules/.cache/check-systemproxy.mjs"
   },
   "dependencies": {
+    "@fontsource/jetbrains-mono": "^5.3.0",
     "crypto-js": "^4.2.0",
     "electron-updater": "^6.8.9",
     "node-forge": "^1.4.0",
@@ -71,8 +83,18 @@
     },
     "files": [
       "out/**/*",
+      "!out/mcp/**",
       "!**/*.map",
       "!**/*.d.ts"
+    ],
+    "extraResources": [
+      {
+        "from": "out/mcp",
+        "to": "mcp",
+        "filter": [
+          "**/*"
+        ]
+      }
     ],
     "publish": [
       {

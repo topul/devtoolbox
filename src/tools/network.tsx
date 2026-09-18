@@ -2,6 +2,9 @@ import React, { useState, useMemo } from 'react'
 import { Panel, Btn, TA, Input, ErrorNote, KV, CopyBtn } from '../components/ui'
 import { useLocalized } from '../lib/i18n'
 import { networkL } from '../lib/locales/network'
+import { ipConvert, parseCookie, parseUrl, parseUserAgent } from '../lib/toolkit'
+
+/* 实现全部来自 src/lib/toolkit —— 与 MCP 服务端共用同一份代码。 */
 
 /* ================= URL Parser ================= */
 
@@ -10,23 +13,10 @@ export function UrlParserTool() {
   const [input, setInput] = useState('https://user:pass@api.example.com:8443/v1/users?id=42&token=abc%20def&tag=a&tag=b#section')
 
   const parsed = useMemo(() => {
-    const t = input.trim()
-    if (!t) return null
+    if (!input.trim()) return null
     try {
-      const u = new URL(t.includes('://') ? t : 'http://' + t)
-      const params: { k: string; v: string }[] = []
-      u.searchParams.forEach((v, k) => params.push({ k, v }))
-      return {
-        protocol: u.protocol.replace(':', ''),
-        username: decodeURIComponent(u.username),
-        password: decodeURIComponent(u.password),
-        hostname: u.hostname,
-        port: u.port || (u.protocol === 'https:' ? '443' : u.protocol === 'http:' ? '80' : l.default),
-        pathname: decodeURIComponent(u.pathname),
-        search: u.search,
-        hash: decodeURIComponent(u.hash.replace(/^#/, '')),
-        params,
-      }
+      const r = parseUrl(input)
+      return { ...r, port: r.port || l.default }
     } catch {
       return { error: l.error }
     }
@@ -72,50 +62,6 @@ export function UrlParserTool() {
 
 /* ================= User-Agent Parser ================= */
 
-interface UaInfo { browser: string; version: string; os: string; device: string; bot: string | null }
-
-function parseUa(ua: string, L: { unknown: string; wechatBrowser: string; desktop: string; phone: string; tablet: string }): UaInfo {
-  const t = ua
-  let bot: string | null = null
-  const botMatch = t.match(/(Googlebot|Bingbot|Baiduspider|YandexBot|DuckDuckBot|Slurp|Sogou|Bytespider|GPTBot|ClaudeBot|curl|wget|python-requests|PostmanRuntime|sqlmap|nmap|Nikto|masscan|Go-http-client)/i)
-  if (botMatch) bot = botMatch[1]
-
-  let browser = L.unknown, version = ''
-  const rules: [RegExp, string][] = [
-    [/Edg(?:e|A|iOS)?\/([\d.]+)/, 'Edge'],
-    [/OPR\/([\d.]+)/, 'Opera'],
-    [/Chrome\/([\d.]+)/, 'Chrome'],
-    [/Firefox\/([\d.]+)/, 'Firefox'],
-    [/Version\/([\d.]+).*Safari/, 'Safari'],
-    [/MSIE ([\d.]+)/, 'IE'],
-    [/Trident.*rv:([\d.]+)/, 'IE'],
-    [/MicroMessenger\/([\d.]+)/, L.wechatBrowser],
-    [/CriOS\/([\d.]+)/, 'Chrome (iOS)'],
-    [/curl\/([\d.]+)/, 'curl'],
-    [/python-requests\/([\d.]+)/, 'python-requests'],
-  ]
-  for (const [re, name] of rules) {
-    const m = t.match(re)
-    if (m) { browser = name; version = m[1]; break }
-  }
-
-  let os: string = L.unknown
-  if (/Windows NT 10/.test(t)) os = 'Windows 10/11'
-  else if (/Windows NT 6\.3/.test(t)) os = 'Windows 8.1'
-  else if (/Windows NT 6\.1/.test(t)) os = 'Windows 7'
-  else if (/iPhone|iPod/.test(t)) os = 'iOS (iPhone)' + (t.match(/OS ([\d_]+)/) ? ' ' + t.match(/OS ([\d_]+)/)![1].replace(/_/g, '.') : '')
-  else if (/iPad/.test(t)) os = 'iOS (iPad)'
-  else if (/Android ([\d.]+)/.test(t)) os = 'Android ' + t.match(/Android ([\d.]+)/)![1]
-  else if (/Mac OS X ([\d_]+)/.test(t)) os = 'macOS ' + t.match(/Mac OS X ([\d_]+)/)![1].replace(/_/g, '.')
-  else if (/Linux/.test(t)) os = 'Linux'
-
-  let device = L.desktop
-  if (/Mobile|iPhone|Android.*Mobile/.test(t)) device = L.phone
-  else if (/iPad|Tablet|Android(?!.*Mobile)/.test(t)) device = L.tablet
-
-  return { browser, version, os, device, bot }
-}
-
 const UA_EXAMPLES: [string, string][] = [
   ['Chrome / Win', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'],
   ['iPhone Safari', 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1'],
@@ -126,7 +72,18 @@ const UA_EXAMPLES: [string, string][] = [
 export function UserAgentTool() {
   const l = useLocalized(networkL).uaParser
   const [input, setInput] = useState('')
-  const info = useMemo(() => input.trim() ? parseUa(input, l) : null, [input, l])
+  const info = useMemo(() => {
+    const t = input.trim()
+    if (!t) return null
+    const r = parseUserAgent(t)
+    return {
+      browser: r.browser ? (r.browser === 'WeChat' ? l.wechatBrowser : r.browser) : l.unknown,
+      version: r.version,
+      os: r.os || l.unknown,
+      device: r.device === 'mobile' ? l.phone : r.device === 'tablet' ? l.tablet : l.desktop,
+      bot: r.bot,
+    }
+  }, [input, l])
 
   return (
     <div className="space-y-3">
@@ -153,42 +110,16 @@ export function UserAgentTool() {
 
 /* ================= IP ↔ Integer ================= */
 
-function ipToLong(ip: string): number | null {
-  const parts = ip.trim().split('.')
-  if (parts.length !== 4) return null
-  let n = 0
-  for (const p of parts) {
-    if (!/^\d{1,3}$/.test(p)) return null
-    const v = parseInt(p)
-    if (v > 255) return null
-    n = n * 256 + v
-  }
-  return n
-}
-function longToIp(n: number): string {
-  return [n >>> 24 & 255, n >>> 16 & 255, n >>> 8 & 255, n & 255].join('.')
-}
-
 export function IpIntTool() {
   const l = useLocalized(networkL).ipInt
   const [input, setInput] = useState('127.0.0.1')
 
   const result = useMemo(() => {
-    const t = input.trim()
-    if (!t) return null
-    let n: number | null = null
-    if (/^\d+$/.test(t)) n = parseInt(t) >>> 0
-    else if (/^0x[0-9a-f]+$/i.test(t)) n = parseInt(t, 16) >>> 0
-    else if (/^0[0-7]+$/.test(t)) n = parseInt(t, 8) >>> 0
-    else n = ipToLong(t)
-    if (n === null || n > 0xFFFFFFFF) return { error: l.error }
-    const ip = longToIp(n)
-    return {
-      n, ip,
-      hex: '0x' + n.toString(16).padStart(8, '0').toUpperCase(),
-      octal: '0' + n.toString(8),
-      dottedHex: ip.split('.').map(o => '0x' + parseInt(o).toString(16).padStart(2, '0')).join('.'),
-      dottedOctal: ip.split('.').map(o => '0' + parseInt(o).toString(8).padStart(3, '0')).join('.'),
+    if (!input.trim()) return null
+    try {
+      return ipConvert(input)
+    } catch {
+      return { error: l.error }
     }
   }, [input, l])
 
@@ -199,7 +130,7 @@ export function IpIntTool() {
       {result && !('error' in result) && (
         <Panel title={l.equivTitle}>
           <KV k={l.dottedDecimal} v={<span className="text-phosphor">{result.ip}</span>} />
-          <KV k={l.decimalInt} v={<>{result.n} <CopyBtn text={String(result.n)} /></>} />
+          <KV k={l.decimalInt} v={<>{result.decimal} <CopyBtn text={String(result.decimal)} /></>} />
           <KV k={l.hex} v={<>{result.hex} <CopyBtn text={result.hex} /></>} />
           <KV k={l.octal} v={<>{result.octal} <CopyBtn text={result.octal} /></>} />
           <KV k={l.dottedHex} v={<>{result.dottedHex} <CopyBtn text={result.dottedHex} /></>} />
@@ -218,20 +149,16 @@ export function CookieTool() {
   const [input, setInput] = useState('sessionid=abc123; Expires=Wed, 21 Oct 2026 07:28:00 GMT; Path=/; Domain=.example.com; Secure; HttpOnly; SameSite=Lax')
 
   const parsed = useMemo(() => {
-    const t = input.trim()
-    if (!t) return null
-    const segs = t.split(';').map(s => s.trim()).filter(Boolean)
-    if (!segs.length) return null
-    const first = segs[0]
-    const eq = first.indexOf('=')
-    const cookie = eq > 0 ? { name: first.slice(0, eq).trim(), value: first.slice(eq + 1).trim() } : null
-    const attrs = segs.slice(cookie ? 1 : 0).map(s => {
-      const i = s.indexOf('=')
-      const k = (i > 0 ? s.slice(0, i) : s).trim().toLowerCase()
-      const v = i > 0 ? s.slice(i + 1).trim() : '(flag)'
-      return { k, v, note: (l.attrNotes as Record<string, string>)[k] }
-    })
-    return { cookie, attrs }
+    if (!input.trim()) return null
+    try {
+      const r = parseCookie(input)
+      return {
+        cookie: r.cookie,
+        attrs: r.attrs.map(a => ({ k: a.k, v: a.flag ? null : a.v, note: (l.attrNotes as Record<string, string>)[a.k] })),
+      }
+    } catch {
+      return null
+    }
   }, [input, l])
 
   return (
@@ -252,7 +179,7 @@ export function CookieTool() {
               {parsed.attrs.map((a, i) => (
                 <div key={i} className="py-1 border-b border-line-soft last:border-0 text-[12.5px]">
                   <span className="text-phosphor">{a.k}</span>
-                  {a.v !== '(flag)' && <span className="text-muted"> = {a.v}</span>}
+                  {a.v !== null && <span className="text-muted"> = {a.v}</span>}
                   {a.note && <div className="text-[11px] text-muted">{a.note}</div>}
                 </div>
               ))}

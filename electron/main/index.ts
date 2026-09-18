@@ -1,13 +1,23 @@
 import { app, BrowserWindow, nativeTheme, ipcMain, shell, dialog, session } from 'electron'
 import { join } from 'path'
+import { homedir } from 'node:os'
 import fs from 'node:fs'
 // electron-updater 是 tsc 编译的 CJS 包，导出用 Object.defineProperty(getter) 定义，
 // Node 的 ESM named-export 探测（cjs-module-lexer）识别不到 → 必须走 default 再解构
 import electronUpdater from 'electron-updater'
 import { performRequest } from './http'
+import { createChatController } from './chat-ipc'
+import { createMcpClientController } from './mcpclient-ipc'
+import { createAgentRulesController } from './agentrules-ipc'
+import { createChatStore, type ChatStore } from './chat-store'
+import { buildClientConfig, configHints, resolveMcpLaunch } from '../mcp/paths'
 import { CaptureProxy } from './proxy/server'
 import { SystemProxyManager } from './systemproxy'
 import type { HttpRequestSpec, HttpRequestResult } from '../../src/lib/http-types'
+import type { ChatEvent, ChatSendResult, ChatSendSpec } from '../../src/lib/chat-types'
+import type { AgentScanSpec, RulesTarget } from '../../src/lib/agentrules-types'
+import type { McpClientEvent, McpConnectSpec } from '../../src/lib/mcpclient-types'
+import type { McpInfo } from '../../src/lib/mcp-types'
 import type {
   CaInfo,
   InterceptDecision,
@@ -395,7 +405,137 @@ ipcMain.handle('theme:set', (_event, theme: 'dark' | 'light' | 'system') => {
   return nativeTheme.shouldUseDarkColors ? 'dark' : 'light'
 })
 
+/**
+ * MCP 接入信息。
+ *
+ * 关键点：安装包里没有独立的 node，所以启动命令指向应用自身的可执行文件（process.execPath），
+ * 再靠 ELECTRON_RUN_AS_NODE=1 让它以纯 Node 模式跑服务端脚本。
+ * 路径由主进程在运行时算出来，界面只负责展示与复制 —— 不让用户自己去猜路径。
+ */
+ipcMain.handle('mcp:info', (): McpInfo => {
+  const launch = resolveMcpLaunch(
+    {
+      isPackaged: app.isPackaged,
+      execPath: process.execPath,
+      resourcesPath: process.resourcesPath,
+      appRoot: app.getAppPath(),
+    },
+    (p) => {
+      try {
+        return fs.existsSync(p)
+      } catch {
+        return false
+      }
+    },
+  )
+  return {
+    launch: {
+      ...launch,
+      configJson: buildClientConfig(launch),
+      packaged: app.isPackaged,
+      version: app.getVersion(),
+    },
+    hints: configHints(homedir(), process.platform),
+  }
+})
+
 setupProxyIpc()
+
+/* ================= 流式对话（AI 调试） ================= */
+
+function sendChatEvent(evt: ChatEvent): void {
+  mainWindow?.webContents.send('chat:event', evt)
+}
+
+// 编排逻辑在 electron/main/chat-ipc.ts，宿主能力从外面注入 —— 这样它才能被 smoke 脚本直接验证
+const chatController = createChatController({ emit: sendChatEvent })
+
+function setupChatIpc(): void {
+  ipcMain.handle('chat:send', (_e, spec: ChatSendSpec): ChatSendResult => chatController.send(spec))
+  ipcMain.handle('chat:abort', (): boolean => chatController.abort())
+}
+
+setupChatIpc()
+
+/* ================= MCP 客户端（Inspector） ================= */
+
+function sendMcpClientEvent(evt: McpClientEvent): void {
+  mainWindow?.webContents.send('mcpclient:event', evt)
+}
+
+function setupMcpClientIpc(): void {
+  const ctl = createMcpClientController({ emit: sendMcpClientEvent }, { version: app.getVersion() })
+  ipcMain.handle('mcpclient:connect', (_e, spec: McpConnectSpec) => ctl.connect(spec))
+  ipcMain.handle('mcpclient:call', (_e, arg: { name: string; args?: Record<string, unknown> }) =>
+    ctl.callTool(String(arg?.name ?? ''), arg?.args ?? {}))
+  ipcMain.handle('mcpclient:read-resource', (_e, uri: string) => ctl.readResource(String(uri)))
+  ipcMain.handle('mcpclient:get-prompt', (_e, arg: { name: string; args?: Record<string, unknown> }) =>
+    ctl.getPrompt(String(arg?.name ?? ''), arg?.args ?? {}))
+  ipcMain.handle('mcpclient:ping', () => ctl.ping())
+  ipcMain.handle('mcpclient:disconnect', () => ctl.disconnect())
+}
+
+setupMcpClientIpc()
+
+/* ================= 对话会话存储 ================= */
+
+// 惰性创建：userData 路径在 app ready 之后才最终确定，别在模块加载时就解析
+let chatStoreRef: ChatStore | null = null
+function chatStore(): ChatStore {
+  return (chatStoreRef ??= createChatStore(app.getPath('userData')))
+}
+
+function setupChatStoreIpc(): void {
+  ipcMain.handle('chatstore:list', () => chatStore().list())
+  ipcMain.handle('chatstore:load', (_e, id: string) => chatStore().load(String(id ?? '')))
+  ipcMain.handle('chatstore:save', (_e, input: { id?: string; title?: string; turns?: unknown[] }) =>
+    chatStore().save({
+      id: String(input?.id ?? ''),
+      title: String(input?.title ?? ''),
+      turns: Array.isArray(input?.turns) ? input.turns : [],
+    }))
+  ipcMain.handle('chatstore:remove', (_e, id: string) => chatStore().remove(String(id ?? '')))
+  ipcMain.handle('chatstore:file', () => chatStore().filePath())
+  ipcMain.handle('chatstore:set-active', (_e, id: string | null) =>
+    chatStore().setActive(id === null || id === undefined ? null : String(id)))
+}
+
+setupChatStoreIpc()
+
+/* ================= Agent 规则文件生成器 ================= */
+
+const agentRules = createAgentRulesController({
+  defaultRoot: () => app.getPath('home'),
+  pickDirectory: async (title) => {
+    const options: Electron.OpenDialogOptions = {
+      properties: ['openDirectory'],
+      // 对话框标题由渲染层给（主进程不留界面文案）
+      ...(title ? { title } : {}),
+    }
+    const res = mainWindow
+      ? await dialog.showOpenDialog(mainWindow, options)
+      : await dialog.showOpenDialog(options)
+    return res.canceled || !res.filePaths.length ? null : res.filePaths[0]
+  },
+  writeFile: async (fullPath, content) => {
+    try {
+      await fs.promises.writeFile(fullPath, content, 'utf8')
+      return { ok: true }
+    } catch (e) {
+      return { ok: false, error: (e as Error).message }
+    }
+  },
+})
+
+function setupAgentRulesIpc(): void {
+  ipcMain.handle('agentrules:default-root', () => agentRules.defaultRoot())
+  ipcMain.handle('agentrules:pick', (_e, title?: string) => agentRules.pick(title))
+  ipcMain.handle('agentrules:scan', (_e, spec: AgentScanSpec) => agentRules.scan(spec))
+  ipcMain.handle('agentrules:save', (_e, root: string, target: RulesTarget, content: string) =>
+    agentRules.save(root, target, content))
+}
+
+setupAgentRulesIpc()
 
 // ---- App lifecycle ----
 app.whenReady().then(() => {

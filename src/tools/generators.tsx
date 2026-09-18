@@ -3,30 +3,21 @@ import QRCode from 'qrcode'
 import { Panel, Btn, TA, Input, Select, Stat, ErrorNote, CopyBtn } from '../components/ui'
 import { useLocalized, useI18n } from '../lib/i18n'
 import { genL } from '../lib/locales/generators'
+import { fakeRowsToCsv, generateFakeRows, generatePassword, generateUuids } from '../lib/toolkit'
+
+/* URI 生成、密码、假数据的实现来自 src/lib/toolkit —— 与 MCP 服务端共用同一份代码。 */
 
 /* ================= UUID ================= */
-
-function uuidv4(): string {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-    const r = crypto.getRandomValues(new Uint8Array(1))[0] % 16
-    const v = c === 'x' ? r : (r & 0x3) | 0x8
-    return v.toString(16)
-  })
-}
 
 export function UuidTool() {
   const l = useLocalized(genL).uuid
   const [count, setCount] = useState('5')
   const [upper, setUpper] = useState(false)
   const [noDash, setNoDash] = useState(false)
-  const [list, setList] = useState<string[]>(() => Array.from({ length: 5 }, uuidv4))
+  const [list, setList] = useState<string[]>(() => generateUuids({ count: 5 }))
 
   const gen = () => {
-    const n = Math.min(Math.max(parseInt(count) || 1, 1), 500)
-    let arr = Array.from({ length: n }, uuidv4)
-    if (noDash) arr = arr.map(u => u.replace(/-/g, ''))
-    if (upper) arr = arr.map(u => u.toUpperCase())
-    setList(arr)
+    setList(generateUuids({ count: parseInt(count) || 1, upper, noDash }))
   }
 
   return (
@@ -48,14 +39,6 @@ export function UuidTool() {
 
 /* ================= Password ================= */
 
-const CHARSETS = {
-  lower: 'abcdefghijklmnopqrstuvwxyz',
-  upper: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
-  digit: '0123456789',
-  symbol: '!@#$%^&*()-_=+[]{};:,.<>?/',
-  ambiguous: 'Il1O0',
-}
-
 type StrengthKey = 'weak' | 'medium' | 'strong' | 'veryStrong'
 
 function strength(bits: number): { key: StrengthKey; color: string } {
@@ -74,18 +57,14 @@ export function PasswordTool() {
   const [bits, setBits] = useState(0)
 
   const gen = () => {
-    let pool = ''
-    if (use.lower) pool += CHARSETS.lower
-    if (use.upper) pool += CHARSETS.upper
-    if (use.digit) pool += CHARSETS.digit
-    if (use.symbol) pool += CHARSETS.symbol
-    if (noAmb) pool = pool.split('').filter(c => !CHARSETS.ambiguous.includes(c)).join('')
-    if (!pool) { setPw(''); setBits(0); return }
-    const n = Math.min(Math.max(parseInt(len) || 16, 4), 128)
-    const rnd = crypto.getRandomValues(new Uint32Array(n))
-    const out = Array.from(rnd, r => pool[r % pool.length]).join('')
-    setPw(out)
-    setBits(Math.round(n * Math.log2(pool.length)))
+    try {
+      const r = generatePassword({ length: parseInt(len) || 16, ...use, excludeAmbiguous: noAmb })
+      setPw(r.password)
+      setBits(r.bits)
+    } catch {
+      setPw('')
+      setBits(0)
+    }
   }
 
   useEffect(gen, [])
@@ -180,84 +159,28 @@ export function QrTool() {
 
 /* ================= Mock Data Generator ================= */
 
-function rndInt(min: number, max: number) {
-  return min + crypto.getRandomValues(new Uint32Array(1))[0] % (max - min + 1)
-}
-
-function rndNameZh(surnames: string[], givens: string[]): string {
-  return surnames[rndInt(0, surnames.length - 1)] + givens[rndInt(0, givens.length - 1)] + (Math.random() > 0.5 ? givens[rndInt(0, givens.length - 1)] : '')
-}
-function rndNameEn(first: string[], last: string[]): string {
-  return first[rndInt(0, first.length - 1)] + ' ' + last[rndInt(0, last.length - 1)]
-}
-function rndPhoneZh(prefixes: string[]): string {
-  return prefixes[rndInt(0, prefixes.length - 1)] + String(rndInt(10000000, 99999999))
-}
-function rndPhoneEn(): string {
-  return `555-${String(rndInt(0, 999)).padStart(3, '0')}-${String(rndInt(0, 9999)).padStart(4, '0')}`
-}
-function rndEmailZh(domains: string[]): string {
-  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789'
-  const n = rndInt(5, 10)
-  let u = ''
-  for (let i = 0; i < n; i++) u += chars[rndInt(0, chars.length - 1)]
-  return u + '@' + domains[rndInt(0, domains.length - 1)]
-}
-function rndEmailEn(first: string[], last: string[], domains: string[]): string {
-  const f = first[rndInt(0, first.length - 1)].toLowerCase()
-  const x = last[rndInt(0, last.length - 1)].toLowerCase()
-  return `${f}.${x}@${domains[rndInt(0, domains.length - 1)]}`
-}
-function rndIdCardZh(areas: string[]): string {
-  const area = areas[rndInt(0, areas.length - 1)]
-  const y = rndInt(1970, 2002), m = rndInt(1, 12), d = rndInt(1, 28)
-  const body = area + y + String(m).padStart(2, '0') + String(d).padStart(2, '0') + String(rndInt(100, 999))
-  const W = [7, 9, 10, 5, 8, 4, 2, 1, 6, 3, 7, 9, 10, 5, 8, 4, 2]
-  const C = ['1', '0', 'X', '9', '8', '7', '6', '5', '4', '3', '2']
-  const sum = body.split('').reduce((acc, ch, i) => acc + parseInt(ch) * W[i], 0)
-  return body + C[sum % 11]
-}
-function rndSsnEn(): string {
-  return `${String(rndInt(0, 999)).padStart(3, '0')}-${String(rndInt(0, 99)).padStart(2, '0')}-${String(rndInt(0, 9999)).padStart(4, '0')}`
-}
-function rndIPv4() { return Array.from({ length: 4 }, () => rndInt(1, 254)).join('.') }
-function rndMac() { return Array.from({ length: 6 }, () => rndInt(0, 255).toString(16).padStart(2, '0')).join(':') }
-
 export function FakeDataTool() {
   const { locale } = useI18n()
   const l = useLocalized(genL).fakeData
   const [count, setCount] = useState('10')
-  const [rows, setRows] = useState<any[]>([])
+  const [rows, setRows] = useState<ReturnType<typeof generateFakeRows>>([])
 
   const gen = () => {
-    const n = Math.min(Math.max(parseInt(count) || 10, 1), 100)
-    setRows(Array.from({ length: n }, (_, i) => {
-      if (locale === 'zh') {
-        return {
-          id: i + 1,
-          name: rndNameZh(l.surnames, l.givens),
-          phone: rndPhoneZh(l.phonePrefixes),
-          email: rndEmailZh(l.domains),
-          idcard: rndIdCardZh(l.areas),
-          ip: rndIPv4(),
-          mac: rndMac().toUpperCase(),
-        }
-      }
-      return {
-        id: i + 1,
-        name: rndNameEn(l.firstNames, l.lastNames),
-        phone: rndPhoneEn(),
-        email: rndEmailEn(l.firstNames, l.lastNames, l.enDomains),
-        idcard: rndSsnEn(),
-        ip: rndIPv4(),
-        mac: rndMac().toUpperCase(),
-      }
-    }))
+    setRows(generateFakeRows(locale, {
+      surnames: l.surnames,
+      givens: l.givens,
+      phonePrefixes: l.phonePrefixes,
+      domains: l.domains,
+      areas: l.areas,
+      firstNames: l.firstNames,
+      lastNames: l.lastNames,
+      enDomains: l.enDomains,
+    }, parseInt(count) || 10))
   }
   useEffect(gen, [])
 
   const asJson = JSON.stringify(rows, null, 2)
-  const asCsv = 'id,name,phone,email,idcard,ip,mac\n' + rows.map(r => Object.values(r).join(',')).join('\n')
+  const asCsv = fakeRowsToCsv(rows)
 
   return (
     <div className="space-y-3">
