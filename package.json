@@ -1,7 +1,7 @@
 {
   "name": "devtoolbox",
   "private": false,
-  "version": "1.2.2",
+  "version": "1.3.0",
   "type": "module",
   "description": "DevOps Toolbox - 程序员与安全研究员的本地工具箱",
   "author": {
