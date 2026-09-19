@@ -104,6 +104,8 @@ export interface ProxyAPI {
 
 export interface ElectronAPI {
   getVersion: () => Promise<string>
+  /** 用系统默认程序打开外链（对话里的 Markdown 链接）；协议白名单在主进程 */
+  openExternal: (url: string) => Promise<boolean>
   getTheme: () => Promise<'dark' | 'light'>
   setTheme: (theme: 'dark' | 'light' | 'system') => Promise<'dark' | 'light'>
   onThemeChanged: (callback: (theme: 'dark' | 'light') => void) => () => void

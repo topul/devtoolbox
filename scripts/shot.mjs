@@ -9,7 +9,10 @@
  *   DTB_NO_SANDBOX=1 npm run shot          # 受限环境（CI 容器 / 受限 shell）起窗口要加
  *   DTB_SHOT_SIZES=1600x1000,2560x1440     # 自定义窗口尺寸
  *   DTB_SHOT_PREP="<js>"                   # 截图前先执行的 JS（例如点开某个页签）
- *   DTB_SHOT_LS='{"key":"1"}'              # 预置 localStorage（设好后自动 reload 再截）
+ *   DTB_SHOT_LS='{"key":"1"}'              # 预置 localStorage（设好后自动 reload 再截；同名键覆盖默认值）
+ *
+ * 默认会预置一份「演示模型」档案（对话是默认视图，不预置就只能截到配置引导卡），
+ * 并通过 chatstore 桩喂入两类历史会话：新格式（parts，含思考与工具调用）与旧格式（blocks）。
  *   DTB_SHOT_USERDATA=/tmp/xxx             # 覆盖隔离 profile 目录
  *
  *   例：DTB_SHOT_PREP="[...document.querySelectorAll('button')].find((b)=>b.textContent==='设置').click()" \
@@ -64,10 +67,13 @@ ipcMain.handle('chat:send', (_e, spec) => {
   const requestId = spec?.requestId || 'shot-chat'
   const win = BrowserWindow.getAllWindows()[0]
   const push = (evt) => win?.webContents.send('chat:event', evt)
-  const reply = '这是用于布局体检的桩数据：界面应当逐字追加内容，并在结束后给出首字延迟、吞吐、token 与费用。'
+  const reasoning = '先想清楚要不要调用工具：这次只是布局体检，直接给一段带 Markdown 的回复即可。'
+  const reply = '这是用于布局体检的桩数据，重点是让**各种部件**都出现一次：\n\n- 思考块（流式时展开，结束后自动收起）\n- Markdown 正文：列表、`行内代码`、[链接](https://example.com)\n\n```ts\nconst ok = true\n```\n\n| 列 | 值 |\n| --- | --- |\n| token | 148 |'
   const chars = [...reply]
+  const rChars = [...reasoning]
   const started = Date.now()
   let i = 0
+  let ri = 0
   push({ type: 'start', requestId })
 
   // 开了工具调用就顺带走一遍工具事件，否则工具块那块的布局体检不到
@@ -93,6 +99,12 @@ ipcMain.handle('chat:send', (_e, spec) => {
   }
 
   chatTimer = setInterval(() => {
+    // 先流思考，再流正文：正好走一遍「思考块自动展开 → 切正文 → 结束后自动折叠」
+    if (ri < rChars.length) {
+      push({ type: 'delta', requestId, text: rChars[ri], kind: 'reasoning', atMs: Date.now() })
+      ri++
+      return
+    }
     if (i < chars.length) {
       push({ type: 'delta', requestId, text: chars[i], kind: 'content', atMs: Date.now() })
       i++
@@ -110,7 +122,7 @@ ipcMain.handle('chat:send', (_e, spec) => {
         totalMs: Date.now() - started,
         chunks: chars.length,
         chars: reply.length,
-        reasoningChars: 0,
+        reasoningChars: reasoning.length,
         usage: { promptTokens: 96, completionTokens: 52, totalTokens: 148 },
         finishReason: 'stop',
         model: 'deepseek-chat',
@@ -194,37 +206,68 @@ const SHOT_SESSIONS = [
   { id: 'sB2c3d4e5f6789012', title: 'MCP 工具调用排查', createdAt: 1757900000000, updatedAt: 1758080000000, turnCount: 6 },
   { id: 'sC3d4e5f678901234', title: '写一个匹配日志行的正则', createdAt: 1757800000000, updatedAt: 1757990000000, turnCount: 2 },
 ]
-const SHOT_TURNS = [
-  { id: 'u-shot-1', role: 'user', blocks: [{ kind: 'text', text: '帮我看看 10.0.0.0/22 的可用主机范围' }], status: 'done' },
+/**
+ * 历史会话两种形态都要能截到：
+ *   - 新格式（parts）：现在写盘的样子，含思考块与工具调用；
+ *   - 旧格式（blocks）：老版本留下的会话文件，靠 chat-ui 的迁移把它读出来。
+ * 只要有一边渲染不出来，截图里立刻能看出来。
+ */
+const SHOT_TURNS_PARTS = [
+  {
+    id: 'u-shot-1',
+    role: 'user',
+    parts: [{ type: 'text', text: '帮我看看 10.0.0.0/22 的可用主机范围，顺便给个能直接粘贴的检查命令' }],
+  },
   {
     id: 'a-shot-1',
     role: 'assistant',
-    blocks: [
-      { kind: 'text', text: '我调用一下本机的 CIDR 工具，别自己算。' },
-      {
-        kind: 'tool',
-        call: { id: 'call_cidr', name: 'cidr_info', args: '{"cidr":"10.0.0.0/22"}' },
-        result: {
-          id: 'call_cidr', name: 'cidr_info', ok: true, isError: false, durationMs: 3,
-          text: 'IP: 10.0.0.1\n网络地址: 10.0.0.0/22\n广播地址: 10.0.3.255\n子网掩码: 255.255.252.0\n可用主机范围: 10.0.0.1 - 10.0.3.254\n可用主机数: 1022\n私有地址: 是',
-        },
+    metadata: {
+      rounds: 2,
+      meta: {
+        ttfbMs: 24, firstTokenMs: 61, totalMs: 1840, chunks: 44, chars: 138, reasoningChars: 96,
+        usage: { promptTokens: 412, completionTokens: 76, totalTokens: 488 },
+        finishReason: 'stop', model: 'deepseek-chat', toolCalls: [],
       },
-      { kind: 'text', text: '可用主机范围是 10.0.0.1 – 10.0.3.254，共 1022 个地址。' },
-    ],
-    status: 'done',
-    rounds: 2,
-    meta: {
-      ttfbMs: 24, firstTokenMs: 61, totalMs: 1840, chunks: 44, chars: 138, reasoningChars: 0,
-      usage: { promptTokens: 412, completionTokens: 76, totalTokens: 488 },
-      finishReason: 'stop', model: 'deepseek-chat',
     },
+    parts: [
+      { type: 'reasoning', id: 'r-shot-1', text: '先确认掩码：/22 是 255.255.252.0，每个子网 1024 个地址。可用主机要减掉网络地址与广播地址，边界要写清楚，别让用户自己再算一遍。', state: 'done' },
+      { type: 'text', text: '我调用一下本机的 CIDR 工具，别自己算：' },
+      {
+        type: 'dynamic-tool',
+        toolCallId: 'call_cidr',
+        toolName: 'cidr_info',
+        state: 'output-available',
+        input: { cidr: '10.0.0.0/22' },
+        output: 'IP: 10.0.0.1\n网络地址: 10.0.0.0/22\n广播地址: 10.0.3.255\n子网掩码: 255.255.252.0\n可用主机范围: 10.0.0.1 - 10.0.3.254\n可用主机数: 1022\n私有地址: 是',
+      },
+      { type: 'text', text: '## 结论\n\n| 项 | 值 |\n| --- | --- |\n| 网络地址 | `10.0.0.0/22` |\n| 广播地址 | `10.0.3.255` |\n| 可用主机数 | **1022** |\n\n可用范围是 10.0.0.1 – 10.0.3.254。要快速确认可以用：\n\n```bash\nnmap -sn 10.0.0.0/22 | head\n```\n\n注意 `/22` 这类**跨网段**写法在有些网关里会被拒绝。' },
+    ],
   },
 ]
+
+/** 旧格式（blocks）—— 老版本会话文件的样子，用来验证迁移路径的渲染 */
+const SHOT_TURNS_LEGACY = [
+  { id: 'u-legacy-1', role: 'user', blocks: [{ kind: 'text', text: '这条会话是老版本留下的' }], status: 'done' },
+  {
+    id: 'a-legacy-1',
+    role: 'assistant',
+    status: 'stopped',
+    blocks: [
+      { kind: 'reasoning', text: '历史会话里的思考内容。' },
+      { kind: 'text', text: '旧格式的正文照样要能渲染出来。' },
+    ],
+  },
+]
+
 ipcMain.handle('chatstore:list', () => ({ ok: true, activeId: SHOT_SESSIONS[0].id, sessions: SHOT_SESSIONS }))
-ipcMain.handle('chatstore:load', () => ({ ok: true, turns: SHOT_TURNS }))
+ipcMain.handle('chatstore:load', (_e, id) => ({
+  ok: true,
+  turns: id === SHOT_SESSIONS[0].id ? SHOT_TURNS_PARTS : SHOT_TURNS_LEGACY,
+}))
 ipcMain.handle('chatstore:save', () => ({ ok: true }))
 ipcMain.handle('chatstore:remove', () => ({ ok: true }))
 ipcMain.handle('chatstore:set-active', () => ({ ok: true }))
+ipcMain.handle('chatstore:file', () => join(shotProfile, 'chat-sessions.json'))
 
 // 规则文件生成器：桩里按本仓库的真实 package.json 造一份扫描结果，
 // 这样截图中的命令清单是真的（布局体检才有意义）
@@ -315,7 +358,17 @@ ipcMain.handle('mcp:info', () => {
   }
 })
 
-const lsSeed = process.env.DTB_SHOT_LS ? JSON.parse(process.env.DTB_SHOT_LS) : null
+/**
+ * 默认预置一份模型档案。对话是默认视图，而模型清单现在只从 localStorage 读 ——
+ * 不预置的话截到的永远只是「先连一个模型」的引导卡，新界面等于没体检到。
+ * 传 DTB_SHOT_LS 时以传入的为准（同名键会覆盖）。
+ */
+const SHOT_MODEL = { id: 'mshot0001', label: '演示模型', baseUrl: 'https://api.deepseek.com/v1', apiKey: 'sk-demo', model: 'deepseek-chat' }
+const DEFAULT_LS_SEED = {
+  'devtoolbox-chat-profiles': JSON.stringify([SHOT_MODEL]),
+  'devtoolbox-chat-active-profile': SHOT_MODEL.id,
+}
+const lsSeed = { ...DEFAULT_LS_SEED, ...(process.env.DTB_SHOT_LS ? JSON.parse(process.env.DTB_SHOT_LS) : {}) }
 
 if (process.env.DTB_NO_SANDBOX) {
   app.commandLine.appendSwitch('no-sandbox')

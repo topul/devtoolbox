@@ -114,6 +114,8 @@ export interface ProxyAPI {
 
 export interface ElectronAPI {
   getVersion: () => Promise<string>
+  /** 用系统默认程序打开外链（对话里的 Markdown 链接）；协议白名单在主进程 */
+  openExternal: (url: string) => Promise<boolean>
   getTheme: () => Promise<'dark' | 'light'>
   setTheme: (theme: 'dark' | 'light' | 'system') => Promise<'dark' | 'light'>
   /** 订阅主题变化；返回退订函数（组件卸载时务必调用，否则会累积监听器） */
@@ -132,6 +134,7 @@ export interface ElectronAPI {
 
 const api: ElectronAPI = {
   getVersion: () => ipcRenderer.invoke('app:get-version'),
+  openExternal: (url) => ipcRenderer.invoke('app:open-external', url),
   getTheme: () => ipcRenderer.invoke('theme:get'),
   setTheme: (theme) => ipcRenderer.invoke('theme:set', theme),
   onThemeChanged: (callback) => {

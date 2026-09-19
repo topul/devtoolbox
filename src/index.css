@@ -50,6 +50,14 @@
   --c-focus: rgba(0, 244, 142, 0.5);
   --glow-strength: 0.55;
   --glow-spread: 0.25;
+  /* 代码高亮：暗色下要够亮才看得清，亮色下同一语义换成深色 */
+  --c-hl-key: #ff79c6;
+  --c-hl-str: #4ade80;
+  --c-hl-num: #ffb000;
+  --c-hl-fn: #7ec8ff;
+  --c-hl-typ: #67e8f9;
+  --c-hl-var: #e879f9;
+  --c-hl-com: #5d7a68;
   color-scheme: dark;
 }
 
@@ -82,6 +90,14 @@
   --c-focus: rgba(0, 128, 85, 0.4);
   --glow-strength: 0;
   --glow-spread: 0;
+  /* 亮色下把同一套语义色压深，否则黄/绿在白底上几乎看不见 */
+  --c-hl-key: #a21caf;
+  --c-hl-str: #15803d;
+  --c-hl-num: #b45309;
+  --c-hl-fn: #1d4ed8;
+  --c-hl-typ: #0e7490;
+  --c-hl-var: #be185d;
+  --c-hl-com: #8a9a8e;
   color-scheme: light;
 }
 
@@ -163,6 +179,18 @@ textarea:focus, input:focus, select:focus, button:focus-visible {
 /* 大屏上等比放大内容：字号与间距一起变大，避免「元素偏小」；
    宽度限制在 App.tsx 的容器上（max-w + mx-auto），这里只管缩放。 */
 .content-zoom { zoom: var(--ui-zoom, 1); }
+
+/*
+ * 对话视图要占满可视区（内部自己滚，页面不滚）。这里**不能写 100vh**：
+ * 对话根节点在带 zoom 的 <main> 里，100vh 会被再放大一次 ——
+ * 实测 1600x1100（zoom=1.1）时整块高 1179px，超出视口 107px，输入框下方的
+ * 发送按钮被切到屏幕外。所以按缩放把视口高度换回「局部 CSS px」。
+ * 窄屏（<1024px）没有缩放，仍按视口减掉移动端顶栏（3rem）。
+ */
+.chat-viewport { height: calc(100dvh - 3rem); }
+@media (min-width: 1024px) {
+  .chat-viewport { height: calc(100dvh / var(--ui-zoom, 1)); }
+}
 @media (min-width: 1440px) { :root { --ui-zoom: 1.06; } }
 @media (min-width: 1600px) { :root { --ui-zoom: 1.1; } }
 @media (min-width: 1900px) { :root { --ui-zoom: 1.16; } }
@@ -199,3 +227,131 @@ pre.codeblock {
   white-space: pre-wrap;
   word-break: break-all;
 }
+
+/* ==================== Markdown（模型回复的正文） ==================== */
+
+/*
+ * 样式全部走主题变量，深浅两色共用一套规则。
+ * 列表样式必须显式写回来：Tailwind 的 preflight 把 ul/ol 的 marker 清掉了。
+ */
+.md {
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: var(--c-text);
+  overflow-wrap: anywhere;
+}
+.md > :first-child { margin-top: 0; }
+.md > :last-child { margin-bottom: 0; }
+
+.md p { margin: 0.55rem 0; }
+.md h1, .md h2, .md h3, .md h4, .md h5, .md h6 {
+  color: var(--c-text-bright);
+  font-weight: 600;
+  margin: 0.9rem 0 0.45rem;
+  line-height: 1.35;
+}
+.md h1 { font-size: 16px; }
+.md h2 { font-size: 15px; }
+.md h3 { font-size: 14px; }
+.md h4, .md h5, .md h6 { font-size: 13px; }
+.md h2 { border-bottom: 1px solid var(--c-line-soft); padding-bottom: 0.25rem; }
+
+.md ul, .md ol { margin: 0.5rem 0; padding-left: 1.35rem; }
+.md ul { list-style: disc; }
+.md ol { list-style: decimal; }
+.md li { margin: 0.18rem 0; }
+.md li > ul, .md li > ol { margin: 0.18rem 0; }
+.md li::marker { color: var(--c-phosphor); }
+/* GFM 任务列表 */
+.md li.task-list-item { list-style: none; margin-left: -1.1rem; }
+.md input[type='checkbox'] { accent-color: var(--c-phosphor); margin-right: 0.35rem; }
+
+.md a {
+  color: var(--c-amber);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.md strong { color: var(--c-text-bright); font-weight: 600; }
+.md em { font-style: italic; color: var(--c-text-dim); }
+.md del { color: var(--c-muted); }
+
+.md blockquote {
+  border-left: 3px solid var(--c-line);
+  padding: 0.1rem 0 0.1rem 0.7rem;
+  margin: 0.6rem 0;
+  color: var(--c-text-dim);
+}
+
+.md hr { border: 0; border-top: 1px solid var(--c-line-soft); margin: 0.9rem 0; }
+
+.md-inline-code {
+  background: var(--c-phosphor-faint);
+  color: var(--c-phosphor);
+  padding: 0.5px 5px;
+  font-size: 12px;
+  word-break: break-all;
+}
+
+.md-code {
+  border: 1px solid var(--c-line-soft);
+  background: var(--c-panel-2);
+  margin: 0.6rem 0;
+}
+.md-code-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.2rem 0.5rem 0.2rem 0.6rem;
+  border-bottom: 1px solid var(--c-line-soft);
+}
+.md-code-lang {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--c-muted);
+}
+.md-code pre {
+  margin: 0;
+  padding: 0.55rem 0.7rem;
+  overflow-x: auto;
+  max-height: 60vh;
+  overflow-y: auto;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--c-text-bright);
+}
+
+.md-table-wrap { margin: 0.6rem 0; overflow-x: auto; }
+.md table { border-collapse: collapse; font-size: 12px; min-width: 100%; }
+.md th, .md td {
+  border: 1px solid var(--c-line-soft);
+  padding: 0.3rem 0.55rem;
+  text-align: left;
+  vertical-align: top;
+}
+.md th { background: var(--c-panel-2); color: var(--c-text-bright); font-weight: 600; }
+
+.md-img { max-width: 100%; margin: 0.4rem 0; }
+.md-img-blocked {
+  display: inline-block;
+  border: 1px dashed var(--c-line);
+  padding: 0.2rem 0.5rem;
+  color: var(--c-muted);
+  font-size: 11.5px;
+  word-break: break-all;
+}
+.md-img-note { color: var(--c-amber); }
+
+/* ---------- 代码高亮（hljs 类名 → 主题变量） ---------- */
+.md .hljs-comment, .md .hljs-quote { color: var(--c-hl-com); font-style: italic; }
+.md .hljs-keyword, .md .hljs-selector-tag, .md .hljs-literal, .md .hljs-doctag { color: var(--c-hl-key); }
+.md .hljs-string, .md .hljs-regexp, .md .hljs-addition, .md .hljs-attribute { color: var(--c-hl-str); }
+.md .hljs-number, .md .hljs-symbol, .md .hljs-bullet, .md .hljs-meta { color: var(--c-hl-num); }
+.md .hljs-title, .md .hljs-name, .md .hljs-section, .md .hljs-function .hljs-title { color: var(--c-hl-fn); }
+.md .hljs-type, .md .hljs-built_in, .md .hljs-class .hljs-title { color: var(--c-hl-typ); }
+.md .hljs-variable, .md .hljs-template-variable, .md .hljs-attr, .md .hljs-property { color: var(--c-hl-var); }
+.md .hljs-deletion { color: var(--c-danger); }
+.md .hljs-emphasis { font-style: italic; }
+.md .hljs-strong { font-weight: 600; }

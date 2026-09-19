@@ -11,6 +11,7 @@ import { createMcpClientController } from './mcpclient-ipc'
 import { createAgentRulesController } from './agentrules-ipc'
 import { createChatStore, type ChatStore } from './chat-store'
 import { buildClientConfig, configHints, resolveMcpLaunch } from '../mcp/paths'
+import { safeExternalUrl } from '../../src/lib/external-link'
 import { CaptureProxy } from './proxy/server'
 import { SystemProxyManager } from './systemproxy'
 import type { HttpRequestSpec, HttpRequestResult } from '../../src/lib/http-types'
@@ -384,6 +385,22 @@ nativeTheme.on('updated', () => {
 
 // ---- IPC ----
 ipcMain.handle('app:get-version', () => app.getVersion())
+
+/**
+ * 打开外链（对话里的 Markdown 链接）。
+ * 链接来自模型输出，属于不可信输入 → 协议白名单在 `safeExternalUrl` 里，
+ * 只放行 http/https/mailto，并且拒绝带账号密码的地址。
+ */
+ipcMain.handle('app:open-external', async (_e, url: unknown): Promise<boolean> => {
+  const safe = safeExternalUrl(url)
+  if (!safe) return false
+  try {
+    await shell.openExternal(safe)
+    return true
+  } catch {
+    return false
+  }
+})
 
 ipcMain.handle('updater:check', () => {
   sendUpdaterEvent({ type: 'checking' })

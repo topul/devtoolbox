@@ -130,7 +130,24 @@ export const UI: Record<Locale, UIStrings> = {
 }
 
 /** Shared button labels used by src/components/ui.tsx primitives */
-export const COMMON: Record<Locale, { copy: string; copied: string }> = {
-  zh: { copy: '复制', copied: '✓ 已复制' },
-  en: { copy: 'Copy', copied: '✓ Copied' },
+export const COMMON: Record<Locale, {
+  copy: string
+  copied: string
+  /** Markdown 外链：点开走系统浏览器（应用窗口本身不导航） */
+  openInBrowser: string
+  /** Markdown 里的外链图片：CSP 只允许本地资源，外链一律不加载 */
+  imageBlocked: string
+}> = {
+  zh: {
+    copy: '复制',
+    copied: '✓ 已复制',
+    openInBrowser: '在浏览器中打开',
+    imageBlocked: '图片未加载（外链资源被安全策略拦截）',
+  },
+  en: {
+    copy: 'Copy',
+    copied: '✓ Copied',
+    openInBrowser: 'Open in browser',
+    imageBlocked: 'Image not loaded (external resource blocked by policy)',
+  },
 }
