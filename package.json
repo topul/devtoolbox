@@ -3,7 +3,7 @@
   "private": false,
   "version": "1.4.0",
   "type": "module",
-  "description": "DevOps Toolbox - \u7a0b\u5e8f\u5458\u4e0e\u5b89\u5168\u7814\u7a76\u5458\u7684\u672c\u5730\u5de5\u5177\u7bb1",
+  "description": "DevOps Toolbox - a local toolkit for developers & security researchers (Electron + React) · 程序员与安全研究员的本地工具箱（Electron + React）",
   "author": {
     "name": "topul",
     "email": "qiaocuixinzhiweini@gmail.com"
