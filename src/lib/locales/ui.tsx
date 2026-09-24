@@ -137,17 +137,21 @@ export const COMMON: Record<Locale, {
   openInBrowser: string
   /** Markdown 里的外链图片：CSP 只允许本地资源，外链一律不加载 */
   imageBlocked: string
+  /** 抽屉 / 弹层关闭按钮的无障碍标签 */
+  close: string
 }> = {
   zh: {
     copy: '复制',
     copied: '✓ 已复制',
     openInBrowser: '在浏览器中打开',
     imageBlocked: '图片未加载（外链资源被安全策略拦截）',
+    close: '关闭',
   },
   en: {
     copy: 'Copy',
     copied: '✓ Copied',
     openInBrowser: 'Open in browser',
     imageBlocked: 'Image not loaded (external resource blocked by policy)',
+    close: 'Close',
   },
 }

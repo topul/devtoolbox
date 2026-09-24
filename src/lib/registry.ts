@@ -57,9 +57,11 @@ export const CATEGORIES: CategoryId[] = [
  * 分类仍是工具的稳定属性（搜索、面包屑、卡片都还按它来），
  * 这里只是给导航加一层聚合。
  *
- * 顺序即优先级：第一个是 AI —— 现在这个工具箱最常用的部分。
+ * 顺序即优先级：AI 第一（打开即对话），HTTP 调试与抓包第二 —— 这两块是日常用得最多的。
+ * `http` 单独成组而不是并进 `network`，就是为了让它在侧栏里有自己的位置、默认展开；
+ * 「网络与调试」剩下的都是解析/换算类小工具，不适合跟抓包抢位置。
  */
-export type SectionId = 'ai' | 'codec' | 'security' | 'network' | 'content' | 'misc'
+export type SectionId = 'ai' | 'http' | 'codec' | 'security' | 'network' | 'content' | 'misc'
 
 export interface SectionDef {
   id: SectionId
@@ -68,9 +70,10 @@ export interface SectionDef {
 
 export const SECTIONS: SectionDef[] = [
   { id: 'ai', categories: ['ai'] },
+  { id: 'http', categories: ['http'] },
   { id: 'codec', categories: ['encoding', 'format'] },
   { id: 'security', categories: ['crypto', 'offsec'] },
-  { id: 'network', categories: ['network', 'http'] },
+  { id: 'network', categories: ['network'] },
   { id: 'content', categories: ['generators', 'text'] },
   { id: 'misc', categories: ['datetime', 'reference'] },
 ]
@@ -86,7 +89,7 @@ const SECTION_OF: Record<CategoryId, SectionId> = {
   crypto: 'security',
   offsec: 'security',
   network: 'network',
-  http: 'network',
+  http: 'http',
   generators: 'content',
   text: 'content',
   datetime: 'misc',

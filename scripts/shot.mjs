@@ -50,6 +50,9 @@ ipcMain.handle('app:get-version', () => JSON.parse(fs.readFileSync(join(root, 'p
 ipcMain.handle('theme:get', () => 'dark')
 ipcMain.handle('theme:set', () => 'dark')
 ipcMain.handle('updater:check', () => undefined)
+// 请求导入/导出：只在点击时才会用到，打桩是为了截图时点得到、且不刷 No handler 噪声
+ipcMain.handle('http:export-file', () => ({ ok: false, canceled: true, path: '' }))
+ipcMain.handle('http:import-file', () => ({ ok: false, canceled: true, path: '' }))
 ipcMain.handle('proxy:state', () => ({
   running: false,
   port: 8899,

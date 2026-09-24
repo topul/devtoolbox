@@ -30,13 +30,17 @@ export function useSidebarCollapsed() {
 /* ================= 导航分组的展开状态 ================= */
 
 const SECTIONS_KEY = 'devtoolbox-open-sections'
-const DEFAULT_OPEN = ['ai']
+const DEFAULT_OPEN = ['ai', 'http']
 
 /**
  * 侧栏里哪些分组是展开的。
  *
- * 默认**只展开 AI 组** —— 54 个工具全摊开会让人找不到东西，
- * 而 AI 是现在最常用的那部分。其余组折叠成一行，点一下再展开。
+ * 默认展开 **AI 与 HTTP 两组** —— 54 个工具全摊开会让人找不到东西，
+ * 而这两块是每天都在用的。其余组折叠成一行，点一下再展开。
+ *
+ * 注意：展开状态存在 localStorage，**老版本升级上来的用户不会自动多展开 http 组**
+ * （用自己调过的折叠状态覆盖默认值是对的，不该被我们改掉）。要让他们也能看到，
+ * 得让他们自己点一次，或者进一次该组里的工具 —— `ensureOpen` 会自动展开。
  */
 export function useOpenSections() {
   const [open, setOpen] = useState<string[]>(() => {

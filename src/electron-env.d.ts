@@ -1,5 +1,5 @@
 // Electron bridge types, as seen from the renderer process
-import type { HttpRequestResult, HttpRequestSpec } from './lib/http-types'
+import type { HttpRequestResult, HttpRequestSpec, HttpTransferAPI } from './lib/http-types'
 import type { ChatEvent, ChatSendResult, ChatSendSpec } from './lib/chat-types'
 import type { McpInfo } from './lib/mcp-types'
 import type {
@@ -36,7 +36,7 @@ export interface UpdaterEvent {
   percent?: number
 }
 
-export interface HttpAPI {
+export interface HttpAPI extends HttpTransferAPI {
   send: (spec: HttpRequestSpec) => Promise<HttpRequestResult>
 }
 

@@ -34,17 +34,19 @@ export const CATEGORY_L = {
 export const SECTION_L = {
   zh: {
     ai: 'AI 工作台',
+    http: 'HTTP 调试与抓包',
     codec: '编解码与格式',
     security: '加密与安全',
-    network: '网络与调试',
+    network: '网络工具',
     content: '生成与文本',
     misc: '时间与参考',
   },
   en: {
     ai: 'AI Workspace',
+    http: 'HTTP Debug & Capture',
     codec: 'Encoding & Format',
     security: 'Crypto & Security',
-    network: 'Network & Debug',
+    network: 'Network Tools',
     content: 'Generate & Text',
     misc: 'Time & Reference',
   },
@@ -54,17 +56,19 @@ export const SECTION_L = {
 export const SECTION_DESC_L = {
   zh: {
     ai: '对话调试、MCP 接入与调用、工具定义与规则文件 —— 最常用的都在这里',
+    http: '接口调试、请求导入导出与多语言代码生成、流量抓包与规则改写',
     codec: '编码解码、序列化与格式美化',
     security: '哈希、对称加密与渗透测试常用',
-    network: 'HTTP 调试、抓包与网络计算',
+    network: 'URL / UA / IP / Cookie 的解析与换算',
     content: '随机数据生成与文本处理',
     misc: '时间计算与速查表',
   },
   en: {
     ai: 'Chat debugging, MCP wiring and inspection, tool schemas and rule files',
+    http: 'API debugging, request import/export, code generation, traffic capture and rules',
     codec: 'Encoding, serialisation and formatting',
     security: 'Hashing, symmetric crypto and offensive-security staples',
-    network: 'HTTP debugging, traffic capture and network math',
+    network: 'URL / UA / IP / cookie parsing and conversion',
     content: 'Random data generation and text processing',
     misc: 'Date math and quick reference tables',
   },

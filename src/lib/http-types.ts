@@ -71,3 +71,21 @@ export interface HttpRequestResult {
   remoteAddress: string
   tls: TlsInfo | null
 }
+
+/** 请求导入 / 导出走文件通道时的返回。preload 与渲染层类型声明共用，避免三处各写一份。 */
+export interface HttpTransferResult {
+  ok: boolean
+  canceled?: boolean
+  path: string
+  /** 导入时回传文件内容 */
+  content?: string
+  /** 稳定错误码（EMPTY_PAYLOAD / FILE_TOO_LARGE）或原始 fs 报错信息 */
+  error?: string
+}
+
+export interface HttpTransferAPI {
+  /** 把请求 JSON 存成文件（主进程弹系统保存框）；title/文件名由调用方给，避免主进程留界面文案 */
+  exportFile: (payload: { title: string; name: string; content: string }) => Promise<HttpTransferResult>
+  /** 从文件读取请求 JSON；取消时 canceled=true */
+  importFile: (title: string) => Promise<HttpTransferResult>
+}

@@ -14,7 +14,7 @@ import { buildClientConfig, configHints, resolveMcpLaunch } from '../mcp/paths'
 import { safeExternalUrl } from '../../src/lib/external-link'
 import { CaptureProxy } from './proxy/server'
 import { SystemProxyManager } from './systemproxy'
-import type { HttpRequestSpec, HttpRequestResult } from '../../src/lib/http-types'
+import type { HttpRequestSpec, HttpRequestResult, HttpTransferResult } from '../../src/lib/http-types'
 import type { ChatEvent, ChatSendResult, ChatSendSpec } from '../../src/lib/chat-types'
 import type { AgentScanSpec, RulesTarget } from '../../src/lib/agentrules-types'
 import type { McpClientEvent, McpConnectSpec } from '../../src/lib/mcpclient-types'
@@ -292,6 +292,53 @@ function setupProxyIpc(): void {
   })
 }
 
+/* ================= 请求导入 / 导出（系统文件对话框） ================= */
+
+/** 只留文件名安全字符，避免用户填的名字带路径分隔符 */
+function sanitizeFileName(name: string): string {
+  const base = String(name ?? '').replace(/[\\/:*?"<>|]+/g, '-').trim()
+  return base || 'devtoolbox-requests.json'
+}
+
+function setupHttpTransferIpc(): void {
+  ipcMain.handle('http:export-file', async (_e, payload: { title?: string; name?: string; content?: string } = {}): Promise<HttpTransferResult> => {
+    const content = typeof payload.content === 'string' ? payload.content : ''
+    if (!content) return { ok: false, path: '', error: 'EMPTY_PAYLOAD' }
+    const filePath = await askSavePath({
+      title: payload.title,
+      defaultPath: join(app.getPath('downloads'), sanitizeFileName(payload.name ?? '')),
+      filters: [{ name: 'JSON', extensions: ['json'] }],
+    })
+    if (!filePath) return { ok: false, canceled: true, path: '' }
+    try {
+      fs.writeFileSync(filePath, content, 'utf8')
+      return { ok: true, path: filePath }
+    } catch (err) {
+      return { ok: false, path: '', error: (err as Error).message }
+    }
+  })
+
+  ipcMain.handle('http:import-file', async (_e, title?: string): Promise<HttpTransferResult> => {
+    const win = mainWindow
+    const options: Electron.OpenDialogOptions = {
+      title,
+      properties: ['openFile'],
+      filters: [{ name: 'JSON', extensions: ['json'] }],
+    }
+    const result = win && !win.isDestroyed()
+      ? await dialog.showOpenDialog(win, options)
+      : await dialog.showOpenDialog(options)
+    const filePath = result.canceled ? '' : result.filePaths[0] ?? ''
+    if (!filePath) return { ok: false, canceled: true, path: '' }
+    try {
+      if (fs.statSync(filePath).size > 8 * 1024 * 1024) return { ok: false, path: filePath, error: 'FILE_TOO_LARGE' }
+      return { ok: true, path: filePath, content: fs.readFileSync(filePath, 'utf8') }
+    } catch (err) {
+      return { ok: false, path: '', error: (err as Error).message }
+    }
+  })
+}
+
 /** 会话 → HAR 1.2，方便导入 Chrome DevTools / Charles 对照 */
 function toHar(sessions: ProxySession[]): string {
   const entries = sessions.map((s) => {
@@ -457,6 +504,7 @@ ipcMain.handle('mcp:info', (): McpInfo => {
 })
 
 setupProxyIpc()
+setupHttpTransferIpc()
 
 /* ================= 流式对话（AI 调试） ================= */
 

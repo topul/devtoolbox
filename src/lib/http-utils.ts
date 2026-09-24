@@ -101,10 +101,6 @@ export function headerValueOf(headers: [string, string][], name: string): string
   return hit ? hit[1] : null
 }
 
-export function hasHeader(headers: [string, string][], name: string): boolean {
-  return headers.some(([k]) => k.toLowerCase() === name.toLowerCase())
-}
-
 export type StatusClass = 'ok' | 'redirect' | 'client' | 'server' | 'none'
 
 export function statusClass(status: number | null): StatusClass {
@@ -197,73 +193,9 @@ export function buildQueryRows(rows: QueryRow[]): string {
     .join('&')
 }
 
-/* ================= cURL 生成 ================= */
-
-export interface CurlInput {
-  method: string
-  url: string
-  headers: [string, string][]
-  bodyText?: string | null
-  followRedirects?: boolean
-  verifyTls?: boolean
-  proxy?: string | null
-}
-
-export function buildCurl(o: CurlInput): string {
-  const parts = ['curl', `-X ${o.method}`]
-  if (o.followRedirects) parts.push('-L')
-  if (o.verifyTls === false) parts.push('-k')
-  if (o.proxy) parts.push(`--proxy ${shellQuote(o.proxy)}`)
-  parts.push(shellQuote(o.url))
-  for (const [k, v] of o.headers) parts.push(`-H ${shellQuote(`${k}: ${v}`)}`)
-  if (o.bodyText) parts.push(`--data-raw ${shellQuote(o.bodyText)}`)
-  return parts.join(' \\\n  ')
-}
-
-function shellQuote(s: string): string {
-  return `'${s.replace(/'/g, `'\\''`)}'`
-}
-
-/* ================= 代码片段 ================= */
-
-export function buildFetchSnippet(o: CurlInput): string {
-  const headers: Record<string, string> = {}
-  for (const [k, v] of o.headers) headers[k] = v
-  const init: string[] = [`  method: ${JSON.stringify(o.method)}`]
-  if (Object.keys(headers).length) init.push(`  headers: ${JSON.stringify(headers, null, 2).replace(/\n/g, '\n  ')}`)
-  if (o.bodyText) init.push(`  body: ${JSON.stringify(o.bodyText)}`)
-  return `const res = await fetch(${JSON.stringify(o.url)}, {\n${init.join(',\n')}\n})\nconsole.log(res.status, await res.text())`
-}
-
-export function buildPythonSnippet(o: CurlInput): string {
-  const headerLines = o.headers.map(([k, v]) => `    ${JSON.stringify(k)}: ${JSON.stringify(v)},`).join('\n')
-  const lines = [
-    'import requests',
-    '',
-    `url = ${JSON.stringify(o.url)}`,
-    'headers = {',
-    headerLines,
-    '}',
-  ]
-  if (o.bodyText) lines.push(`data = ${JSON.stringify(o.bodyText)}`)
-  lines.push(`r = requests.${o.method.toLowerCase()}(${o.bodyText ? 'url, headers=headers, data=data' : 'url, headers=headers'}${o.verifyTls === false ? ', verify=False' : ''})`)
-  lines.push('print(r.status_code, r.text)')
-  return lines.join('\n')
-}
-
-export function buildNodeSnippet(o: CurlInput): string {
-  const headers = o.headers.map(([k, v]) => `    ${JSON.stringify(k)}: ${JSON.stringify(v)},`).join('\n')
-  return [
-    `const res = await fetch(${JSON.stringify(o.url)}, {`,
-    `  method: ${JSON.stringify(o.method)},`,
-    '  headers: {',
-    headers,
-    '  },',
-    ...(o.bodyText ? [`  body: ${JSON.stringify(o.bodyText)},`] : []),
-    '})',
-    'console.log(res.status, await res.text())',
-  ].join('\n')
-}
+/* 请求序列化与代码生成见 src/lib/http-codegen.ts（curl/多语言/文件读写共用一份实现）。
+   这里只做转发，避免抓包页等既有调用点被迫改 import。 */
+export { buildCurl, type CurlInput } from './http-codegen'
 
 /* ================= 本地存储 ================= */
 

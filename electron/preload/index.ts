@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import type { HttpRequestResult, HttpRequestSpec } from '../../src/lib/http-types'
+import type { HttpRequestResult, HttpRequestSpec, HttpTransferAPI } from '../../src/lib/http-types'
 import type { ChatEvent, ChatSendResult, ChatSendSpec } from '../../src/lib/chat-types'
 import type { McpInfo } from '../../src/lib/mcp-types'
 import type {
@@ -36,7 +36,7 @@ export interface UpdaterEvent {
   percent?: number
 }
 
-export interface HttpAPI {
+export interface HttpAPI extends HttpTransferAPI {
   send: (spec: HttpRequestSpec) => Promise<HttpRequestResult>
 }
 
@@ -151,6 +151,8 @@ const api: ElectronAPI = {
   },
   http: {
     send: (spec) => ipcRenderer.invoke('http:send', spec),
+    exportFile: (payload) => ipcRenderer.invoke('http:export-file', payload),
+    importFile: (title) => ipcRenderer.invoke('http:import-file', title),
   },
   mcp: {
     info: () => ipcRenderer.invoke('mcp:info'),

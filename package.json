@@ -35,6 +35,7 @@
     "smoke:chat": "esbuild scripts/smoke-chat.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/smoke-chat.mjs --log-level=error && node node_modules/.cache/smoke-chat.mjs",
     "smoke:chatstore": "esbuild scripts/smoke-chatstore.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/smoke-chatstore.mjs --log-level=error && node node_modules/.cache/smoke-chatstore.mjs",
     "smoke:schema": "esbuild scripts/smoke-schema.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/smoke-schema.mjs --log-level=error && node node_modules/.cache/smoke-schema.mjs",
+    "smoke:httpcodec": "esbuild scripts/smoke-httpcodec.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/smoke-httpcodec.mjs --log-level=error && node node_modules/.cache/smoke-httpcodec.mjs",
     "smoke:agentrules": "esbuild scripts/smoke-agentrules.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/smoke-agentrules.mjs --log-level=error && node node_modules/.cache/smoke-agentrules.mjs",
     "smoke:chatagent": "esbuild scripts/smoke-chatagent.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/smoke-chatagent.mjs --log-level=error && node node_modules/.cache/smoke-chatagent.mjs",
     "smoke:preload": "electron scripts/check-preload.mjs",

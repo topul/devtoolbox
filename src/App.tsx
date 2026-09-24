@@ -19,7 +19,7 @@ const ASCII_LOGO = `
 
 /** 导航分组的图标：侧栏窄栏、侧栏展开态、首页分区共用一套 */
 const SECTION_ICONS: Record<SectionId, string> = {
-  ai: '✦', codec: '⇄', security: '⚿', network: '⌁', content: '⚙', misc: '▤',
+  ai: '✦', http: '⇅', codec: '⇄', security: '⚿', network: '⌁', content: '⚙', misc: '▤',
 }
 
 /** 首页与侧栏共用的分组内容：组 → 其下的工具（按分类顺序） */

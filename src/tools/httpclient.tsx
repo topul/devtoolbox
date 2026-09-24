@@ -1,8 +1,18 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react'
-import { Panel, Btn, TA, Input, Select, ErrorNote, CopyBtn } from '../components/ui'
+import { Panel, Btn, TA, Input, Select, ErrorNote, CopyBtn, Drawer, NoteList } from '../components/ui'
+import { CodeSnippets } from '../components/http/CodeSnippets'
+import { RequestTransfer } from '../components/http/RequestTransfer'
 import { useLocalized } from '../lib/i18n'
 import { httpClientL } from '../lib/locales/httpclient'
 import type { HttpRequestResult, HttpRequestSpec } from '../lib/http-types'
+import {
+  docFromRequestSpec,
+  generateCode,
+  mergeRequests,
+  type RequestBody,
+  type RequestDoc,
+  type RequestEntry,
+} from '../lib/http-codegen'
 import * as U from '../lib/http-utils'
 
 /* ================= 类型 ================= */
@@ -88,6 +98,88 @@ const DEFAULT_OPTIONS: OptState = {
 function sameParams(a: Row[], b: Row[]): boolean {
   if (a.length !== b.length) return false
   return a.every((r, i) => r.name === b[i].name && r.value === b[i].value)
+}
+
+/* ================= 表单 / 文档 互转（导出与回填共用） ================= */
+
+/** 认证方式 → 实际要加的请求头 */
+function authHeaderPairs(auth: AuthState): [string, string][] {
+  if (auth.type === 'basic') {
+    const b64 = U.bytesToB64(new TextEncoder().encode(`${auth.username}:${auth.password}`))
+    return [['Authorization', `Basic ${b64}`]]
+  }
+  if (auth.type === 'bearer') return auth.token ? [['Authorization', `Bearer ${auth.token}`]] : []
+  if (auth.type === 'apikey') return [[auth.headerName.trim() || 'X-API-Key', `${auth.headerPrefix}${auth.token}`]]
+  return []
+}
+
+/** 最终请求头 = 手工行 + 认证 + 正文类型。表单发送与收藏导出走同一份，避免两边不一致。 */
+function buildFinalHeaders(o: { headers: Row[]; authHeaders: [string, string][]; bodyContentType: string | null }): [string, string][] {
+  const out: [string, string][] = o.headers.filter((h) => h.enabled && h.name.trim()).map((h) => [h.name.trim(), h.value])
+  for (const [k, v] of o.authHeaders) {
+    const i = out.findIndex(([n]) => n.toLowerCase() === k.toLowerCase())
+    if (i >= 0) out[i] = [out[i][0], v]
+    else out.push([k, v])
+  }
+  if (o.bodyContentType && !out.some(([n]) => n.toLowerCase() === 'content-type')) {
+    out.push(['Content-Type', o.bodyContentType])
+  }
+  return out
+}
+
+function bodyFromParts(mode: BodyMode, fields: Row[], raw: string): RequestBody {
+  if (mode === 'form' || mode === 'multipart') {
+    return {
+      kind: 'fields',
+      fields: fields.filter((f) => f.enabled && f.name).map((f) => [f.name, f.value] as [string, string]),
+      multipart: mode === 'multipart',
+    }
+  }
+  if (mode === 'none' || !raw.trim()) return { kind: 'none' }
+  return { kind: 'text', text: raw }
+}
+
+/** 从 Content-Type 猜正文类型；认不出来就按内容嗅一下，比一律当 JSON 更少误报 */
+function inferBodyMode(contentType: string, body: string): BodyMode {
+  const ct = contentType.toLowerCase()
+  if (ct.includes('json')) return 'json'
+  if (ct.includes('xml')) return 'xml'
+  if (ct.includes('html')) return 'html'
+  if (ct.includes('javascript')) return 'javascript'
+  return U.prettyJson(body) ? 'json' : 'text'
+}
+
+function bodyModeOf(doc: RequestDoc): BodyMode {
+  if (doc.body.kind === 'none') return 'none'
+  if (doc.body.kind === 'fields') return doc.body.multipart ? 'multipart' : 'form'
+  return inferBodyMode(U.headerValueOf(doc.headers, 'content-type') ?? '', doc.body.text)
+}
+
+function docBodyFromDraft(d: Draft): RequestBody {
+  return bodyFromParts(d.bodyMode ?? 'none', d.fields ?? [], d.bodyRaw ?? '')
+}
+
+function draftFromDoc(doc: RequestDoc, name: string, at: number): Draft {
+  return {
+    id: U.newRowId(),
+    at,
+    name,
+    method: doc.method,
+    url: doc.url,
+    headers: doc.headers.map(([n, v]) => row(n, v)),
+    bodyMode: bodyModeOf(doc),
+    bodyRaw: doc.body.kind === 'text' ? doc.body.text : '',
+    fields: doc.body.kind === 'fields' ? doc.body.fields.map(([n, v]) => row(n, v)) : [],
+    auth: { ...DEFAULT_AUTH },
+    options: {
+      ...DEFAULT_OPTIONS,
+      follow: doc.followRedirects,
+      verifyTls: doc.verifyTls,
+      useProxy: !!doc.proxy,
+      proxy: doc.proxy ?? DEFAULT_OPTIONS.proxy,
+    },
+    status: null,
+  }
 }
 
 /* ================= KV 编辑器 ================= */
@@ -182,6 +274,10 @@ export function HttpClientTool() {
   const [saved, setSaved] = useState<Draft[]>(() => U.loadJson<Draft[]>(SAVED_KEY, []))
   const [saveName, setSaveName] = useState('')
   const [proxyInfo, setProxyInfo] = useState<{ running: boolean; port: number } | null>(null)
+  /** 次要功能收在抽屉里：主界面只留「发请求 → 看响应」这条主线，别把它割开 */
+  const [panel, setPanel] = useState<'code' | 'transfer' | 'proxy' | 'history' | null>(null)
+  /** 抽屉里产生的提示，关掉抽屉后要留在主界面上，否则用户看不到「填好了」 */
+  const [transferNote, setTransferNote] = useState<string[]>([])
 
   /* ---- 初始化：抓包代理状态（历史/收藏由 useState 惰性读取） ---- */
   useEffect(() => {
@@ -242,6 +338,75 @@ export function HttpClientTool() {
     setError(null)
   }, [])
 
+  /** 把解析出来的 curl / 导入的单条请求填进表单。只覆盖请求本身，不动超时等出口配置。 */
+  const applyDoc = useCallback((doc: RequestDoc, name?: string) => {
+    setMethod(METHODS.includes(doc.method) ? doc.method : 'GET')
+    setUrl(doc.url)
+    setHeaders(doc.headers.map(([n, v]) => row(n, v)))
+    if (doc.body.kind === 'fields') {
+      setBodyMode(doc.body.multipart ? 'multipart' : 'form')
+      setFields(doc.body.fields.map(([n, v]) => row(n, v)))
+      setBodyRaw('')
+    } else if (doc.body.kind === 'text') {
+      const ct = (U.headerValueOf(doc.headers, 'content-type') ?? '').toLowerCase()
+      if (ct.includes('x-www-form-urlencoded')) {
+        // 表单正文拆成可编辑的行，否则切到表单视图后正文会丢
+        setBodyMode('form')
+        setFields(U.queryRows(`?${doc.body.text}`).map((r) => row(r.name, r.value)))
+        setBodyRaw('')
+      } else {
+        setBodyMode(inferBodyMode(ct, doc.body.text))
+        setBodyRaw(doc.body.text)
+        setFields([])
+      }
+    } else {
+      setBodyMode('none')
+      setBodyRaw('')
+      setFields([])
+    }
+    setAuth({ ...DEFAULT_AUTH })
+    // 跟随重定向 / TLS 校验属于请求本身的语义，照做；
+    // 代理是「本机怎么出去」的配置，命令里没写就保留用户原设置，避免粘一条命令把连通性弄断。
+    setOptions((o) => ({
+      ...o,
+      follow: doc.followRedirects,
+      verifyTls: doc.verifyTls,
+      ...(doc.proxy ? { useProxy: true, proxy: doc.proxy } : {}),
+    }))
+    setResponse(null)
+    setError(null)
+    if (name) setSaveName(name)
+  }, [])
+
+  /** 收藏 → 导出条目（含认证与正文类型，导出的请求能独立发出去） */
+  const buildExportEntries = useCallback((): RequestEntry[] => saved.map((d) => ({
+    name: d.name?.trim() || `${d.method} ${d.url}`.slice(0, 60),
+    doc: {
+      method: d.method,
+      url: d.url,
+      headers: buildFinalHeaders({
+        headers: d.headers ?? [],
+        authHeaders: authHeaderPairs(d.auth ?? DEFAULT_AUTH),
+        bodyContentType: BODY_CT[d.bodyMode ?? 'none'] || null,
+      }),
+      body: docBodyFromDraft(d),
+      followRedirects: d.options?.follow ?? false,
+      verifyTls: d.options?.verifyTls !== false,
+      proxy: d.options?.useProxy ? (d.options?.proxy ?? null) : null,
+    },
+  })), [saved])
+
+  /** 导入的条目并入收藏（同「名称 + 方法 + URL」跳过） */
+  const mergeImportEntries = useCallback((entries: RequestEntry[]): { added: number; skipped: number } => {
+    const res = mergeRequests(buildExportEntries(), entries)
+    if (res.added > 0) {
+      const now = Date.now()
+      const fresh = res.merged.slice(0, res.added).map((e, i) => draftFromDoc(e.doc, e.name, now + i))
+      setSaved((s) => [...fresh, ...s].slice(0, 40))
+    }
+    return { added: res.added, skipped: res.skipped }
+  }, [buildExportEntries])
+
   /* ---- 组装请求体 ---- */
   const multipart = useMemo(() => {
     if (bodyMode !== 'multipart') return null
@@ -272,46 +437,25 @@ export function HttpClientTool() {
   }, [bodyMode, bodyRaw, fields, multipart])
 
   /* ---- 认证派生请求头 ---- */
-  const authHeaders = useMemo((): [string, string][] => {
-    if (auth.type === 'basic') {
-      const raw = `${auth.username}:${auth.password}`
-      const b64 = U.bytesToB64(new TextEncoder().encode(raw))
-      return [['Authorization', `Basic ${b64}`]]
-    }
-    if (auth.type === 'bearer') return auth.token ? [['Authorization', `Bearer ${auth.token}`]] : []
-    if (auth.type === 'apikey') {
-      const name = auth.headerName.trim() || 'X-API-Key'
-      return [[name, `${auth.headerPrefix}${auth.token}`]]
-    }
-    return []
-  }, [auth])
+  const authHeaders = useMemo((): [string, string][] => authHeaderPairs(auth), [auth])
 
   /** 最终请求头：手工行 + 认证 + 正文类型 */
-  const finalHeaders = useCallback((): [string, string][] => {
-    const out: [string, string][] = headers
-      .filter((h) => h.enabled && h.name.trim())
-      .map((h) => [h.name.trim(), h.value])
-    for (const [k, v] of authHeaders) {
-      const i = out.findIndex(([n]) => n.toLowerCase() === k.toLowerCase())
-      if (i >= 0) out[i] = [out[i][0], v]
-      else out.push([k, v])
-    }
-    if (builtBody.contentType) {
-      const has = out.some(([n]) => n.toLowerCase() === 'content-type')
-      if (!has) out.push(['Content-Type', builtBody.contentType])
-    }
-    return out
-  }, [headers, authHeaders, builtBody])
+  const finalHeaders = useCallback((): [string, string][] =>
+    buildFinalHeaders({ headers, authHeaders, bodyContentType: builtBody.contentType }),
+  [headers, authHeaders, builtBody])
 
-  const curlText = useMemo(() => U.buildCurl({
+  const docBody = useCallback((): RequestBody => bodyFromParts(bodyMode, fields, bodyRaw), [bodyMode, fields, bodyRaw])
+
+  /** 中立文档：生成代码 / 导出 / 复制 JSON 的唯一输入 */
+  const currentDoc = useCallback((): RequestDoc => ({
     method,
-    url,
+    url: url.includes('://') || !url ? url : `http://${url}`,
     headers: finalHeaders(),
-    bodyText: builtBody.text,
+    body: docBody(),
     followRedirects: options.follow,
     verifyTls: options.verifyTls,
-    proxy: options.useProxy ? options.proxy : null,
-  }), [method, url, finalHeaders, builtBody, options])
+    proxy: options.useProxy ? options.proxy.trim() : null,
+  }), [method, url, finalHeaders, docBody, options])
 
   /* ---- 发送 ---- */
   const send = useCallback(async () => {
@@ -378,6 +522,8 @@ export function HttpClientTool() {
     setOptions((o) => ({ ...o, useProxy: true, proxy: `http://127.0.0.1:${s.port}` }))
   }, [])
 
+  const closePanel = useCallback(() => setPanel(null), [])
+
   const desktop = typeof window !== 'undefined' && !!window.electronAPI
 
   return (
@@ -404,36 +550,22 @@ export function HttpClientTool() {
           {sending ? l.sending : l.send}
         </Btn>
       </div>
-      <div className="text-[10.5px] text-muted">{l.misc.sendTip}</div>
-
-      {/* ===== 出口代理（常驻，直连不通时直接填这里） ===== */}
-      <div className={`flex flex-col lg:flex-row lg:items-center gap-2 border px-2.5 py-2 ${options.useProxy ? 'border-phosphor/40 bg-phosphor-faint' : 'border-line-soft bg-panel-2'}`}>
-        <label className="flex items-center gap-1.5 text-[12.5px] shrink-0 cursor-pointer select-none">
-          <input
-            type="checkbox"
-            checked={options.useProxy}
-            onChange={(e) => setOptions((o) => ({ ...o, useProxy: e.target.checked }))}
-            className="accent-[color:var(--c-phosphor)]"
-          />
-          {l.options.proxyEnable}
-        </label>
-        <input
-          value={options.proxy}
-          onChange={(e) => setOptions((o) => ({ ...o, proxy: e.target.value, useProxy: true }))}
-          placeholder={l.options.proxyPlaceholder}
-          spellCheck={false}
-          className="flex-1 min-w-0 bg-panel border border-line-soft px-2 py-1 text-[12.5px] text-bright placeholder:text-muted/50 focus:border-phosphor/40"
-        />
+      <div className="flex items-center gap-2 flex-wrap">
+        <Btn onClick={() => { setTransferNote([]); setPanel('transfer') }}>{l.transfer.open}</Btn>
+        <Btn onClick={() => setPanel('code')}>{l.code.title}</Btn>
+        {/* 代理与历史也收在这里：状态直接写在按钮上，收起来不等于看不见 */}
         <Btn
-          variant="ghost"
-          className="shrink-0"
-          onClick={() => void useBuiltinProxy()}
-          title={proxyInfo?.running ? l.options.capturedTip : l.options.capturedUnavailable}
+          onClick={() => setPanel('proxy')}
+          className={options.useProxy ? 'border-phosphor/50 text-phosphor' : ''}
         >
-          {l.options.useCaptured}{proxyInfo?.running ? ` :${proxyInfo.port}` : ''}
+          {l.options.proxyTitle} · {options.useProxy && options.proxy ? options.proxy : l.options.proxyDirect}
         </Btn>
-        <span className="text-[11px] text-muted">{options.useProxy ? l.options.proxyHint : l.options.proxyRemember}</span>
+        <Btn onClick={() => setPanel('history')}>
+          {l.history.title}{history.length > 0 ? ` · ${history.length}` : ''}
+        </Btn>
+        <span className="text-[10.5px] text-muted">{l.misc.sendTip}</span>
       </div>
+      <NoteList lines={transferNote} />
 
       <div className="space-y-3 min-[1700px]:grid min-[1700px]:grid-cols-2 min-[1700px]:items-start min-[1700px]:gap-3 min-[1700px]:space-y-0">
         <div className="space-y-3">
@@ -613,7 +745,6 @@ export function HttpClientTool() {
             setView={setView}
             response={response}
             spec={sentSpec}
-            curlText={curlText}
             l={l}
           />
         </Panel>
@@ -621,38 +752,92 @@ export function HttpClientTool() {
         </div>
       </div>
 
-      {/* ===== 历史 / 收藏 ===== */}
-      <HistoryPanel
-        history={history}
-        saved={saved}
-        saveName={saveName}
-        setSaveName={setSaveName}
-        onLoad={loadDraft}
-        onSave={() => {
-          const entry: Draft = { ...draft(), name: saveName.trim() || `${method} ${url.slice(0, 40)}` }
-          setSaved((s) => [entry, ...s].slice(0, 40))
-          setSaveName('')
-        }}
-        onRemoveSaved={(id) => setSaved((s) => s.filter((x) => x.id !== id))}
-        onClearHistory={() => setHistory([])}
-        l={l}
-      />
+      {/* 抽屉按需挂载：关掉即卸载，粘过的内容不会残留到下一次 */}
+      {panel === 'code' && (
+        <Drawer title={l.code.title} onClose={closePanel} width={860}>
+          <CodeSnippets doc={currentDoc()} l={l} codeHeight="64vh" />
+        </Drawer>
+      )}
+      {panel === 'transfer' && (
+        <Drawer title={l.transfer.title} onClose={closePanel}>
+          <RequestTransfer
+            toDoc={currentDoc}
+            applyDoc={applyDoc}
+            buildExport={buildExportEntries}
+            mergeImport={mergeImportEntries}
+            onDone={(notes) => { setTransferNote(notes); setPanel(null) }}
+            l={l}
+          />
+        </Drawer>
+      )}
+      {panel === 'proxy' && (
+        <Drawer title={l.options.proxyTitle} onClose={closePanel} width={640}>
+          <div className="space-y-3">
+            <Check
+              label={l.options.proxyEnable}
+              checked={options.useProxy}
+              onChange={(v) => setOptions((o) => ({ ...o, useProxy: v }))}
+            />
+            <Input
+              label={l.options.proxy}
+              value={options.proxy}
+              onChange={(v) => setOptions((o) => ({ ...o, proxy: v, useProxy: true }))}
+              placeholder={l.options.proxyPlaceholder}
+            />
+            <div className="flex items-center gap-2 flex-wrap">
+              <Btn
+                variant="ghost"
+                onClick={() => void useBuiltinProxy()}
+                title={proxyInfo?.running ? l.options.capturedTip : l.options.capturedUnavailable}
+              >
+                {l.options.useCaptured}{proxyInfo?.running ? ` :${proxyInfo.port}` : ''}
+              </Btn>
+              <span className="text-[11px] text-muted">{options.useProxy ? l.options.proxyHint : l.options.proxyRemember}</span>
+            </div>
+          </div>
+        </Drawer>
+      )}
+      {panel === 'history' && (
+        <Drawer title={l.history.title} onClose={closePanel} width={760}>
+          <HistoryPanel
+            history={history}
+            saved={saved}
+            saveName={saveName}
+            setSaveName={setSaveName}
+            onLoad={loadDraft}
+            onSave={() => {
+              const entry: Draft = { ...draft(), name: saveName.trim() || `${method} ${url.slice(0, 40)}` }
+              setSaved((s) => [entry, ...s].slice(0, 40))
+              setSaveName('')
+            }}
+            onRemoveSaved={(id) => setSaved((s) => s.filter((x) => x.id !== id))}
+            onClearHistory={() => setHistory([])}
+            onDone={closePanel}
+            l={l}
+          />
+        </Drawer>
+      )}
     </div>
   )
 }
 
 /* ================= 响应视图 ================= */
 
-function ResponseTabs({ respTab, setRespTab, view, setView, response, spec, curlText, l }: {
+function ResponseTabs({ respTab, setRespTab, view, setView, response, spec, l }: {
   respTab: RespTab
   setRespTab: (t: RespTab) => void
   view: ViewMode
   setView: (v: ViewMode) => void
   response: HttpRequestResult
   spec: HttpRequestSpec | null
-  curlText: string
   l: L
 }) {
+  /** 代码片段按「实际发出去的请求」生成，便于与当前表单对照 */
+  const sentDoc = useMemo(
+    () => docFromRequestSpec(spec ?? { method: response.method, url: response.url }, response.url),
+    [spec, response],
+  )
+
   const decoded = useMemo(() => {
     const ct = U.headerValueOf(response.headers, 'content-type')
     const bytes = U.b64ToBytes(response.bodyBase64)
@@ -675,7 +860,7 @@ function ResponseTabs({ respTab, setRespTab, view, setView, response, spec, curl
     { id: 'cookies', label: l.tabs.cookies },
     { id: 'timing', label: l.response.timing },
     { id: 'sent', label: l.response.requestSent },
-    { id: 'snippets', label: l.snippets.title },
+    { id: 'snippets', label: l.code.responseTab },
   ]
 
   const bodyText = view === 'pretty' && decoded.pretty ? decoded.pretty : (view === 'hex' ? U.hexDump(decoded.bytes) : decoded.text)
@@ -793,31 +978,12 @@ function ResponseTabs({ respTab, setRespTab, view, setView, response, spec, curl
           </div>
           {spec?.bodyText && <pre className="codeblock max-h-[240px] overflow-auto bg-panel-2 border border-line-soft px-3 py-2 text-[12px] text-bright">{spec.bodyText}</pre>}
           <div className="flex items-center gap-2">
-            <CopyBtn text={curlText} />
+            <CopyBtn text={generateCode('curl', sentDoc)} />
           </div>
         </div>
       )}
 
-      {respTab === 'snippets' && (
-        <div className="space-y-3">
-          <SnippetBlock title={l.snippets.curl} code={curlText} />
-          <SnippetBlock title={l.snippets.fetch} code={U.buildFetchSnippet({ method: spec?.method ?? 'GET', url: spec?.url ?? response.url, headers: spec?.headers ?? [], bodyText: spec?.bodyText ?? null })} />
-          <SnippetBlock title={l.snippets.node} code={U.buildNodeSnippet({ method: spec?.method ?? 'GET', url: spec?.url ?? response.url, headers: spec?.headers ?? [], bodyText: spec?.bodyText ?? null })} />
-          <SnippetBlock title={l.snippets.python} code={U.buildPythonSnippet({ method: spec?.method ?? 'GET', url: spec?.url ?? response.url, headers: spec?.headers ?? [], bodyText: spec?.bodyText ?? null, verifyTls: spec?.rejectUnauthorized !== false })} />
-        </div>
-      )}
-    </div>
-  )
-}
-
-function SnippetBlock({ title, code }: { title: string; code: string }) {
-  return (
-    <div className="space-y-1">
-      <div className="flex items-center justify-between">
-        <span className="text-[11px] uppercase tracking-wider text-muted">{title}</span>
-        <CopyBtn text={code} />
-      </div>
-      <pre className="codeblock max-h-[220px] overflow-auto bg-panel-2 border border-line-soft px-3 py-2 text-[11.5px] text-bright">{code}</pre>
+      {respTab === 'snippets' && <CodeSnippets doc={sentDoc} l={l} />}
     </div>
   )
 }
@@ -866,7 +1032,7 @@ function Check({ label, checked, onChange }: { label: string; checked: boolean; 
 
 /* ================= 历史 / 收藏 ================= */
 
-function HistoryPanel({ history, saved, saveName, setSaveName, onLoad, onSave, onRemoveSaved, onClearHistory, l }: {
+function HistoryPanel({ history, saved, saveName, setSaveName, onLoad, onSave, onRemoveSaved, onClearHistory, onDone, l }: {
   history: Draft[]
   saved: Draft[]
   saveName: string
@@ -875,6 +1041,8 @@ function HistoryPanel({ history, saved, saveName, setSaveName, onLoad, onSave, o
   onSave: () => void
   onRemoveSaved: (id: string) => void
   onClearHistory: () => void
+  /** 选中某条后回调：调用方据此关掉抽屉，让用户直接看到填好的表单 */
+  onDone?: () => void
   l: L
 }) {
   const [which, setWhich] = useState<'history' | 'saved'>('history')
@@ -883,55 +1051,56 @@ function HistoryPanel({ history, saved, saveName, setSaveName, onLoad, onSave, o
     !filter.trim() || `${d.method} ${d.url}`.toLowerCase().includes(filter.trim().toLowerCase()))
 
   return (
-    <Panel
-      title={which === 'history' ? l.history.title : l.history.saved}
-      right={
-        <div className="flex items-center gap-1">
-          <button onClick={() => setWhich('history')} className={`px-2 py-0.5 text-[11px] border ${which === 'history' ? 'border-phosphor/60 text-phosphor' : 'border-line-soft text-muted'}`}>{l.history.title}</button>
-          <button onClick={() => setWhich('saved')} className={`px-2 py-0.5 text-[11px] border ${which === 'saved' ? 'border-phosphor/60 text-phosphor' : 'border-line-soft text-muted'}`}>{l.history.saved}</button>
-        </div>
-      }
-    >
-      <div className="space-y-2">
-        <div className="flex gap-2 flex-wrap">
-          <input
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            placeholder={l.history.filter}
-            className="flex-1 min-w-[140px] bg-panel-2 border border-line-soft px-2 py-1 text-[12px] text-bright placeholder:text-muted/50 focus:border-phosphor/40"
-          />
-          <input
-            value={saveName}
-            onChange={(e) => setSaveName(e.target.value)}
-            placeholder={l.history.savePrompt}
-            className="w-40 bg-panel-2 border border-line-soft px-2 py-1 text-[12px] text-bright placeholder:text-muted/50 focus:border-phosphor/40"
-          />
-          <Btn onClick={onSave}>{l.history.save}</Btn>
-          {which === 'history' && history.length > 0 && <Btn variant="ghost" onClick={onClearHistory}>{l.history.clear}</Btn>}
-        </div>
-
-        {list.length === 0 && (
-          <div className="text-[12px] text-muted">{which === 'history' ? l.history.empty : l.history.noSaved}</div>
-        )}
-        <div className="max-h-[260px] overflow-auto divide-y divide-[color:var(--c-line-soft)]">
-          {list.map((d) => (
-            <div key={d.id} className="flex items-center gap-2 py-1.5 group">
-              <button onClick={() => onLoad(d)} className="flex-1 min-w-0 text-left">
-                <div className="flex items-center gap-2 text-[11.5px]">
-                  <span className="shrink-0 text-phosphor w-14">{d.method}</span>
-                  {d.status != null && <span className={`shrink-0 ${U.statusColorClass(d.status)}`}>{d.status}</span>}
-                  {d.durationMs != null && <span className="shrink-0 text-muted">{U.formatDuration(d.durationMs)}</span>}
-                  <span className="text-muted shrink-0">{U.formatTime(d.at)}</span>
-                </div>
-                <div className="text-[11.5px] text-dim truncate">{d.name ? `${d.name} — ` : ''}{d.url}</div>
-              </button>
-              {which === 'saved' && (
-                <button onClick={() => onRemoveSaved(d.id)} className="shrink-0 text-muted hover:text-danger px-1" title={l.history.remove}>×</button>
-              )}
-            </div>
-          ))}
-        </div>
+    <div className="space-y-2">
+      {/* 内容在抽屉里，标题由 Drawer 给 —— 这里的页签负责在「历史」与「收藏」之间切 */}
+      <div className="flex items-center gap-1">
+        <button onClick={() => setWhich('history')} className={`px-2 py-0.5 text-[11px] border ${which === 'history' ? 'border-phosphor/60 text-phosphor' : 'border-line-soft text-muted'}`}>
+          {l.history.title} <span className="text-phosphor/60">{history.length}</span>
+        </button>
+        <button onClick={() => setWhich('saved')} className={`px-2 py-0.5 text-[11px] border ${which === 'saved' ? 'border-phosphor/60 text-phosphor' : 'border-line-soft text-muted'}`}>
+          {l.history.saved} <span className="text-phosphor/60">{saved.length}</span>
+        </button>
       </div>
-    </Panel>
+
+      <div className="flex gap-2 flex-wrap">
+        <input
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          placeholder={l.history.filter}
+          className="flex-1 min-w-[140px] bg-panel-2 border border-line-soft px-2 py-1 text-[12px] text-bright placeholder:text-muted/50 focus:border-phosphor/40"
+        />
+        <input
+          value={saveName}
+          onChange={(e) => setSaveName(e.target.value)}
+          placeholder={l.history.savePrompt}
+          className="w-40 bg-panel-2 border border-line-soft px-2 py-1 text-[12px] text-bright placeholder:text-muted/50 focus:border-phosphor/40"
+        />
+        <Btn onClick={onSave}>{l.history.save}</Btn>
+        {which === 'history' && history.length > 0 && <Btn variant="ghost" onClick={onClearHistory}>{l.history.clear}</Btn>}
+      </div>
+
+      {list.length === 0 && (
+        <div className="text-[12px] text-muted">{which === 'history' ? l.history.empty : l.history.noSaved}</div>
+      )}
+      {/* 抽屉里高度够，列表跟着放宽，别让人在小窗口里翻 */}
+      <div className="max-h-[60vh] overflow-auto divide-y divide-[color:var(--c-line-soft)]">
+        {list.map((d) => (
+          <div key={d.id} className="flex items-center gap-2 py-1.5 group">
+            <button onClick={() => { onLoad(d); onDone?.() }} className="flex-1 min-w-0 text-left">
+              <div className="flex items-center gap-2 text-[11.5px]">
+                <span className="shrink-0 text-phosphor w-14">{d.method}</span>
+                {d.status != null && <span className={`shrink-0 ${U.statusColorClass(d.status)}`}>{d.status}</span>}
+                {d.durationMs != null && <span className="shrink-0 text-muted">{U.formatDuration(d.durationMs)}</span>}
+                <span className="text-muted shrink-0">{U.formatTime(d.at)}</span>
+              </div>
+              <div className="text-[11.5px] text-dim truncate">{d.name ? `${d.name} — ` : ''}{d.url}</div>
+            </button>
+            {which === 'saved' && (
+              <button onClick={() => onRemoveSaved(d.id)} className="shrink-0 text-muted hover:text-danger px-1" title={l.history.remove}>×</button>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
   )
 }

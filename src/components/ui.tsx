@@ -1,4 +1,5 @@
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useI18n, COMMON } from '../lib/i18n'
 
 /* ---------- shared primitives ---------- */
@@ -88,6 +89,72 @@ export function Collapse({ title, hint, right, defaultOpen = false, children }: 
   )
 }
 
+/**
+ * 右侧抽屉。
+ *
+ * 给「次要功能」用：导入导出、代码生成这类不参与主流程的东西收进抽屉，主界面才有地方
+ * 留给主线（发请求 → 看响应）。调用方按需挂载即可，卸载时内部状态自然重置。
+ *
+ * 用 portal 挂到 document.body：工具页在带 `zoom` 的 <main> 里，fixed 定位如果留在
+ * 缩放容器内，尺寸会被一起放大（同一个坑曾让对话视图的 100vh 超出视口），挂到 body
+ * 才拿得到真实视口。
+ */
+export function Drawer({ title, onClose, width = 720, children }: {
+  title: string
+  onClose: () => void
+  /** 内容最大宽度（CSS px） */
+  width?: number
+  children: React.ReactNode
+}) {
+  const { locale } = useI18n()
+  const closeLabel = COMMON[locale].close
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent): void => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  if (typeof document === 'undefined') return null
+  return createPortal(
+    <>
+      <div className="fixed inset-0 z-40 bg-terminal/60" onClick={onClose} />
+      <aside
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        style={{ maxWidth: width }}
+        className="fixed right-0 top-0 z-50 h-[100dvh] w-full border-l border-line bg-panel flex flex-col"
+      >
+        <div className="shrink-0 flex items-center justify-between gap-2 border-b border-line px-4 py-3">
+          <span className="text-[13px] text-phosphor font-semibold tracking-wider">{title}</span>
+          <button onClick={onClose} aria-label={closeLabel} className="text-muted hover:text-bright text-xl leading-none">×</button>
+        </div>
+        <div className="flex-1 min-h-0 overflow-y-auto p-4">{children}</div>
+      </aside>
+    </>,
+    document.body,
+  )
+}
+
+/**
+ * 一串提示行：首行记 ✓，其余记 ·。
+ *
+ * 抽出来是因为同一个结果要在两处显示 —— 抽屉里（刚操作完）和主界面（抽屉关掉之后）。
+ */
+export function NoteList({ lines }: { lines: string[] }) {
+  if (lines.length === 0) return null
+  return (
+    <div className="border border-phosphor/25 bg-phosphor-faint/30 px-3 py-2 space-y-0.5">
+      {lines.map((n, i) => (
+        <div key={`${i}-${n}`} className="text-[11.5px] text-bright leading-relaxed">
+          <span className="text-phosphor/70">{i === 0 ? '✓ ' : '· '}</span>{n}
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export function Btn({ children, onClick, variant = 'default', disabled, className = '', title }: {
   children: React.ReactNode
   onClick?: () => void
@@ -110,7 +177,7 @@ export function Btn({ children, onClick, variant = 'default', disabled, classNam
   )
 }
 
-export function CopyBtn({ text, className = '' }: { text: string; className?: string }) {
+export function CopyBtn({ text, className = '', label }: { text: string; className?: string; label?: string }) {
   const { locale } = useI18n()
   const c = COMMON[locale]
   const [ok, setOk] = useState(false)
@@ -133,7 +200,7 @@ export function CopyBtn({ text, className = '' }: { text: string; className?: st
       onClick={copy}
       className={`px-2 py-0.5 text-[11px] border border-line text-muted hover:text-phosphor hover:border-phosphor/50 transition-colors ${className}`}
     >
-      {ok ? c.copied : c.copy}
+      {ok ? c.copied : (label ?? c.copy)}
     </button>
   )
 }
