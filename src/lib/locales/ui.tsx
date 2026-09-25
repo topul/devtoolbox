@@ -36,6 +36,13 @@ export interface UIStrings {
   homeNav: string
   jumpToSection: string
   heroChips: string[]
+  /** ⌘K 命令面板：空结果提示 */
+  cmdkEmpty: string
+  /** ⌘K 命令面板：快捷导航分组标题 */
+  quickNav: string
+  /** ⌘K 命令面板：底部按键提示（↑↓ / ↵） */
+  cmdkSelect: string
+  cmdkOpen: string
   updateChecking: string
   updateNone: string
   updateFound: (v: string) => string
@@ -77,6 +84,10 @@ export const UI: Record<Locale, UIStrings> = {
     homeNav: '工具箱',
     jumpToSection: '跳到分组',
     heroChips: ['MCP 服务端', '流式对话', '工具调用', 'Agent 规则', 'JSON', 'JWT'],
+    cmdkEmpty: '没有匹配的工具',
+    quickNav: '快捷入口',
+    cmdkSelect: '选择',
+    cmdkOpen: '打开',
     // 自动升级
     updateChecking: '正在检查更新...',
     updateNone: '已是最新版本',
@@ -117,6 +128,10 @@ export const UI: Record<Locale, UIStrings> = {
     homeNav: 'Toolbox',
     jumpToSection: 'Jump to group',
     heroChips: ['MCP server', 'Streaming chat', 'Tool calling', 'Agent rules', 'JSON', 'JWT'],
+    cmdkEmpty: 'No matching tools',
+    quickNav: 'Quick access',
+    cmdkSelect: 'Select',
+    cmdkOpen: 'Open',
     updateChecking: 'Checking for updates...',
     updateNone: 'You are up to date',
     updateFound: (v: string) => `New version v${v} found, downloading...`,

@@ -20,74 +20,88 @@
 
 /* ==================== Theme variables ==================== */
 
+/*
+ * 主题变量：现代简洁风双主题。
+ *
+ * 变量名保留历史命名（--c-phosphor 等）—— 全部 53 个工具页都通过 tailwind 的
+ * token 类（text-phosphor / bg-panel / border-line…）取色，改名会迫使大面积
+ * 无意义改动。这里只换值：中性底色 + 翡翠绿 accent，对比度全部对齐 WCAG AA
+ * （正文 ≥7:1，次要文字 ≥4.5:1）。
+ *
+ * 对比度速查（AA 阈值 4.5:1，正文 AAA 阈值 7:1）：
+ *   暗色 正文 #cbd5e1 on #14171c ≈ 10.9:1 · muted #8a97a8 ≈ 5.4:1
+ *   亮色 正文 #334155 on #ffffff ≈ 8.4:1 · muted #64748b ≈ 4.8:1
+ */
+
 :root,
 .dark {
-  --c-bg: #000000;
-  --c-text: #c9e8d6;
-  --c-text-bright: #d7f5e5;
-  --c-text-dim: #a9c9b6;
-  --c-text-card: #e3f7ec;
-  --c-phosphor: #00F48E;
-  --c-phosphor-hover: #33ffa8;
-  --c-phosphor-glow: #b8ffe0;
-  --c-phosphor-dim: #0a3d2a;
-  --c-phosphor-faint: rgba(0, 244, 142, 0.10);
-  --c-panel: #060906;
-  --c-panel-2: #0a0f0a;
-  --c-line: rgba(0, 244, 142, 0.18);
-  --c-line-soft: rgba(0, 244, 142, 0.09);
-  --c-amber: #ffb000;
-  --c-danger: #ff5555;
-  --c-muted: #5d7a68;
-  --c-on-phosphor: #000000;
-  --c-overlay: rgba(0, 0, 0, 0.6);
-  --c-scanline: rgba(0, 0, 0, 0.12);
-  --c-matrix-bg: rgba(0, 0, 0, 0.14);
-  --c-scrollbar: rgba(0, 244, 142, 0.18);
-  --c-scrollbar-hover: rgba(0, 244, 142, 0.35);
-  --c-selection-bg: rgba(0, 244, 142, 0.28);
-  --c-selection-fg: #eafff5;
-  --c-focus: rgba(0, 244, 142, 0.5);
-  --glow-strength: 0.55;
-  --glow-spread: 0.25;
+  --c-bg: #0f1216;
+  --c-text: #cbd5e1;
+  --c-text-bright: #e8edf4;
+  --c-text-dim: #94a3b8;
+  --c-text-card: #e2e8f0;
+  --c-phosphor: #34d399;
+  --c-phosphor-hover: #6ee7b7;
+  --c-phosphor-glow: #6ee7b7;
+  --c-phosphor-dim: #065f46;
+  --c-phosphor-faint: rgba(52, 211, 153, 0.10);
+  --c-panel: #14171c;
+  --c-panel-2: #1c2128;
+  --c-line: rgba(148, 163, 184, 0.16);
+  --c-line-soft: rgba(148, 163, 184, 0.09);
+  --c-amber: #fbbf24;
+  --c-danger: #f87171;
+  --c-muted: #8a97a8;
+  --c-on-phosphor: #052e21;
+  --c-overlay: rgba(2, 6, 12, 0.55);
+  --c-scanline: rgba(0, 0, 0, 0);
+  --c-matrix-bg: rgba(0, 0, 0, 0);
+  --c-scrollbar: rgba(148, 163, 184, 0.22);
+  --c-scrollbar-hover: rgba(148, 163, 184, 0.4);
+  --c-selection-bg: rgba(52, 211, 153, 0.25);
+  --c-selection-fg: #ecfdf5;
+  --c-focus: rgba(52, 211, 153, 0.5);
+  /* glow 仅保留变量兼容旧类，值已归零（终端辉光效果下线） */
+  --glow-strength: 0;
+  --glow-spread: 0;
   /* 代码高亮：暗色下要够亮才看得清，亮色下同一语义换成深色 */
-  --c-hl-key: #ff79c6;
+  --c-hl-key: #f472b6;
   --c-hl-str: #4ade80;
-  --c-hl-num: #ffb000;
-  --c-hl-fn: #7ec8ff;
+  --c-hl-num: #fbbf24;
+  --c-hl-fn: #7dd3fc;
   --c-hl-typ: #67e8f9;
   --c-hl-var: #e879f9;
-  --c-hl-com: #5d7a68;
+  --c-hl-com: #6b7a8d;
   color-scheme: dark;
 }
 
 .light {
-  --c-bg: #f5f7f3;
-  --c-text: #3a4a3e;
-  --c-text-bright: #2a3a2e;
-  --c-text-dim: #5a6a5e;
-  --c-text-card: #2a3a2e;
-  --c-phosphor: #008055;
-  --c-phosphor-hover: #009966;
-  --c-phosphor-glow: #00aa70;
-  --c-phosphor-dim: #b3e6d0;
-  --c-phosphor-faint: rgba(0, 128, 85, 0.08);
+  --c-bg: #f6f7f9;
+  --c-text: #334155;
+  --c-text-bright: #0f172a;
+  --c-text-dim: #475569;
+  --c-text-card: #0f172a;
+  --c-phosphor: #059669;
+  --c-phosphor-hover: #047857;
+  --c-phosphor-glow: #047857;
+  --c-phosphor-dim: #a7f3d0;
+  --c-phosphor-faint: rgba(5, 150, 105, 0.08);
   --c-panel: #ffffff;
-  --c-panel-2: #f0f2ec;
-  --c-line: rgba(0, 128, 85, 0.18);
-  --c-line-soft: rgba(0, 128, 85, 0.08);
-  --c-amber: #b07000;
-  --c-danger: #cc3333;
-  --c-muted: #8a9a8e;
+  --c-panel-2: #f1f3f6;
+  --c-line: #e2e8f0;
+  --c-line-soft: #eceff3;
+  --c-amber: #b45309;
+  --c-danger: #dc2626;
+  --c-muted: #64748b;
   --c-on-phosphor: #ffffff;
-  --c-overlay: rgba(0, 0, 0, 0.3);
-  --c-scanline: rgba(0, 0, 0, 0.03);
-  --c-matrix-bg: rgba(0, 0, 0, 0.03);
-  --c-scrollbar: rgba(0, 128, 85, 0.15);
-  --c-scrollbar-hover: rgba(0, 128, 85, 0.3);
-  --c-selection-bg: rgba(0, 128, 85, 0.2);
-  --c-selection-fg: #1a2a1e;
-  --c-focus: rgba(0, 128, 85, 0.4);
+  --c-overlay: rgba(15, 23, 42, 0.4);
+  --c-scanline: rgba(0, 0, 0, 0);
+  --c-matrix-bg: rgba(0, 0, 0, 0);
+  --c-scrollbar: rgba(15, 23, 42, 0.18);
+  --c-scrollbar-hover: rgba(15, 23, 42, 0.32);
+  --c-selection-bg: rgba(5, 150, 105, 0.18);
+  --c-selection-fg: #06281c;
+  --c-focus: rgba(5, 150, 105, 0.4);
   --glow-strength: 0;
   --glow-spread: 0;
   /* 亮色下把同一套语义色压深，否则黄/绿在白底上几乎看不见 */
@@ -97,7 +111,7 @@
   --c-hl-fn: #1d4ed8;
   --c-hl-typ: #0e7490;
   --c-hl-var: #be185d;
-  --c-hl-com: #8a9a8e;
+  --c-hl-com: #64748b;
   color-scheme: light;
 }
 
@@ -110,9 +124,11 @@ html, body, #root {
 body {
   background: var(--c-bg);
   color: var(--c-text);
-  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, 'PingFang SC', 'Microsoft YaHei', monospace;
-  font-size: 13px;
-  line-height: 1.6;
+  /* UI 走系统无衬线（中文 PingFang/微软雅黑），JetBrains Mono 只留给代码场景 */
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
+    'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+  font-size: 13.5px;
+  line-height: 1.65;
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior-y: none;
@@ -140,21 +156,9 @@ body {
 .pl-safe { padding-left: env(safe-area-inset-left, 0px); }
 .pr-safe { padding-right: env(safe-area-inset-right, 0px); }
 
-/* scanline overlay */
+/* scanline overlay 已下线（终端风装饰）：类名保留避免旧引用报错，效果置空 */
 .scanlines::after {
-  content: '';
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 60;
-  background: repeating-linear-gradient(
-    to bottom,
-    transparent 0px,
-    transparent 2px,
-    var(--c-scanline) 3px,
-    var(--c-scanline) 4px
-  );
-  mix-blend-mode: multiply;
+  content: none;
 }
 
 ::selection {
@@ -164,10 +168,13 @@ body {
 
 *::-webkit-scrollbar { width: 8px; height: 8px; }
 *::-webkit-scrollbar-track { background: transparent; }
-*::-webkit-scrollbar-thumb { background: var(--c-scrollbar); border-radius: 0; }
+*::-webkit-scrollbar-thumb { background: var(--c-scrollbar); border-radius: 9999px; }
 *::-webkit-scrollbar-thumb:hover { background: var(--c-scrollbar-hover); }
 
-textarea, input, select { font-family: inherit; }
+textarea { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+
+/* 代码场景显式找回落等宽字体（body 已换成无衬线） */
+pre, code, kbd, samp { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
 
 textarea:focus, input:focus, select:focus, button:focus-visible {
   outline: 1px solid var(--c-focus);
@@ -195,6 +202,170 @@ textarea:focus, input:focus, select:focus, button:focus-visible {
 @media (min-width: 1600px) { :root { --ui-zoom: 1.1; } }
 @media (min-width: 1900px) { :root { --ui-zoom: 1.16; } }
 @media (min-width: 2300px) { :root { --ui-zoom: 1.22; } }
+
+/* ==================== Motion tokens ==================== */
+
+/*
+ * 全站统一的时长与缓动。快速反馈 150ms、常规过渡 200ms、
+ * 弹层/抽屉等大位移 300ms；缓动用 ease-out-quint 系（快出缓停，不粘滞）。
+ */
+:root {
+  --dur-fast: 150ms;
+  --dur-base: 200ms;
+  --dur-slow: 300ms;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in: cubic-bezier(0.55, 0, 0.68, 0.4);
+}
+
+@keyframes overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes overlay-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+@keyframes drawer-in {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+@keyframes drawer-out {
+  from { transform: translateX(0); }
+  to { transform: translateX(100%); }
+}
+@keyframes pop-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes pop-out {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(6px) scale(0.98); }
+}
+
+.anim-overlay-in  { animation: overlay-in var(--dur-base) ease-out both; }
+.anim-overlay-out { animation: overlay-out var(--dur-fast) ease-in both; }
+.anim-drawer-in   { animation: drawer-in var(--dur-slow) var(--ease-out) both; }
+.anim-drawer-out  { animation: drawer-out var(--dur-fast) ease-in both; }
+.anim-pop-in      { animation: pop-in var(--dur-base) var(--ease-out) both; }
+.anim-pop-out     { animation: pop-out var(--dur-fast) ease-in both; }
+
+/* 折叠容器高度过渡：grid-rows 0fr/1fr 切换（配合 ui.tsx 的 Collapse） */
+.collapse-grid {
+  display: grid;
+  transition: grid-template-rows var(--dur-base) var(--ease-out);
+}
+.collapse-grid > * { overflow: hidden; min-height: 0; }
+
+/* ==================== Command palette (cmdk) ==================== */
+
+/*
+ * cmdk 是 headless 的：结构（overlay/dialog/input/list/item）全靠 data 属性
+ * 定位，外观在这里统一给。动画用专用 keyframes —— dialog 本身带
+ * translateX(-50%) 居中，通用 pop-in 的 transform 会把它顶掉。
+ */
+@keyframes cmdk-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+}
+
+[cmdk-overlay] {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  background: var(--c-overlay);
+  animation: overlay-in var(--dur-base) ease-out both;
+}
+
+[cmdk-dialog] {
+  position: fixed;
+  left: 50%;
+  top: 13vh;
+  transform: translateX(-50%);
+  z-index: 71;
+  width: min(620px, 92vw);
+  border-radius: 14px;
+  border: 1px solid var(--c-line);
+  background: var(--c-panel);
+  box-shadow: 0 20px 60px rgba(2, 6, 12, 0.3);
+  overflow: hidden;
+  animation: cmdk-in var(--dur-base) var(--ease-out) both;
+}
+
+[cmdk-input] {
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  border-bottom: 1px solid var(--c-line-soft);
+  color: var(--c-text-bright);
+  font-size: 14px;
+  padding: 14px 16px;
+}
+[cmdk-input]::placeholder { color: var(--c-muted); opacity: 0.7; }
+
+[cmdk-list] {
+  max-height: 48vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 6px;
+}
+
+[cmdk-group-heading] {
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--c-muted);
+  padding: 8px 10px 4px;
+  user-select: none;
+}
+
+[cmdk-item] {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-radius: 8px;
+  padding: 8px 10px;
+  cursor: pointer;
+  color: var(--c-text);
+  transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease;
+}
+[cmdk-item][data-selected='true'] {
+  background: var(--c-phosphor-faint);
+  color: var(--c-phosphor);
+}
+[cmdk-item][data-disabled='true'] { display: none; }
+
+.cmdk-name { font-size: 13px; color: inherit; white-space: nowrap; }
+.cmdk-desc {
+  flex: 1;
+  min-width: 0;
+  font-size: 11.5px;
+  color: var(--c-muted);
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cmdk-count { font-size: 10.5px; color: var(--c-muted); }
+
+.cmdk-foot {
+  display: flex;
+  gap: 14px;
+  padding: 8px 14px;
+  border-top: 1px solid var(--c-line-soft);
+  font-size: 10.5px;
+  color: var(--c-muted);
+}
+.cmdk-foot kbd {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 10px;
+  border: 1px solid var(--c-line);
+  border-radius: 4px;
+  padding: 0 4px;
+  margin-right: 3px;
+  background: var(--c-panel-2);
+}
 
 /* ==================== Animations ==================== */
 

@@ -40,7 +40,7 @@
     "smoke:chatagent": "esbuild scripts/smoke-chatagent.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/smoke-chatagent.mjs --log-level=error && node node_modules/.cache/smoke-chatagent.mjs",
     "smoke:preload": "electron scripts/check-preload.mjs",
     "shot": "electron scripts/shot.mjs",
-    "smoke:render": "esbuild scripts/smoke-render.tsx --bundle --platform=node --format=esm --outfile=node_modules/.cache/smoke.mjs --loader:.tsx=tsx --jsx=automatic --log-level=error --external:qrcode --external:react --external:react-dom --external:react/jsx-runtime && node node_modules/.cache/smoke.mjs",
+    "smoke:render": "esbuild scripts/smoke-render.tsx --bundle --platform=node --format=esm --outfile=node_modules/.cache/smoke.mjs --loader:.tsx=tsx --jsx=automatic --log-level=error --external:qrcode --external:react --external:react-dom --external:react/jsx-runtime --external:cmdk --external:@radix-ui/* --external:react-remove-scroll --external:aria-hidden && node node_modules/.cache/smoke.mjs",
     "smoke:proxy": "esbuild scripts/smoke-proxy.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/smoke-proxy.mjs --log-level=error --external:node-forge && node node_modules/.cache/smoke-proxy.mjs",
     "smoke:systemproxy": "esbuild scripts/check-systemproxy.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/check-systemproxy.mjs --log-level=error && node node_modules/.cache/check-systemproxy.mjs",
     "smoke:chatui": "esbuild scripts/smoke-chatui.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/smoke-chatui.mjs --log-level=error --loader:.tsx=tsx --jsx=automatic --external:react --external:react-dom --external:react/jsx-runtime && node node_modules/.cache/smoke-chatui.mjs"
@@ -49,6 +49,8 @@
     "@ai-sdk/react": "^2.0.264",
     "@fontsource/jetbrains-mono": "^5.3.0",
     "ai": "^5.0.261",
+    "clsx": "^2.1.1",
+    "cmdk": "^1.1.1",
     "crypto-js": "^4.2.0",
     "electron-updater": "^6.8.9",
     "node-forge": "^1.4.0",
@@ -57,7 +59,8 @@
     "react-dom": "^18.3.1",
     "react-markdown": "^10.1.0",
     "rehype-highlight": "^7.0.2",
-    "remark-gfm": "^4.0.1"
+    "remark-gfm": "^4.0.1",
+    "tailwind-merge": "^3.7.0"
   },
   "devDependencies": {
     "@types/crypto-js": "^4.2.2",
