@@ -84,13 +84,32 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    env:
+      TAG: ${{ github.ref_name }}
     steps:
       - uses: actions/checkout@v7
+
+      # electron-builder 用 package.json 的 version 作为 release tag，
+      # 若与 git tag 不一致，会创建一个“错误 tag”的 draft，导致后续 edit 找不到。
+      # 这里提前校验，让问题在发布前就暴露为清晰的错误。
+      - name: Verify version matches tag
+        run: |
+          PKG_VER=$(node -p "require('./package.json').version")
+          echo "package.json version: v$PKG_VER"
+          echo "git tag:              $TAG"
+          if [ "v$PKG_VER" != "$TAG" ]; then
+            echo "::error::package.json version (v$PKG_VER) does not match the pushed tag ($TAG). Bump package.json before tagging so electron-builder creates the release under the correct tag."
+            exit 1
+          fi
 
       - name: Generate release notes and publish
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ github.ref_name }}
         run: |
           BODY=$(gh api repos/${{ github.repository }}/releases/generate-notes -f tag_name="$TAG" -f target_commitish="${{ github.sha }}" --jq .body)
-          gh release edit "$TAG" --draft=false --latest --notes "$BODY"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release edit "$TAG" --draft=false --latest --notes "$BODY"
+          else
+            echo "::warning::Draft release for $TAG not found (electron-builder may have created it under a different tag). Creating the release now."
+            gh release create "$TAG" --title "$TAG" --notes "$BODY" --latest
+          fi
