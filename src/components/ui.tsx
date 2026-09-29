@@ -37,28 +37,47 @@ export function Panel({ title, children, right, className = '' }: {
  *
  * 起因很具体：功能一多，页面就变成一堆面板往下堆，进来的人不知道先看哪、要干什么。
  * 所以每个 AI 工具的开头放一段固定的三步说明 —— 先说做什么，再谈参数。
+ *
+ * 默认收起成一行（标题 + 首步预览），点开才展开完整步骤：
+ * 工作区本来就窄，引导是参考信息，不该常驻占一屏。动画复用 collapse-grid
+ * （grid-template-rows 0fr→1fr，内容高度未知也能平滑展开）。
  */
 export function ToolGuide({ title, steps, note }: {
   title: string
   steps: string[]
   note?: string
 }) {
+  const [open, setOpen] = useState(false)
   return (
-    <div className="rounded-lg border border-phosphor/25 bg-phosphor-faint/40 px-4 py-3 mb-3">
-      <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-phosphor/80 mb-2 select-none">{title}</div>
-      <ol className="space-y-1.5">
-        {steps.map((s, i) => (
-          <li key={i} className="flex gap-2 text-[13px] text-bright leading-relaxed">
-            <span className="shrink-0 font-mono text-phosphor/70">{i + 1}.</span>
-            <span>{s}</span>
-          </li>
-        ))}
-      </ol>
-      {note && (
-        <p className="mt-2.5 pt-2 border-t border-phosphor/15 text-[12.5px] text-amber leading-relaxed">
-          <span aria-hidden>⚠ </span>{note}
-        </p>
-      )}
+    <div className="rounded-lg border border-phosphor/25 bg-phosphor-faint/40 mb-3">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="w-full flex items-center gap-2 px-4 py-2 text-left"
+      >
+        <span className={`text-phosphor/70 text-[10px] w-2 shrink-0 transition-transform duration-200 ${open ? 'rotate-90' : ''}`}>▶</span>
+        <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-phosphor/80 select-none shrink-0">{title}</span>
+        {!open && <span className="text-[11px] text-muted/60 truncate min-w-0">{steps[0]}</span>}
+      </button>
+      <div className="collapse-grid" style={{ gridTemplateRows: open ? '1fr' : '0fr' }} aria-hidden={!open}>
+        <div>
+          <div className="px-4 pb-3">
+            <ol className="space-y-1.5">
+              {steps.map((s, i) => (
+                <li key={i} className="flex gap-2 text-[13px] text-bright leading-relaxed">
+                  <span className="shrink-0 font-mono text-phosphor/70">{i + 1}.</span>
+                  <span>{s}</span>
+                </li>
+              ))}
+            </ol>
+            {note && (
+              <p className="mt-2.5 pt-2 border-t border-phosphor/15 text-[12.5px] text-amber leading-relaxed">
+                <span aria-hidden>⚠ </span>{note}
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
