@@ -14,6 +14,7 @@
  */
 import { chatStream, type ChatStreamConfig, type OpenAiToolDef } from './chat'
 import { McpClient } from './mcpclient'
+import type { ChatTraceRecorder } from './chat-trace'
 import type {
   ChatEvent,
   ChatMessage,
@@ -34,6 +35,8 @@ type WireMessage =
 export interface ChatAgentSpec extends Omit<ChatSendSpec, 'tools'> {
   requestId: string
   tools: ChatToolsSpec
+  /** 存在时把每轮的请求体 / SSE 帧 / 工具调用记进链路（纯对话路径由 chat-ipc 直接接） */
+  trace?: ChatTraceRecorder
 }
 
 export interface ChatAgentHost {
@@ -53,7 +56,7 @@ export function runChatAgent(spec: ChatAgentSpec, host: ChatAgentHost): { abort:
   /** wireName → 客户端与原始名。模型看到的名字一旦给出就不能变，重名在这里消化。 */
   const registry = new Map<string, { client: McpClient; original: string }>()
 
-  const { tools: toolsSpec, requestId: _rid, messages: _msgs, ...streamBase } = spec
+  const { tools: toolsSpec, requestId: _rid, messages: _msgs, trace, ...streamBase } = spec
   const baseConfig = streamBase as ChatStreamConfig
 
   const abort = (): void => {
@@ -73,7 +76,7 @@ export function runChatAgent(spec: ChatAgentSpec, host: ChatAgentHost): { abort:
   }
 
   /** 跑一轮流式请求；deltas 直接转发给界面 */
-  const runRound = (messages: WireMessage[], toolDefs: OpenAiToolDef[]): Promise<{ meta: ChatMeta; content: string }> =>
+  const runRound = (round: number, messages: WireMessage[], toolDefs: OpenAiToolDef[]): Promise<{ meta: ChatMeta; content: string }> =>
     new Promise((resolve, reject) => {
       let content = ''
       streamHandle = chatStream(
@@ -85,12 +88,19 @@ export function runChatAgent(spec: ChatAgentSpec, host: ChatAgentHost): { abort:
           },
           onDone: (meta) => {
             streamHandle = null
+            trace?.meta(round, meta)
             resolve({ meta, content })
           },
           onError: (message, code) => {
             streamHandle = null
             reject(Object.assign(new Error(message), { code }))
           },
+          ...(trace
+            ? {
+                onRequest: (info) => trace.request(round, info),
+                onFrame: (line: string) => trace.frame(round, line),
+              }
+            : {}),
         },
       )
     })
@@ -223,7 +233,7 @@ export function runChatAgent(spec: ChatAgentSpec, host: ChatAgentHost): { abort:
         }
         rounds++
         emit({ type: 'round', requestId, round: rounds, maxRounds })
-        const { meta, content } = await runRound(messages, toolDefs)
+        const { meta, content } = await runRound(rounds, messages, toolDefs)
         lastMeta = meta
         if (aborted) {
           finishAborted()
@@ -254,8 +264,10 @@ export function runChatAgent(spec: ChatAgentSpec, host: ChatAgentHost): { abort:
             return
           }
           emit({ type: 'toolCall', requestId, round: rounds, call })
+          trace?.toolCall(rounds, call)
           const result = await executeTool(call)
           emit({ type: 'toolResult', requestId, round: rounds, result })
+          trace?.toolResult(rounds, call.id, result)
           const body = result.error ? `调用失败：${result.error}` : result.text
           const clipped = body.length > TOOL_RESULT_MAX
             ? `${body.slice(0, TOOL_RESULT_MAX)}\n…（结果过长已截断，原始长度 ${body.length} 字符）`

@@ -1,8 +1,8 @@
 /**
- * 对话设置抽屉：模型清单、工具调用、自定义工具源、高级参数、价格表。
+ * 对话设置抽屉：模型清单、对话参数、工具调用、自定义工具源、技能预设、连接与请求、价格表。
  *
- * 一屏能看见的东西越少，越知道重点在哪 —— 所以除了「模型清单」与「工具调用」，
- * 其余全在折叠区里。
+ * 区块按使用频率排布：高频（模型、提示词、采样）在上，低频（代理、TLS、请求头）下沉；
+ * 技能预设快照的就是「对话参数 + 工具调用」六项，紧跟其后。
  */
 import React, { useState } from 'react'
 import { Btn, Collapse, Drawer, Input, TA } from '../ui'
@@ -19,6 +19,8 @@ import {
   type ModelProfile,
 } from '../../lib/chat-config'
 import type { ModelPrice } from '../../lib/toolkit'
+import { SkillsSection } from './SkillsSection'
+import { ServerProbe } from './ServerProbe'
 
 type L = (typeof chatL)['zh']
 
@@ -114,6 +116,17 @@ export function SettingsDrawer({
           <p className="text-[10.5px] text-muted/70 leading-relaxed">{l.apiKeyNote}</p>
         </section>
 
+        {/* ---------- 对话参数（高频，紧随模型） ---------- */}
+        <section className="space-y-3 border-t border-line-soft pt-4">
+          <h3 className="text-[12px] font-semibold text-bright">{l.paramsTitle}</h3>
+          <TA value={settings.system} onChange={(v) => patchSettings({ system: v })} label={l.system} placeholder={l.systemPh} rows={3} />
+          <div className="grid grid-cols-3 gap-2">
+            <Input value={settings.temperature} onChange={(v) => patchSettings({ temperature: v })} label={l.temperature} placeholder="0.7" />
+            <Input value={settings.maxTokens} onChange={(v) => patchSettings({ maxTokens: v })} label={l.maxTokens} placeholder="—" />
+            <Input value={settings.topP} onChange={(v) => patchSettings({ topP: v })} label={l.topP} placeholder="—" />
+          </div>
+        </section>
+
         {/* ---------- 工具调用 ---------- */}
         <section className="space-y-3 border-t border-line-soft pt-4">
           <h3 className="text-[12px] font-semibold text-bright">{l.toolsEnable}</h3>
@@ -127,6 +140,12 @@ export function SettingsDrawer({
               <span className="text-[11.5px] text-muted shrink-0">{l.maxRounds}</span>
               <Input value={settings.maxRounds} onChange={(v) => patchSettings({ maxRounds: v })} />
               <span className="text-[10.5px] text-muted/70 shrink-0">{l.roundsRange}</span>
+            </div>
+          )}
+          {settings.toolsEnabled && (
+            <div>
+              <TA value={settings.toolAllow} onChange={(v) => patchSettings({ toolAllow: v })} label={l.toolAllow} placeholder={l.toolAllowPh} rows={2} />
+              <p className="text-[11px] text-muted mt-1">{l.toolAllowNote}</p>
             </div>
           )}
         </section>
@@ -170,20 +189,18 @@ export function SettingsDrawer({
                     <TA value={sv.headers} onChange={(v) => setServers((p) => p.map((x, j) => (j === i ? { ...x, headers: v } : x)))} rows={2} placeholder={l.serverHeadersPh} />
                   </div>
                 )}
+                <ServerProbe sv={sv} />
               </div>
             ))}
           </div>
         </section>
 
-        {/* ---------- 高级 ---------- */}
+        {/* ---------- 技能预设 ---------- */}
+        <SkillsSection settings={settings} patchSettings={patchSettings} />
+
+        {/* ---------- 连接与请求（低频，下沉） ---------- */}
         <section className="border-t border-line-soft pt-4 space-y-3">
-          <h3 className="text-[12px] font-semibold text-bright">{l.advanced}</h3>
-          <TA value={settings.system} onChange={(v) => patchSettings({ system: v })} label={l.system} placeholder={l.systemPh} rows={3} />
-          <div className="grid grid-cols-3 gap-2">
-            <Input value={settings.temperature} onChange={(v) => patchSettings({ temperature: v })} label={l.temperature} placeholder="0.7" />
-            <Input value={settings.maxTokens} onChange={(v) => patchSettings({ maxTokens: v })} label={l.maxTokens} placeholder="—" />
-            <Input value={settings.topP} onChange={(v) => patchSettings({ topP: v })} label={l.topP} placeholder="—" />
-          </div>
+          <h3 className="text-[12px] font-semibold text-bright">{l.networkTitle}</h3>
           <Input value={settings.proxy} onChange={(v) => patchSettings({ proxy: v })} label={l.proxy} placeholder={l.proxyPh} />
           <label className="flex items-center gap-2 text-[12.5px] cursor-pointer">
             <input type="checkbox" checked={settings.tlsVerify} onChange={(e) => patchSettings({ tlsVerify: e.target.checked })} className="accent-phosphor" />

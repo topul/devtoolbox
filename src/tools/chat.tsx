@@ -16,6 +16,7 @@ import { Btn, ErrorNote, Input, Panel } from '../components/ui'
 import { MessageView } from '../components/chat/MessageView'
 import { Composer } from '../components/chat/Composer'
 import { SettingsDrawer } from '../components/chat/SettingsDrawer'
+import { TraceDrawer } from '../components/chat/TraceView'
 import { useLocalized } from '../lib/i18n'
 import { chatL } from '../lib/locales/chat'
 import { createIpcChatTransport, type ChatTransportHost } from '../lib/chat-transport'
@@ -36,6 +37,7 @@ import {
   loadServers,
   loadSettings,
   numOrUndefined,
+  parseAllowList,
   parseHeaderLines,
   profileName,
   profileReady,
@@ -74,6 +76,8 @@ export function ChatTool(): React.ReactElement {
   const [showSettings, setShowSettings] = useState(false)
   const [input, setInput] = useState('')
   const [desktop, setDesktop] = useState(true)
+  /** 正在查看调用链路的消息 id（= requestId）；null = 关闭 */
+  const [traceId, setTraceId] = useState<string | null>(null)
 
   useEffect(() => { saveProfiles(profiles) }, [profiles])
   useEffect(() => { saveSettings(settings) }, [settings])
@@ -225,6 +229,7 @@ export function ChatTool(): React.ReactElement {
               ...custom,
             ],
             maxRounds,
+            ...(parseAllowList(c.settings.toolAllow).length ? { allow: parseAllowList(c.settings.toolAllow) } : {}),
           }
         : null,
     }
@@ -544,6 +549,7 @@ export function ChatTool(): React.ReactElement {
           emptyText={`${l.empty}　${l.emptyHint}`}
           sendError={sendError}
           onRetry={retry}
+          onTrace={setTraceId}
         />
 
         <div className="border-t border-line px-4 py-3 shrink-0 pb-safe">
@@ -584,13 +590,15 @@ export function ChatTool(): React.ReactElement {
         setPrices={setPrices}
         toolServerErr={toolServerErr}
       />
+
+      {traceId && <TraceDrawer requestId={traceId} onClose={() => setTraceId(null)} />}
     </div>
   )
 }
 
 /* ================= 消息流 ================= */
 
-function MessageList({ messages, busy, prices, model, emptyText, sendError, onRetry }: {
+function MessageList({ messages, busy, prices, model, emptyText, sendError, onRetry, onTrace }: {
   messages: ChatUIMessage[]
   busy: boolean
   prices: ModelPrice[]
@@ -598,6 +606,7 @@ function MessageList({ messages, busy, prices, model, emptyText, sendError, onRe
   emptyText: string
   sendError: string
   onRetry: () => Promise<void>
+  onTrace: (requestId: string) => void
 }): React.ReactElement {
   const l = useLocalized(chatL)
   const listRef = useRef<HTMLDivElement | null>(null)
@@ -625,6 +634,7 @@ function MessageList({ messages, busy, prices, model, emptyText, sendError, onRe
             msg={m}
             live={busy && i === messages.length - 1}
             price={findPrice(messageMeta(m).meta?.model ?? model, prices)}
+            onTrace={m.role === 'assistant' ? onTrace : undefined}
           />
         ))}
         {sendError && (

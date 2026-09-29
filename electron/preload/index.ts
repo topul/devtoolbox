@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type { HttpRequestResult, HttpRequestSpec, HttpTransferAPI } from '../../src/lib/http-types'
-import type { ChatEvent, ChatSendResult, ChatSendSpec } from '../../src/lib/chat-types'
+import type { ChatEvent, ChatSendResult, ChatSendSpec, ChatToolServer, ChatTraceResult, McpProbeResult } from '../../src/lib/chat-types'
 import type { McpInfo } from '../../src/lib/mcp-types'
 import type {
   ChatStoreListResult,
@@ -49,7 +49,12 @@ export interface ChatAPI {
   /** 发起一次流式对话；增量内容通过 onEvent 推送 */
   send: (spec: ChatSendSpec) => Promise<ChatSendResult>
   /** 取消当前这条流 */
-  abort: () => Promise<boolean>
+  /** 取消当前流；给定 id 只停那条（对比页多流并行时用），不给 id 停全部 */
+  abort: (requestId?: string) => Promise<boolean>
+  /** 取一条对话的调用链路（仅本次运行内的对话有记录） */
+  trace: (requestId: string) => Promise<ChatTraceResult>
+  /** 探测一个工具源：连上→拉目录→立刻断开；配置时手动触发 */
+  probeServer: (src: ChatToolServer) => Promise<McpProbeResult>
   onEvent: (callback: (evt: ChatEvent) => void) => () => void
 }
 
@@ -159,7 +164,9 @@ const api: ElectronAPI = {
   },
   chat: {
     send: (spec) => ipcRenderer.invoke('chat:send', spec),
-    abort: () => ipcRenderer.invoke('chat:abort'),
+    abort: (requestId) => ipcRenderer.invoke('chat:abort', requestId),
+    trace: (requestId) => ipcRenderer.invoke('chat:trace', requestId),
+    probeServer: (src) => ipcRenderer.invoke('chat:probe-server', src),
     onEvent: (callback) => {
       const listener = (_event: Electron.IpcRendererEvent, evt: ChatEvent): void => callback(evt)
       ipcRenderer.on('chat:event', listener)

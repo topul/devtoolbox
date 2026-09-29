@@ -37,13 +37,33 @@ export interface ChatStreamConfig extends Omit<ChatConfig, 'tools'> {
   toolDefs?: OpenAiToolDef[]
 }
 
+/** onRequest 回调携带的信息（headers 已脱敏） */
+export interface ChatRequestInfo {
+  url: string
+  headers: [string, string][]
+  body: string
+}
+
 export interface ChatHooks {
   onDelta: (text: string, kind: ChatDeltaKind) => void
   onDone: (meta: ChatMeta) => void
   onError: (message: string, code?: string) => void
+  /** 请求发出前回调（一次调用 = 一轮请求）；给链路视图用。headers 已脱敏 */
+  onRequest?: (info: ChatRequestInfo) => void
+  /** 收到的每条原始 SSE 行（空行与注释行不回调）；给链路视图用 */
+  onFrame?: (line: string) => void
 }
 
 const DEFAULT_TIMEOUT_MS = 120_000
+
+/** 回调给外界的请求头必须先脱敏：密钥类的值只留形态（Bearer *** ），不留内容 */
+export function redactHeaders(headers: [string, string][]): [string, string][] {
+  return headers.map(([k, v]) => {
+    if (!/^(authorization|api-key|x-api-key)$/i.test(k)) return [k, v]
+    const i = v.indexOf(' ')
+    return [k, i > 0 ? `${v.slice(0, i)} ***` : '***']
+  })
+}
 
 function completionsUrl(baseUrl: string): string {
   const base = baseUrl.trim().replace(/\/+$/, '')
@@ -131,6 +151,7 @@ export function chatStream(cfg: ChatStreamConfig, hooks: ChatHooks): { abort: ()
   const handleLine = (line: string): boolean => {
     const t = line.trim()
     if (!t || t.startsWith(':')) return false
+    hooks.onFrame?.(t)
     if (!t.startsWith('data:')) return false
     const payload = t.slice(5).trim()
     if (!payload) return false
@@ -306,6 +327,8 @@ export function chatStream(cfg: ChatStreamConfig, hooks: ChatHooks): { abort: ()
     ...(cfg.maxTokens === undefined ? {} : { max_tokens: cfg.maxTokens }),
     ...(cfg.topP === undefined ? {} : { top_p: cfg.topP }),
   })
+
+  hooks.onRequest?.({ url: url.toString(), headers: redactHeaders(headers), body })
 
   handle = streamHop(
     {

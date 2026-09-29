@@ -129,6 +129,7 @@ export const TOOLS_L = {
     'mcp-inspector': { name: 'MCP 客户端调试', desc: '连任意 MCP 服务端（含本机自己）：看能力清单、直接调工具、逐帧看 JSON-RPC' },
     'tool-schema': { name: '工具定义互转', desc: 'OpenAI tools / MCP / JSON Schema ⇄ TypeScript / Pydantic，并体检 schema 写法' },
     'agent-rules': { name: 'Agent 规则文件生成', desc: '扫一遍项目，按真实命令与结构生成 AGENTS.md / .cursorrules / CLAUDE.md' },
+    'chat-compare': { name: '多模型对比', desc: '同一问题并排发给多个模型：流式回复平铺，首字延迟 / 总耗时 / token / 费用一目了然' },
   },
   en: {
     'base64': { name: 'Base64 Codec', desc: 'Text ↔ Base64, UTF-8 safe' },
@@ -184,6 +185,7 @@ export const TOOLS_L = {
     'mcp-inspector': { name: 'MCP Client Debugger', desc: 'Connect to any MCP server (including this app): list capabilities, call tools, inspect every JSON-RPC frame' },
     'tool-schema': { name: 'Tool Schema Converter', desc: 'OpenAI tools / MCP / JSON Schema ⇄ TypeScript / Pydantic, with a schema lint' },
     'agent-rules': { name: 'Agent Rules Generator', desc: 'Scan a project and draft AGENTS.md / .cursorrules / CLAUDE.md from its real commands and structure' },
+    'chat-compare': { name: 'Model Comparison', desc: 'Send one question to several models side by side: streaming replies laid out flat, first-token latency / total time / tokens / cost at a glance' },
   },
 }
 

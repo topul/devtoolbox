@@ -142,6 +142,34 @@ ipcMain.handle('chat:abort', () => {
   }
   return true
 })
+ipcMain.handle('chat:trace', (_e, id) => ({
+  ok: true,
+  trace: {
+    requestId: id,
+    startedAt: Date.now() - 5_000,
+    url: 'https://api.deepseek.com/v1/chat/completions',
+    headers: [
+      ['Content-Type', 'application/json'],
+      ['Accept', 'text/event-stream'],
+      ['Authorization', 'Bearer ***'],
+    ],
+    rounds: [
+      {
+        round: 1,
+        requestBody: JSON.stringify({ model: 'deepseek-chat', stream: true, messages: [{ role: 'user', content: '你好' }] }),
+        truncated: false,
+        frames: [
+          'data: {"model":"deepseek-chat","choices":[{"index":0,"delta":{"content":"你好"}}]}',
+          'data: {"model":"deepseek-chat","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}',
+          'data: [DONE]',
+        ],
+        framesTruncated: false,
+        meta: { ttfbMs: 120, firstTokenMs: 340, totalMs: 2400, chunks: 12, chars: 48, reasoningChars: 0, usage: { promptTokens: 9, completionTokens: 15, totalTokens: 24 }, finishReason: 'stop', model: 'deepseek-chat', toolCalls: [] },
+        tools: [],
+      },
+    ],
+  },
+}))
 // MCP Inspector：桩里给一份确定性的服务端信息与能力清单，用来体检「表单 + 清单 + 调用结果 + 帧日志」的布局。
 // 真实协议行为由 npm run smoke:mcpclient 覆盖（73 条断言，被测目标就是本仓库自己的 MCP 服务端）。
 const SHOT_MCP_TOOLS = [

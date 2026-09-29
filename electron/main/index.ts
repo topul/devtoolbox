@@ -7,6 +7,7 @@ import fs from 'node:fs'
 import electronUpdater from 'electron-updater'
 import { performRequest } from './http'
 import { createChatController } from './chat-ipc'
+import { probeServer } from './mcp-probe'
 import { createMcpClientController } from './mcpclient-ipc'
 import { createAgentRulesController } from './agentrules-ipc'
 import { createChatStore, type ChatStore } from './chat-store'
@@ -15,7 +16,7 @@ import { safeExternalUrl } from '../../src/lib/external-link'
 import { CaptureProxy } from './proxy/server'
 import { SystemProxyManager } from './systemproxy'
 import type { HttpRequestSpec, HttpRequestResult, HttpTransferResult } from '../../src/lib/http-types'
-import type { ChatEvent, ChatSendResult, ChatSendSpec } from '../../src/lib/chat-types'
+import type { ChatEvent, ChatSendResult, ChatSendSpec, ChatToolServer, ChatTraceResult } from '../../src/lib/chat-types'
 import type { AgentScanSpec, RulesTarget } from '../../src/lib/agentrules-types'
 import type { McpClientEvent, McpConnectSpec } from '../../src/lib/mcpclient-types'
 import type { McpInfo } from '../../src/lib/mcp-types'
@@ -518,6 +519,9 @@ const chatController = createChatController({ emit: sendChatEvent })
 function setupChatIpc(): void {
   ipcMain.handle('chat:send', (_e, spec: ChatSendSpec): ChatSendResult => chatController.send(spec))
   ipcMain.handle('chat:abort', (): boolean => chatController.abort())
+  ipcMain.handle('chat:trace', (_e, id: unknown): ChatTraceResult => chatController.trace(String(id ?? '')))
+  // 工具源连通性探测：一次性连接（连上→拉目录→立刻断开），与 agent 会话互不相干
+  ipcMain.handle('chat:probe-server', (_e, src: ChatToolServer) => probeServer(src))
 }
 
 setupChatIpc()

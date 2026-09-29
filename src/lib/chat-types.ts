@@ -136,6 +136,55 @@ export type ChatEvent =
   | { type: 'toolCall'; requestId: string; round: number; call: ChatToolCall }
   | { type: 'toolResult'; requestId: string; round: number; result: ChatToolResult }
 
+/* ==================== 调用链路（学习用，主进程内存态） ==================== */
+
+/** 链路中的一轮：一次真实的 HTTP 请求 + 它的响应与工具执行 */
+export interface ChatTraceRound {
+  round: number
+  /** 发出的完整请求体（JSON 文本；超长会截断） */
+  requestBody: string
+  truncated: boolean
+  /** 服务端返回的原始 SSE 行样例（注释行与空行不记） */
+  frames: string[]
+  framesTruncated: boolean
+  /** 本轮响应指标；请求失败或被取消时为 null */
+  meta: ChatMeta | null
+  /** 本轮模型发起的工具调用与执行结果（结果可能还没有） */
+  tools: { call: ChatToolCall; result: ChatToolResult | null }[]
+}
+
+/** 一次对话的完整链路 */
+export interface ChatTrace {
+  requestId: string
+  startedAt: number
+  /** 实际请求的 completions 地址 */
+  url: string
+  /** 请求头（密钥类已脱敏为 ***） */
+  headers: [string, string][]
+  rounds: ChatTraceRound[]
+}
+
+export type ChatTraceResult =
+  | { ok: true; trace: ChatTrace }
+  | { ok: false; error: 'NOT_FOUND' }
+
+/* ==================== 工具源探测（配置时的连通性测试） ==================== */
+
+/** 一次工具源探测的结果：连得上就带目录摘要，连不上就带原因 */
+export interface McpProbeResult {
+  ok: boolean
+  /** 服务端自报名（initialize 返回的 name/version），ok=true 时有 */
+  serverName?: string
+  serverVersion?: string
+  /** 工具目录摘要（描述截断）；发给模型的就是这些名字的原始形态 */
+  tools?: { name: string; description: string }[]
+  /** 资源与 prompts 只报数量（详情归 Inspector） */
+  resources?: number
+  prompts?: number
+  /** ok=false 时的失败原因（超时 / 拒连 / 协议错误等） */
+  error?: string
+}
+
 export interface ChatSendResult {
   ok: boolean
   requestId?: string

@@ -15,6 +15,7 @@ import { TrafficProxyTool } from '../tools/proxy'
 import { XorTool, RotTool, VigenereTool, PrivescTool } from '../tools/offsec'
 import { McpTool } from '../tools/mcp'
 import { ChatTool } from '../tools/chat'
+import { ChatCompareTool } from '../tools/chatcompare'
 import { McpInspectorTool } from '../tools/mcpclient'
 import { ToolSchemaTool } from '../tools/schema'
 import { AgentRulesTool } from '../tools/agentrules'
@@ -212,6 +213,7 @@ export const TOOLS: ToolDef[] = [
   { id: 'mcp-inspector', category: 'ai', keywords: ['mcp', 'inspector', '客户端', '连接', '调用', '工具调用', 'jsonrpc', 'stdio', '调试'], hot: true, component: McpInspectorTool },
   { id: 'tool-schema', category: 'ai', keywords: ['schema', 'json schema', '工具定义', '函数调用', 'function calling', 'typescript', 'pydantic', 'openai', 'mcp', '转换', '校验'], hot: true, component: ToolSchemaTool },
   { id: 'agent-rules', category: 'ai', keywords: ['agents.md', 'agents', 'cursorrules', 'claude', '规则文件', '项目说明', '扫描', '仓库结构', 'onboarding', 'ai 协作'], hot: true, component: AgentRulesTool },
+  { id: 'chat-compare', category: 'ai', keywords: ['对比', '多模型', '测评', '评测', 'compare', '模型选型', '并排', '首字延迟', 'benchmark'], hot: true, component: ChatCompareTool },
 ]
 
 /**

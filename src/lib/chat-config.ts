@@ -146,6 +146,8 @@ export interface ChatSettings {
   extraHeaders: string
   toolsEnabled: boolean
   maxRounds: string
+  /** 工具白名单：逗号或换行分隔的工具原始名；空 = 全部允许（发给模型前过滤） */
+  toolAllow: string
 }
 
 export const DEFAULT_SETTINGS: ChatSettings = {
@@ -159,6 +161,7 @@ export const DEFAULT_SETTINGS: ChatSettings = {
   extraHeaders: '',
   toolsEnabled: true,
   maxRounds: '8',
+  toolAllow: '',
 }
 
 /** 老配置的键名，保留只读兼容（迁移后不再写它） */
@@ -244,6 +247,19 @@ export function saveServers(list: CustomServer[]): void {
 }
 
 /* ==================== 文本解析 ==================== */
+
+/**
+ * 工具白名单文本 → 工具名数组。逗号与换行都算分隔符，去重去空白；
+ * 工具名大小写敏感，原样保留。空结果表示「全部允许」。
+ */
+export function parseAllowList(raw: string): string[] {
+  const out: string[] = []
+  for (const tok of raw.split(/[,\n]/)) {
+    const t = tok.trim()
+    if (t && !out.includes(t)) out.push(t)
+  }
+  return out
+}
 
 /**
  * 界面里的自定义工具源 → agent 能吃的形态。
@@ -346,5 +362,85 @@ export function shortHost(u: string): string {
     return new URL(t).host
   } catch {
     return t.replace(/^https?:\/\//, '').split('/')[0] || t
+  }
+}
+
+/* ==================== Skill 预设 ==================== */
+
+/**
+ * Skill = 命名预设：把对话设置的一个子集打包，一键应用。
+ * 覆盖字段见 `applySkill` —— 固定六项，不碰模型档案、代理、请求头这些环境性配置。
+ */
+export interface SkillPreset {
+  id: string
+  label: string
+  system: string
+  temperature: string
+  maxTokens: string
+  topP: string
+  toolAllow: string
+  toolsEnabled: boolean
+}
+
+export const SKILLS_KEY = 'devtoolbox-chat-skills'
+
+function str(v: unknown): string {
+  return typeof v === 'string' ? v : ''
+}
+
+/** 脏数据单条矫正：label 为空的条目没有意义，直接丢弃 */
+export function coerceSkill(raw: unknown): SkillPreset | null {
+  if (typeof raw !== 'object' || raw === null) return null
+  const o = raw as Record<string, unknown>
+  const label = str(o.label).trim()
+  if (!label) return null
+  return {
+    id: typeof o.id === 'string' && o.id ? o.id : newId('k'),
+    label,
+    system: str(o.system),
+    temperature: str(o.temperature),
+    maxTokens: str(o.maxTokens),
+    topP: str(o.topP),
+    toolAllow: str(o.toolAllow),
+    toolsEnabled: typeof o.toolsEnabled === 'boolean' ? o.toolsEnabled : true,
+  }
+}
+
+export function loadSkills(): SkillPreset[] {
+  if (typeof localStorage === 'undefined') return []
+  try {
+    const raw = localStorage.getItem(SKILLS_KEY)
+    if (!raw) return []
+    const parsed: unknown = JSON.parse(raw)
+    if (!Array.isArray(parsed)) return []
+    return parsed.map(coerceSkill).filter((s): s is SkillPreset => !!s)
+  } catch {
+    return []
+  }
+}
+
+export function saveSkills(list: SkillPreset[]): void {
+  if (typeof localStorage === 'undefined') return
+  try {
+    localStorage.setItem(SKILLS_KEY, JSON.stringify(list))
+  } catch {
+    /* ignore */
+  }
+}
+
+/** 一条空预设（label 由调用方给，其余留给「存为预设」时从当前设置快照覆盖） */
+export function blankSkill(label: string): SkillPreset {
+  return { id: newId('k'), label, system: '', temperature: '', maxTokens: '', topP: '', toolAllow: '', toolsEnabled: true }
+}
+
+/** 应用 = 覆盖 settings 的固定六项；返回值直接喂 patchSettings */
+export function applySkill(p: SkillPreset): Partial<ChatSettings> {
+  return {
+    system: p.system,
+    temperature: p.temperature,
+    maxTokens: p.maxTokens,
+    topP: p.topP,
+    toolAllow: p.toolAllow,
+    toolsEnabled: p.toolsEnabled,
   }
 }

@@ -357,16 +357,38 @@ async function main(): Promise<void> {
     ok('delta 事件按到达顺序累积成完整正文', deltaEvts.map((d) => d.text).join('') === DELTA_TEXT.join(''))
     ok('delta 事件带时间戳', deltaEvts.every((d) => typeof d.atMs === 'number' && d.atMs >= 0))
 
-    // 新请求顶掉旧的：不这么做会出现两条流同时往界面上打字
+    // 多路复用：不同 requestId 并行，事件按 id 归组互不干扰；同 id 重发才顶掉旧流
     events.length = 0
     ctl.send({ requestId: 'req-b', baseUrl, apiKey: 'k', model: 'slow', messages: [{ role: 'user', content: 'hi' }] } as ChatSendSpec)
     const second = ctl.send({ requestId: 'req-c', baseUrl, apiKey: 'k', model: 'stream', messages: [{ role: 'user', content: 'hi' }] } as ChatSendSpec)
     eq('第二条请求用的是自己的 id', second.requestId, 'req-c')
+    ok('两条流同时活跃（并行）', ctl.activeCount() === 2, String(ctl.activeCount()))
     await waitFor(() => events.some((e) => e.type === 'done' && e.requestId === 'req-c'), 5000)
+    ok('快的先完成，慢的还在跑', ctl.isActive())
+    ok('两条流的事件都到了且 id 各自归组', events.some((e) => e.type === 'delta' && e.requestId === 'req-b') && events.some((e) => e.type === 'delta' && e.requestId === 'req-c'))
+
+    // 定向取消：只停 req-b，req-c 继续到 done
+    eq('定向取消命中', ctl.abort('req-b'), true)
+    await waitFor(() => events.some((e) => e.type === 'error' && e.requestId === 'req-b'), 5000)
     const abortedB = events.find((e) => e.type === 'error' && e.requestId === 'req-b') as Extract<ChatEvent, { type: 'error' }> | undefined
-    ok('被顶掉的旧请求收到取消事件', !!abortedB, events.map((e) => `${e.type}:${e.requestId}`).join(' '))
+    ok('被取消的请求收到取消事件', !!abortedB, events.map((e) => `${e.type}:${e.requestId}`).join(' '))
     eq('取消事件的错误码可识别', abortedB?.code, 'ABORTED')
-    ok('旧请求不再产生 delta', !events.some((e) => e.type === 'delta' && e.requestId === 'req-b'))
+    ok('定向取消后 req-c 正常完成', events.some((e) => e.type === 'done' && e.requestId === 'req-c'))
+    eq('全部结束后不再有活跃流', ctl.activeCount(), 0)
+    eq('abort 不存在的 id 返回 false', ctl.abort('req-b'), false)
+
+    // 同 id 重发：顶掉旧流（防重复），界面不会出现两份同 id 的活流
+    events.length = 0
+    ctl.send({ requestId: 'req-x', baseUrl, apiKey: 'k', model: 'slow', messages: [{ role: 'user', content: 'hi' }] } as ChatSendSpec)
+    const dup = ctl.send({ requestId: 'req-x', baseUrl, apiKey: 'k', model: 'stream', messages: [{ role: 'user', content: 'hi' }] } as ChatSendSpec)
+    eq('重发返回同一 requestId', dup.requestId, 'req-x')
+    await waitFor(() => events.some((e) => e.type === 'error' && e.requestId === 'req-x'), 5000)
+    const dupX = events.filter((e) => e.type === 'start' && e.requestId === 'req-x')
+    ok('同 id 两次发送都发出了 start', dupX.length === 2, String(dupX.length))
+    eq('被顶掉者收到 ABORTED', (events.find((e) => e.type === 'error' && e.requestId === 'req-x') as Extract<ChatEvent, { type: 'error' }> | undefined)?.code, 'ABORTED')
+    await waitFor(() => events.some((e) => e.type === 'done' && e.requestId === 'req-x'), 5000)
+    eq('新流完成后活跃数归零', ctl.activeCount(), 0)
+    ctl.abort()
 
     // 参数不合法：要能同步给出错误事件，而不是让界面永远转圈
     events.length = 0

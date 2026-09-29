@@ -25,11 +25,13 @@ import type { ChatMeta } from '../../lib/chat-types'
 
 type L = (typeof chatL)['zh']
 
-export function MessageView({ msg, price, live }: {
+export function MessageView({ msg, price, live, onTrace }: {
   msg: ChatUIMessage
   price: ModelPrice | null
   /** 这条消息正处在流式输出中（决定思考块是否自动展开） */
   live: boolean
+  /** 打开这条回复的调用链路（助手消息才有入口） */
+  onTrace?: (requestId: string) => void
 }): React.ReactElement {
   const l = useLocalized(chatL)
   const isUser = msg.role === 'user'
@@ -86,7 +88,17 @@ export function MessageView({ msg, price, live }: {
       </div>
 
       {meta.error && <div className="mt-1.5"><ErrorNote msg={meta.error} /></div>}
-      {!isUser && !!meta.meta && <InlineMetrics meta={meta.meta} text={text} tools={tools.length} rounds={meta.rounds} l={l} price={price} />}
+      {!isUser && !!meta.meta && (
+        <InlineMetrics
+          meta={meta.meta}
+          text={text}
+          tools={tools.length}
+          rounds={meta.rounds}
+          l={l}
+          price={price}
+          onTrace={onTrace ? () => onTrace(msg.id) : undefined}
+        />
+      )}
     </div>
   )
 }
@@ -171,13 +183,14 @@ function formatArgs(input: unknown): string {
 /* ================= 指标 ================= */
 
 /** 消息尾部的一行指标摘要：点开才是完整指标面板，不再常驻右栏 */
-function InlineMetrics({ meta, text, tools, rounds, l, price }: {
+function InlineMetrics({ meta, text, tools, rounds, l, price, onTrace }: {
   meta: ChatMeta
   text: string
   tools: number
   rounds?: number
   l: L
   price: ModelPrice | null
+  onTrace?: () => void
 }): React.ReactElement {
   const [open, setOpen] = useState(false)
   const tokensOut = meta.usage?.completionTokens ?? Math.ceil(meta.chars / 3.2)
@@ -199,6 +212,14 @@ function InlineMetrics({ meta, text, tools, rounds, l, price }: {
       </button>
       {open && (
         <div className="mt-1.5 border border-line-soft bg-panel-2 p-2.5">
+          {onTrace && (
+            <button
+              onClick={onTrace}
+              className="mb-2 text-[11.5px] text-phosphor hover:text-bright transition-colors"
+            >
+              {l.traceOpen} ▸
+            </button>
+          )}
           <MetricsView meta={meta} text={text} tools={tools} rounds={rounds} l={l} price={price} />
         </div>
       )}
