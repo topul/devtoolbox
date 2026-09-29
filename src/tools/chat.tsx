@@ -461,21 +461,27 @@ export function ChatTool(): React.ReactElement {
               {sess.title || l.untitledSession}
               <span className="ml-1.5 text-[9.5px] text-muted/50">{sess.turnCount}</span>
             </button>
-            <button
-              onClick={() => { if (sess.id === sessionId) { setTitleDraft(sessionTitle || sess.title); setRenaming(true) } }}
-              title={l.rename}
-              className="hidden group-hover:block text-muted hover:text-phosphor text-[11px] px-0.5"
-            >✎</button>
+            {/* 管理操作常驻可见（不再 hover 才出现）：触屏点得到，删错也有二次确认兜底 */}
+            {sess.id === sessionId && (
+              <button
+                onClick={() => { setTitleDraft(sessionTitle || sess.title); setRenaming(true) }}
+                title={l.rename}
+                aria-label={l.rename}
+                className="shrink-0 text-muted/50 hover:text-phosphor text-[11px] px-0.5"
+              >✎</button>
+            )}
             <button
               onClick={() => { if (sess.id === sessionId) { if (confirmDel) void removeSession(sess.id); else setConfirmDel(true) } else void removeSession(sess.id) }}
               title={confirmDel && sess.id === sessionId ? l.confirmDelete : l.deleteSession}
-              className={`hidden group-hover:block text-[12px] px-0.5 ${confirmDel && sess.id === sessionId ? 'text-danger' : 'text-muted hover:text-danger'}`}
+              aria-label={l.deleteSession}
+              className={`shrink-0 text-[12px] px-0.5 ${confirmDel && sess.id === sessionId ? 'text-danger' : 'text-muted/50 hover:text-danger'}`}
             >×</button>
           </div>
         ))}
       </div>
-      <div className="border-t border-line-soft px-2.5 py-2">
-        <p className="text-[9.5px] text-muted/50 leading-snug break-all" title={storePath || l.savedHint}>{l.savedHint}</p>
+      {/* 存储位置从常驻文字降级为 ⓘ 悬浮提示：这一行信息价值低，不该常驻占位 */}
+      <div className="border-t border-line-soft px-2.5 py-1.5">
+        <span className="cursor-help text-[10px] text-muted/40 hover:text-muted" title={`${l.savedHint}${storePath ? ` · ${storePath}` : ''}`}>ⓘ</span>
       </div>
     </aside>
   )
@@ -486,41 +492,50 @@ export function ChatTool(): React.ReactElement {
       {rail}
       <div className="flex-1 min-w-0 flex flex-col">
         <header className="flex items-center gap-2 border-b border-line px-3 py-2 shrink-0 pt-safe">
+          {/* 改名只替换标题本身：模型名、提示、设置键在改名期间保持可见，
+              顶栏职责不随编辑状态漂移 */}
+          {renaming ? (
+            <input
+              value={titleDraft}
+              onChange={(e) => setTitleDraft(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') void commitRename(); if (e.key === 'Escape') setRenaming(false) }}
+              autoFocus
+              spellCheck={false}
+              className="flex-1 min-w-0 bg-panel-2 border border-line-soft px-2 py-1 text-[12px] text-bright focus:outline-none focus:border-phosphor/40"
+            />
+          ) : (
+            <button
+              onClick={() => { setTitleDraft(sessionTitle); setRenaming(true) }}
+              className="min-w-0 max-w-[50%] truncate text-left text-[12.5px] text-bright hover:text-phosphor transition-colors !min-h-0"
+              title={l.rename}
+            >
+              {sessionTitle || l.untitledSession}
+            </button>
+          )}
           {renaming ? (
             <>
-              <input
-                value={titleDraft}
-                onChange={(e) => setTitleDraft(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') void commitRename(); if (e.key === 'Escape') setRenaming(false) }}
-                autoFocus
-                spellCheck={false}
-                className="flex-1 min-w-0 bg-panel-2 border border-line-soft px-2 py-1 text-[12px] text-bright focus:outline-none focus:border-phosphor/40"
-              />
               <Btn variant="ghost" onClick={() => void commitRename()}>{l.renameSave}</Btn>
               <Btn variant="ghost" onClick={() => setRenaming(false)}>{l.renameCancel}</Btn>
             </>
           ) : (
-            <>
-              <span className="text-[12.5px] text-bright truncate">{sessionTitle || l.untitledSession}</span>
-              <span className="text-[10px] text-muted/60 truncate hidden md:inline">
-                {active ? `${profileName(active)} · ${active.model}` : ''}
-              </span>
-              <span className="flex-1" />
-              {notice && (
-                <span className="hidden md:inline text-[10.5px] text-amber truncate max-w-[40%]" title={notice}>{notice}</span>
-              )}
-              <button
-                onClick={() => setShowSessions((v) => !v)}
-                disabled={!storeApi}
-                className="lg:hidden border border-line-soft px-2 py-1 text-[11px] text-muted hover:text-phosphor"
-              >{l.sessionsTitle}</button>
-              <button
-                onClick={() => setShowSettings(true)}
-                className="border border-line-soft px-2.5 py-1 text-[12px] text-muted hover:text-phosphor hover:border-phosphor/40 transition-colors"
-                title={l.settingsTitle}
-              >⚙</button>
-            </>
+            <span className="text-[10px] text-muted/60 truncate hidden md:inline">
+              {active ? `${profileName(active)} · ${active.model}` : ''}
+            </span>
           )}
+          <span className="flex-1" />
+          {notice && (
+            <span className="hidden md:inline text-[10.5px] text-amber truncate max-w-[40%]" title={notice}>{notice}</span>
+          )}
+          <button
+            onClick={() => setShowSessions((v) => !v)}
+            disabled={!storeApi}
+            className="lg:hidden border border-line-soft px-2 py-1 text-[11px] text-muted hover:text-phosphor"
+          >{l.sessionsTitle}</button>
+          <button
+            onClick={() => setShowSettings(true)}
+            className="border border-line-soft px-2.5 py-1 text-[12px] text-muted hover:text-phosphor hover:border-phosphor/40 transition-colors"
+            title={l.settingsTitle}
+          >⚙</button>
         </header>
 
         {notice && <p className="lg:hidden px-3 py-1.5 text-[11px] text-amber border-b border-line-soft">{notice}</p>}
@@ -532,11 +547,24 @@ export function ChatTool(): React.ReactElement {
             </button>
             {sessions.length === 0 && <div className="px-3 py-3 text-[11.5px] text-muted">{l.emptySessions}</div>}
             {sessions.map((sess) => (
-              <button key={sess.id} onClick={() => void switchSession(sess.id)}
-                className={`w-full text-left px-3 py-2 border-b border-line-soft last:border-0 text-[12px] ${sess.id === sessionId ? 'bg-phosphor-faint text-phosphor' : 'text-bright'}`}>
-                <div className="truncate">{sess.title || l.untitledSession}</div>
-                <div className="text-[10px] text-muted">{l.msgCount(sess.turnCount)} · {new Date(sess.updatedAt).toLocaleString()}</div>
-              </button>
+              /* 行结构从「整行一个按钮」改为「主按钮 + 行内操作」：
+                 窄屏没有 hover，管理操作必须和桌面一样点得到 */
+              <div key={sess.id} className={`flex items-stretch border-b border-line-soft last:border-0 ${sess.id === sessionId ? 'bg-phosphor-faint' : ''}`}>
+                <button onClick={() => void switchSession(sess.id)}
+                  className="flex-1 min-w-0 text-left px-3 py-2 text-[12px]">
+                  <div className={`truncate ${sess.id === sessionId ? 'text-phosphor' : 'text-bright'}`}>{sess.title || l.untitledSession}</div>
+                  <div className="text-[10px] text-muted">{l.msgCount(sess.turnCount)} · {new Date(sess.updatedAt).toLocaleString()}</div>
+                </button>
+                {sess.id === sessionId && (
+                  <button onClick={() => { setTitleDraft(sessionTitle || sess.title); setRenaming(true); setShowSessions(false) }}
+                    aria-label={l.rename} title={l.rename}
+                    className="shrink-0 px-2.5 flex items-center text-muted/70 hover:text-phosphor text-[13px]">✎</button>
+                )}
+                <button onClick={() => { if (sess.id === sessionId) { if (confirmDel) void removeSession(sess.id); else setConfirmDel(true) } else void removeSession(sess.id) }}
+                  aria-label={l.deleteSession}
+                  title={confirmDel && sess.id === sessionId ? l.confirmDelete : l.deleteSession}
+                  className={`shrink-0 px-3 flex items-center text-[14px] ${confirmDel && sess.id === sessionId ? 'text-danger' : 'text-muted/70 hover:text-danger'}`}>×</button>
+              </div>
             ))}
           </div>
         )}

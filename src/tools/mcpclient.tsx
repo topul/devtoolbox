@@ -367,203 +367,210 @@ export function McpInspectorTool() {
 
       {!desktop && <ErrorNote msg={l.noDesktop} />}
 
-      <Panel title={l.connTitle} right={<span className={`text-[10px] px-1.5 py-0.5 border ${statusCls}`}>{statusText}</span>}>
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-1.5">
-            <span className="text-[11px] text-muted uppercase tracking-wider">{l.transportLabel}</span>
-            {(['stdio', 'http'] as McpTransportKind[]).map((t) => (
-              <button key={t} onClick={() => setTransport(t)} disabled={status === 'connected'}
-                className={`px-2 py-0.5 text-[11px] border transition-colors ${transport === t ? 'border-phosphor/50 text-phosphor' : 'border-line-soft text-muted hover:text-bright'}`}>
-                {t === 'stdio' ? l.transportStdio : l.transportHttp}
-              </button>
-            ))}
-          </div>
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="text-[11px] text-muted uppercase tracking-wider">{l.presetLabel}</span>
-            <button onClick={useSelfPreset} disabled={status === 'connected' || busy} title={l.presetSelfNote}
-              className="px-2 py-0.5 text-[11px] border border-line-soft text-muted hover:text-phosphor hover:border-phosphor/40 transition-colors">
-              {l.presetSelf}
-            </button>
-            <button onClick={useFilesystemPreset} disabled={status === 'connected'} title={l.presetFilesystemNote}
-              className="px-2 py-0.5 text-[11px] border border-line-soft text-muted hover:text-phosphor hover:border-phosphor/40 transition-colors">
-              {l.presetFilesystem}
-            </button>
-          </div>
-        </div>
-
-        <div className="mt-3 space-y-3">
-          {transport === 'stdio' ? (
-            <>
-              <Input value={form.command} onChange={(v) => patchForm({ command: v })} label={l.commandLabel} placeholder={l.commandPh} />
-              <div className="grid grid-cols-1 min-[1500px]:grid-cols-2 gap-3">
-                <TA value={form.args} onChange={(v) => patchForm({ args: v })} label={l.argsLabel} placeholder={l.argsPh} rows={3} />
-                <TA value={form.env} onChange={(v) => patchForm({ env: v })} label={l.envLabel} placeholder={l.envPh} rows={3} />
+      {/* 三栏工作台：连接固定左栏、能力与调用居中、帧时间线常驻右栏。
+          原来是垂直长页——「连接→选工具→调用→看帧」纵贯四屏，
+          而调试时最常看的帧流还沉在页面最底的折叠区里。 */}
+      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,340px)_minmax(0,1fr)] 2xl:grid-cols-[minmax(0,340px)_minmax(0,1fr)_minmax(0,400px)] gap-3 items-start">
+        {/* ===== 左栏：连接配置（sticky，不随内容滚走） ===== */}
+        <div className="space-y-3 xl:sticky xl:top-4">
+          <Panel title={l.connTitle} right={<span className={`text-[10px] px-1.5 py-0.5 border ${statusCls}`}>{statusText}</span>}>
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] text-muted uppercase tracking-wider">{l.transportLabel}</span>
+                {(['stdio', 'http'] as McpTransportKind[]).map((t) => (
+                  <button key={t} onClick={() => setTransport(t)} disabled={status === 'connected'}
+                    className={`px-2 py-0.5 text-[11px] border transition-colors ${transport === t ? 'border-phosphor/50 text-phosphor' : 'border-line-soft text-muted hover:text-bright'}`}>
+                    {t === 'stdio' ? l.transportStdio : l.transportHttp}
+                  </button>
+                ))}
               </div>
-              <div className="grid grid-cols-1 min-[1500px]:grid-cols-2 gap-3">
-                <Input value={form.cwd} onChange={(v) => patchForm({ cwd: v })} label={l.cwdLabel} placeholder={l.cwdPh} />
-                <Input value={form.timeout} onChange={(v) => patchForm({ timeout: v })} label={l.timeoutLabel} type="number" />
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[11px] text-muted uppercase tracking-wider">{l.presetLabel}</span>
+                <button onClick={useSelfPreset} disabled={status === 'connected' || busy} title={l.presetSelfNote}
+                  className="px-2 py-0.5 text-[11px] border border-line-soft text-muted hover:text-phosphor hover:border-phosphor/40 transition-colors">
+                  {l.presetSelf}
+                </button>
+                <button onClick={useFilesystemPreset} disabled={status === 'connected'} title={l.presetFilesystemNote}
+                  className="px-2 py-0.5 text-[11px] border border-line-soft text-muted hover:text-phosphor hover:border-phosphor/40 transition-colors">
+                  {l.presetFilesystem}
+                </button>
               </div>
-            </>
-          ) : (
-            <>
-              <Input value={form.url} onChange={(v) => patchForm({ url: v })} label={l.urlLabel} placeholder={l.urlPh} />
-              <div className="grid grid-cols-1 min-[1500px]:grid-cols-2 gap-3">
-                <TA value={form.headers} onChange={(v) => patchForm({ headers: v })} label={l.headersLabel} placeholder={l.headersPh} rows={3} />
-                <Input value={form.timeout} onChange={(v) => patchForm({ timeout: v })} label={l.timeoutLabel} type="number" />
-              </div>
-            </>
-          )}
-        </div>
+            </div>
 
-        <div className="flex items-center gap-2 mt-3 flex-wrap">
-          <Btn variant="primary" onClick={() => connect()} disabled={status === 'connected' || busy}>{l.connect}</Btn>
-          <Btn onClick={disconnect} disabled={status !== 'connected'}>{l.disconnect}</Btn>
-          <Btn onClick={pingIt} disabled={status !== 'connected'}>{l.ping}</Btn>
-          {busy && <span className="text-[11px] text-amber">{l.calling}…</span>}
-          {detail && <span className="text-[11px] text-muted">{detail}</span>}
-        </div>
-        {connErr && <div className="mt-2"><ErrorNote msg={connErr} /></div>}
+            <div className="mt-3 space-y-3">
+              {transport === 'stdio' ? (
+                <>
+                  <Input value={form.command} onChange={(v) => patchForm({ command: v })} label={l.commandLabel} placeholder={l.commandPh} />
+                  <div className="grid grid-cols-1 min-[1500px]:grid-cols-2 gap-3">
+                    <TA value={form.args} onChange={(v) => patchForm({ args: v })} label={l.argsLabel} placeholder={l.argsPh} rows={3} />
+                    <TA value={form.env} onChange={(v) => patchForm({ env: v })} label={l.envLabel} placeholder={l.envPh} rows={3} />
+                  </div>
+                  <div className="grid grid-cols-1 min-[1500px]:grid-cols-2 gap-3">
+                    <Input value={form.cwd} onChange={(v) => patchForm({ cwd: v })} label={l.cwdLabel} placeholder={l.cwdPh} />
+                    <Input value={form.timeout} onChange={(v) => patchForm({ timeout: v })} label={l.timeoutLabel} type="number" />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <Input value={form.url} onChange={(v) => patchForm({ url: v })} label={l.urlLabel} placeholder={l.urlPh} />
+                  <div className="grid grid-cols-1 min-[1500px]:grid-cols-2 gap-3">
+                    <TA value={form.headers} onChange={(v) => patchForm({ headers: v })} label={l.headersLabel} placeholder={l.headersPh} rows={3} />
+                    <Input value={form.timeout} onChange={(v) => patchForm({ timeout: v })} label={l.timeoutLabel} type="number" />
+                  </div>
+                </>
+              )}
+            </div>
 
-        {info && (
-          <div className="mt-3 border-t border-line-soft pt-3">
-            <div className="text-[11px] uppercase tracking-wider text-muted mb-1">{l.serverInfoTitle}</div>
-            <KV k={l.serverName} v={info.name} />
-            <KV k={l.serverVersion} v={info.version || '—'} />
-            <KV k={l.protocol} v={info.protocolVersion || '—'} />
-            <KV k={l.capabilities} v={Object.keys(info.capabilities).join(', ') || '—'} />
-            {info.instructions && (
-              <div className="mt-2">
-                <div className="text-[11px] uppercase tracking-wider text-muted mb-1">{l.instructionsTitle}</div>
-                <pre className="codeblock text-[11.5px] text-muted whitespace-pre-wrap break-all">{info.instructions}</pre>
+            <div className="flex items-center gap-2 mt-3 flex-wrap">
+              <Btn variant="primary" onClick={() => connect()} disabled={status === 'connected' || busy}>{l.connect}</Btn>
+              <Btn onClick={disconnect} disabled={status !== 'connected'}>{l.disconnect}</Btn>
+              <Btn onClick={pingIt} disabled={status !== 'connected'}>{l.ping}</Btn>
+              {busy && <span className="text-[11px] text-amber">{l.calling}…</span>}
+              {detail && <span className="text-[11px] text-muted">{detail}</span>}
+            </div>
+            {connErr && <div className="mt-2"><ErrorNote msg={connErr} /></div>}
+
+            {info && (
+              <div className="mt-3 border-t border-line-soft pt-3">
+                <div className="text-[11px] uppercase tracking-wider text-muted mb-1">{l.serverInfoTitle}</div>
+                <KV k={l.serverName} v={info.name} />
+                <KV k={l.serverVersion} v={info.version || '—'} />
+                <KV k={l.protocol} v={info.protocolVersion || '—'} />
+                <KV k={l.capabilities} v={Object.keys(info.capabilities).join(', ') || '—'} />
+                {info.instructions && (
+                  <div className="mt-2">
+                    <div className="text-[11px] uppercase tracking-wider text-muted mb-1">{l.instructionsTitle}</div>
+                    <pre className="codeblock text-[11.5px] text-muted whitespace-pre-wrap break-all">{info.instructions}</pre>
+                  </div>
+                )}
               </div>
             )}
-          </div>
-        )}
-      </Panel>
+          </Panel>
+        </div>
 
-      {!catalog && (
-        <Panel title={l.catalogTitle}>
-          <p className="text-[12px] text-muted">{l.empty}</p>
-        </Panel>
-      )}
-
-      {catalog && (
-      <div className="grid grid-cols-1 min-[1500px]:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-4">
-        <Panel title={l.catalogTitle} right={
-          <span className="flex items-center gap-1.5">
-            {(['tools', 'resources', 'prompts'] as Tab[]).map((t) => (
-              <button key={t} onClick={() => setTab(t)}
-                className={`px-2 py-0.5 text-[11px] border transition-colors ${tab === t ? 'border-phosphor/50 text-phosphor' : 'border-line-soft text-muted hover:text-bright'}`}>
-                {t === 'tools' ? l.tabTools : t === 'resources' ? l.tabResources : l.tabPrompts}
-              </button>
-            ))}
-          </span>
-        }>
-          {!catalog && <p className="text-[12px] text-muted">{l.empty}</p>}
-          {catalog && !declaredForTab && (
-            <p className="text-[12px] text-muted">{l.notDeclared.replace('{x}', tab === 'tools' ? l.tabTools : tab === 'resources' ? l.tabResources : l.tabPrompts)}</p>
-          )}
-          {catalog && declaredForTab && items.length === 0 && <p className="text-[12px] text-muted">{l.emptyList}</p>}
-          {catalog && declaredForTab && items.length > 0 && (
-            <div className="border border-line-soft max-h-[46vh] overflow-auto">
-              {items.map((it) => (
-                <button key={it.name} onClick={() => pick(it.name, it.schema)}
-                  className={`w-full text-left px-3 py-2 border-b border-line-soft last:border-0 transition-colors ${target === it.name ? 'bg-phosphor-faint' : 'hover:bg-phosphor-faint'}`}>
-                  <div className={`text-[12.5px] break-all ${target === it.name ? 'text-phosphor' : 'text-bright'}`}>{it.name}</div>
-                  {it.hint && <div className="text-[11.5px] text-muted leading-snug mt-0.5">{it.hint}</div>}
+        {/* ===== 中栏：能力清单 + 调用 ===== */}
+        <div className="space-y-3 min-w-0">
+          <Panel title={l.catalogTitle} right={
+            <span className="flex items-center gap-1.5">
+              {(['tools', 'resources', 'prompts'] as Tab[]).map((t) => (
+                <button key={t} onClick={() => setTab(t)}
+                  className={`px-2 py-0.5 text-[11px] border transition-colors ${tab === t ? 'border-phosphor/50 text-phosphor' : 'border-line-soft text-muted hover:text-bright'}`}>
+                  {t === 'tools' ? l.tabTools : t === 'resources' ? l.tabResources : l.tabPrompts}
                 </button>
               ))}
-            </div>
-          )}
-        </Panel>
+            </span>
+          }>
+            {!catalog && <p className="text-[12px] text-muted">{l.empty}</p>}
+            {catalog && !declaredForTab && (
+              <p className="text-[12px] text-muted">{l.notDeclared.replace('{x}', tab === 'tools' ? l.tabTools : tab === 'resources' ? l.tabResources : l.tabPrompts)}</p>
+            )}
+            {catalog && declaredForTab && items.length === 0 && <p className="text-[12px] text-muted">{l.emptyList}</p>}
+            {catalog && declaredForTab && items.length > 0 && (
+              <div className="border border-line-soft max-h-[46vh] overflow-auto">
+                {items.map((it) => (
+                  <button key={it.name} onClick={() => pick(it.name, it.schema)}
+                    className={`w-full text-left px-3 py-2 border-b border-line-soft last:border-0 transition-colors ${target === it.name ? 'bg-phosphor-faint' : 'hover:bg-phosphor-faint'}`}>
+                    <div className={`text-[12.5px] break-all ${target === it.name ? 'text-phosphor' : 'text-bright'}`}>{it.name}</div>
+                    {it.hint && <div className="text-[11.5px] text-muted leading-snug mt-0.5">{it.hint}</div>}
+                  </button>
+                ))}
+              </div>
+            )}
+          </Panel>
 
-        <Panel title={l.callTitle} right={target ? <CopyBtn text={target} /> : undefined}>
-          {!target && <p className="text-[12px] text-muted">{l.pickHint}</p>}
-          {target && (
-            <div className="space-y-3">
-              <KV k={l.targetLabel} v={<span className="break-all">{target}</span>} />
-              {tab === 'resources' ? (
-                <p className="text-[11px] text-muted">{l.noArgs}</p>
-              ) : (
-                <div>
-                  <TA value={argsText} onChange={setArgsText} label={l.argsJsonLabel} rows={6} />
-                  {argsErr && <div className="mt-1"><ErrorNote msg={argsErr} /></div>}
-                </div>
-              )}
-              <Btn variant="primary" onClick={invoke} disabled={busy}>
-                {busy ? `${l.calling}…` : tab === 'tools' ? l.runTool : tab === 'resources' ? l.readResource : l.getPrompt}
-              </Btn>
-
-              {outcome && (
-                <div className="border-t border-line-soft pt-3 space-y-2">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-[11px] uppercase tracking-wider text-muted">{l.resultTitle}</span>
-                    <span className={`text-[10px] px-1.5 py-0.5 border ${outcome.ok && !outcome.isError ? 'text-phosphor border-phosphor/40' : outcome.isError ? 'text-amber border-amber/40' : 'text-danger border-danger/40'}`}>
-                      {outcome.ok ? (outcome.isError ? l.resToolError : l.resOk) : l.resFailed}
-                    </span>
-                    <span className="text-[11px] text-muted">{l.durationLabel} {outcome.durationMs} ms</span>
+          <Panel title={l.callTitle} right={target ? <CopyBtn text={target} /> : undefined}>
+            {!target && <p className="text-[12px] text-muted">{l.pickHint}</p>}
+            {target && (
+              <div className="space-y-3">
+                <KV k={l.targetLabel} v={<span className="break-all">{target}</span>} />
+                {tab === 'resources' ? (
+                  <p className="text-[11px] text-muted">{l.noArgs}</p>
+                ) : (
+                  <div>
+                    <TA value={argsText} onChange={setArgsText} label={l.argsJsonLabel} rows={6} />
+                    {argsErr && <div className="mt-1"><ErrorNote msg={argsErr} /></div>}
                   </div>
-                  {outcome.error && <ErrorNote msg={outcome.error} />}
-                  {outcome.text && (
-                    <div>
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-[10px] uppercase tracking-wider text-muted">{l.resultTitle}</span>
-                        <CopyBtn text={outcome.text} />
-                      </div>
-                      <pre className="codeblock text-[12px] text-phosphor whitespace-pre-wrap break-all max-h-[26vh] overflow-auto">{outcome.text}</pre>
+                )}
+                <Btn variant="primary" onClick={invoke} disabled={busy}>
+                  {busy ? `${l.calling}…` : tab === 'tools' ? l.runTool : tab === 'resources' ? l.readResource : l.getPrompt}
+                </Btn>
+
+                {outcome && (
+                  <div className="border-t border-line-soft pt-3 space-y-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-[11px] uppercase tracking-wider text-muted">{l.resultTitle}</span>
+                      <span className={`text-[10px] px-1.5 py-0.5 border ${outcome.ok && !outcome.isError ? 'text-phosphor border-phosphor/40' : outcome.isError ? 'text-amber border-amber/40' : 'text-danger border-danger/40'}`}>
+                        {outcome.ok ? (outcome.isError ? l.resToolError : l.resOk) : l.resFailed}
+                      </span>
+                      <span className="text-[11px] text-muted">{l.durationLabel} {outcome.durationMs} ms</span>
                     </div>
-                  )}
-                  {outcome.raw !== null && outcome.raw !== undefined && (
-                    <details>
-                      <summary className="text-[11px] text-muted cursor-pointer">{l.rawResult}</summary>
-                      <pre className="codeblock text-[11px] text-muted whitespace-pre-wrap break-all max-h-[26vh] overflow-auto mt-1">{JSON.stringify(outcome.raw, null, 2)}</pre>
-                    </details>
+                    {outcome.error && <ErrorNote msg={outcome.error} />}
+                    {outcome.text && (
+                      <div>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[10px] uppercase tracking-wider text-muted">{l.resultTitle}</span>
+                          <CopyBtn text={outcome.text} />
+                        </div>
+                        <pre className="codeblock text-[12px] text-phosphor whitespace-pre-wrap break-all max-h-[26vh] overflow-auto">{outcome.text}</pre>
+                      </div>
+                    )}
+                    {outcome.raw !== null && outcome.raw !== undefined && (
+                      <details>
+                        <summary className="text-[11px] text-muted cursor-pointer">{l.rawResult}</summary>
+                        <pre className="codeblock text-[11px] text-muted whitespace-pre-wrap break-all max-h-[26vh] overflow-auto mt-1">{JSON.stringify(outcome.raw, null, 2)}</pre>
+                      </details>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </Panel>
+        </div>
+
+        {/* ===== 右栏：帧时间线常驻（xl 两栏时通吃整行，2xl 起占右栏） ===== */}
+        <div className="space-y-3 min-w-0 xl:col-span-2 2xl:col-span-1 xl:sticky xl:top-4">
+          <Panel
+            title={l.framesTitle}
+            right={
+              <span className="flex items-center gap-2">
+                {dropped > 0 && <span className="text-[11px] text-amber">{l.dropped.replace('{n}', String(dropped))}</span>}
+                <Btn variant="ghost" onClick={() => { setPaused((v) => !v); if (paused) setDropped(0) }}>{paused ? l.resume : l.pause}</Btn>
+                <Btn variant="ghost" onClick={() => { setTimeline([]); setDropped(0) }}>{l.clear}</Btn>
+              </span>
+            }
+          >
+            <div ref={streamRef} className="border border-line-soft bg-panel-2 max-h-[40vh] xl:max-h-[calc(100dvh-11rem)] overflow-auto p-2 font-mono text-[11.5px] leading-relaxed">
+              {timeline.length === 0 && <div className="text-muted px-1 py-2">{l.emptyFrames}</div>}
+              {timeline.map((it) => (
+                <div key={it.seq} className="flex gap-2 px-1 py-0.5">
+                  <span className="text-muted/60 shrink-0">{it.at}</span>
+                  {it.kind === 'frame' ? (
+                    <>
+                      <span className={`shrink-0 w-10 ${it.dir === 'send' ? 'text-[#7ec8ff]' : it.ok === false ? 'text-danger' : 'text-amber'}`}>
+                        {it.dir === 'send' ? l.frameSend : it.ok === false ? l.frameJunk : l.frameRecv}
+                      </span>
+                      <span className={`break-all ${it.ok === false ? 'text-danger' : it.dir === 'send' ? 'text-bright' : 'text-phosphor'}`}>{it.text}</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className={`shrink-0 w-10 ${it.source === 'stderr' ? 'text-muted' : 'text-[#7ec8ff]'}`}>
+                        {it.source === 'stderr' ? l.logStderr : l.logInfo}
+                      </span>
+                      <span className="break-all text-muted whitespace-pre-wrap">{it.text}</span>
+                    </>
                   )}
                 </div>
-              )}
+              ))}
             </div>
-          )}
-        </Panel>
-      </div>
-      )}
+          </Panel>
 
-      <Collapse title={l.framesTitle} right={
-        <span className="flex items-center gap-2">
-          {dropped > 0 && <span className="text-[11px] text-amber">{l.dropped.replace('{n}', String(dropped))}</span>}
-          <Btn variant="ghost" onClick={() => { setPaused((v) => !v); if (paused) setDropped(0) }}>{paused ? l.resume : l.pause}</Btn>
-          <Btn variant="ghost" onClick={() => { setTimeline([]); setDropped(0) }}>{l.clear}</Btn>
-        </span>
-      }>
-        <div ref={streamRef} className="border border-line-soft bg-panel-2 max-h-[34vh] overflow-auto p-2 font-mono text-[11.5px] leading-relaxed">
-          {timeline.length === 0 && <div className="text-muted px-1 py-2">{l.emptyFrames}</div>}
-          {timeline.map((it) => (
-            <div key={it.seq} className="flex gap-2 px-1 py-0.5">
-              <span className="text-muted/60 shrink-0">{it.at}</span>
-              {it.kind === 'frame' ? (
-                <>
-                  <span className={`shrink-0 w-10 ${it.dir === 'send' ? 'text-[#7ec8ff]' : it.ok === false ? 'text-danger' : 'text-amber'}`}>
-                    {it.dir === 'send' ? l.frameSend : it.ok === false ? l.frameJunk : l.frameRecv}
-                  </span>
-                  <span className={`break-all ${it.ok === false ? 'text-danger' : it.dir === 'send' ? 'text-bright' : 'text-phosphor'}`}>{it.text}</span>
-                </>
-              ) : (
-                <>
-                  <span className={`shrink-0 w-10 ${it.source === 'stderr' ? 'text-muted' : 'text-[#7ec8ff]'}`}>
-                    {it.source === 'stderr' ? l.logStderr : l.logInfo}
-                  </span>
-                  <span className="break-all text-muted whitespace-pre-wrap">{it.text}</span>
-                </>
-              )}
-            </div>
-          ))}
+          <Collapse title={l.hint}>
+            <ul className="text-[12px] text-muted space-y-1 list-none">
+              {l.hintItems.map((x) => <li key={x}>· {x}</li>)}
+            </ul>
+          </Collapse>
         </div>
-      </Collapse>
-
-      <Collapse title={l.hint}>
-        <ul className="text-[12px] text-muted space-y-1 list-none">
-          {l.hintItems.map((x) => <li key={x}>· {x}</li>)}
-        </ul>
-      </Collapse>
+      </div>
     </div>
   )
 }

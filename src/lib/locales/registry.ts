@@ -55,7 +55,7 @@ export const SECTION_L = {
 /** 分组的一句话说明（首页分区标题右侧用） */
 export const SECTION_DESC_L = {
   zh: {
-    ai: '对话调试、MCP 接入与调用、工具定义与规则文件 —— 最常用的都在这里',
+    ai: '接入 → 调试 → 互转 → 规则 → 评测：MCP 接入、连接调试、工具定义、规则文件与模型对比，按这个顺序用',
     http: '接口调试、请求导入导出与多语言代码生成、流量抓包与规则改写',
     codec: '编码解码、序列化与格式美化',
     security: '哈希、对称加密与渗透测试常用',
@@ -64,7 +64,7 @@ export const SECTION_DESC_L = {
     misc: '时间计算与速查表',
   },
   en: {
-    ai: 'Chat debugging, MCP wiring and inspection, tool schemas and rule files',
+    ai: 'Wire up → debug → convert → rules → compare: MCP access, connection debugging, tool schemas, rule files and model comparison, in that order',
     http: 'API debugging, request import/export, code generation, traffic capture and rules',
     codec: 'Encoding, serialisation and formatting',
     security: 'Hashing, symmetric crypto and offensive-security staples',

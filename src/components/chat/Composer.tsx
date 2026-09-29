@@ -80,12 +80,16 @@ export function Composer({
         className="w-full resize-y bg-transparent px-2.5 py-2 text-[12.5px] leading-relaxed text-bright placeholder:text-muted/50 focus:outline-none"
       />
 
-      <div className="flex items-center gap-3 flex-wrap border-t border-line-soft px-2 py-1.5">
+      {/* 动作行：主按钮右下（打完字光标就在这一带，Fitts 最近路径），
+          token 估算与费用降级成左侧说明文字，不再和按钮抢同一行视觉权重 */}
+      <div className="flex items-center gap-3 border-t border-line-soft px-2 py-1.5">
+        <span className="flex-1 min-w-0 truncate text-[11px] text-muted/70">
+          {l.preflight.replace('{n}', estimate.toLocaleString())}
+          {cost !== null && ` · ${l.lastCost} ${formatMoney(cost)}`}
+        </span>
         {streaming
           ? <Btn onClick={onStop}>{l.stop}</Btn>
           : <Btn variant="primary" onClick={onSend} disabled={disabled || !input.trim()}>{l.send}</Btn>}
-        <span className="text-[11px] text-muted">{l.preflight.replace('{n}', estimate.toLocaleString())}</span>
-        {cost !== null && <span className="text-[11px] text-muted/70">{l.lastCost} {formatMoney(cost)}</span>}
       </div>
     </div>
   )

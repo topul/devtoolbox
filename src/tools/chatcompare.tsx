@@ -8,7 +8,7 @@
  * 即用即走：对比结果不持久化 —— 评测场景下旧对比没有回看价值，链路存档仍会接住它（ requestId 可查）。
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { Btn, ErrorNote, Panel, TA, ToolGuide } from '../components/ui'
+import { Btn, CopyBtn, ErrorNote, Panel, TA, ToolGuide } from '../components/ui'
 import { useLocalized } from '../lib/i18n'
 import { chatcompareL } from '../lib/locales/chatcompare'
 import {
@@ -53,6 +53,10 @@ export function ChatCompareTool(): React.ReactElement {
     })
   }
 
+  // 全选/清空：逐个点 chip 选模型太慢，而「对比」场景的默认意图就是手里几个档案全上一遍
+  const selectAll = (): void => setPicked(new Set(profiles.map((p) => p.id)))
+  const clearAll = (): void => setPicked(new Set())
+
   const start = (): void => {
     const q = question.trim()
     const api = typeof window !== 'undefined' ? window.electronAPI?.chat : undefined
@@ -74,14 +78,23 @@ export function ChatCompareTool(): React.ReactElement {
 
   return (
     <div className="max-w-[1720px] mx-auto space-y-4 fade-in">
-      <Panel title={l.questionLabel}>
+      {/* 输入区桌面 sticky：结果列可能滚很长，对比途中要随时改问题、换模型重发，
+          不能每次滚回顶部半天。移动端顶部已有 sticky topbar，不再叠罗汉。 */}
+      <Panel title={l.questionLabel} className="lg:sticky lg:top-0 z-10">
         <ToolGuide title={l.guideTitle} steps={l.guideSteps} />
         <p className="text-[12px] text-muted leading-relaxed mb-3">{l.intro}</p>
         <TA value={question} onChange={setQuestion} rows={3} placeholder={l.questionPh} />
         {profiles.length === 0 && <div className="mt-3"><ErrorNote msg={l.emptyModels} /></div>}
         {profiles.length > 0 && (
           <div className="mt-3 space-y-2">
-            <div className="text-[12px] font-semibold text-bright">{l.modelsLabel}</div>
+            <div className="flex items-center gap-2">
+              <span className="text-[12px] font-semibold text-bright">{l.modelsLabel}</span>
+              <span className="text-[11px] text-muted/60">{l.pickedCount.replace('{n}', String(picked.size))}</span>
+              <span className="ml-auto flex items-center gap-1">
+                <button onClick={selectAll} className="px-1.5 py-0.5 rounded text-[11px] text-muted hover:text-phosphor hover:bg-phosphor-faint transition-colors">{l.selectAll}</button>
+                <button onClick={clearAll} className="px-1.5 py-0.5 rounded text-[11px] text-muted hover:text-bright hover:bg-panel-2 transition-colors">{l.clearAll}</button>
+              </span>
+            </div>
             <div className="flex flex-wrap gap-1.5">
               {profiles.map((p) => {
                 const on = picked.has(p.id)
@@ -145,7 +158,8 @@ function Column({ col, l, prices }: {
       <div className="flex items-center gap-2 flex-wrap">
         <span className="text-[12.5px] font-medium text-bright truncate">{col.label}</span>
         <span className="text-[10px] text-muted/70 truncate">{col.model}</span>
-        <span className={`ml-auto shrink-0 text-[10px] px-1.5 py-0.5 border ${statusCls}`}>{statusText}</span>
+        <CopyBtn text={col.text} label={l.copyCol} className="ml-auto shrink-0" />
+        <span className={`shrink-0 text-[10px] px-1.5 py-0.5 border ${statusCls}`}>{statusText}</span>
       </div>
 
       <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[10.5px] text-muted">

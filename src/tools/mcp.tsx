@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { Panel, CopyBtn, KV, ToolGuide, Collapse } from '../components/ui'
+import { Panel, CopyBtn, ToolGuide, Collapse } from '../components/ui'
 import { useI18n, useLocalized } from '../lib/i18n'
 import { mcpL } from '../lib/locales/mcp'
 import { MCP_GROUPS, MCP_TOOLS, toProtocolTools, toolDesc, type McpGroup } from '../lib/mcp-catalog'
@@ -55,37 +55,34 @@ export function McpTool() {
 
       <ToolGuide title={l.guideTitle} steps={l.guideSteps} note={l.guideNote} />
 
-      <Panel title={l.statusTitle}>
-        {!launch && <p className="text-[12px] text-muted">{l.noDesktop}</p>}
-        {launch && (
-          <>
-            <KV
-              k={l.serverFile}
-              v={
-                <span className="flex flex-wrap items-center gap-2">
-                  <span className={launch.serverPathExists ? 'text-phosphor break-all' : 'text-danger break-all'}>{launch.serverPath}</span>
-                  <span className={`text-[10px] px-1.5 py-0.5 border ${launch.serverPathExists ? 'border-phosphor/40 text-phosphor' : 'border-danger/40 text-danger'}`}>
-                    {launch.serverPathExists ? l.ready : l.notBuilt}
-                  </span>
-                </span>
-              }
-            />
-            <KV k={l.commandLabel} v={<span className="break-all">{launch.command} {launch.args.join(' ')}</span>} />
-            <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1.5 text-[11px] text-muted">
-              <span>{l.runModeLabel}: <span className="text-bright">{launch.packaged ? l.packagedMode : l.devMode}</span></span>
-              <span>{l.versionLabel}: <span className="text-bright">{launch.version}</span></span>
-            </div>
-            {!launch.serverPathExists && (
-              <p className="text-[12px] text-danger mt-2">{l.notBuiltHint}</p>
-            )}
-          </>
-        )}
-      </Panel>
-
-      {launch && (
+      {/* 首屏即 hero：这一页的存在理由是「把配置粘进 AI 客户端」—— 配置片段排最前，
+          复制按钮就在标题行；服务端状态降级成片段下方的一行诊断，不再占一整块面板。 */}
+      {launch ? (
         <Panel title={l.configTitle} right={<CopyBtn text={launch.configJson} />}>
           <p className="text-[12px] text-muted mb-2">{l.configHint}</p>
           <pre className="codeblock text-[12px] text-phosphor overflow-auto max-h-[320px]">{launch.configJson}</pre>
+          <div className="mt-3 border-t border-line-soft pt-2.5 space-y-1 text-[11px]">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-muted/70 w-16 shrink-0 select-none">{l.serverFile}</span>
+              <span className={`break-all ${launch.serverPathExists ? 'text-phosphor' : 'text-danger'}`}>{launch.serverPath}</span>
+              <span className={`px-1.5 py-0.5 border shrink-0 ${launch.serverPathExists ? 'border-phosphor/40 text-phosphor' : 'border-danger/40 text-danger'}`}>
+                {launch.serverPathExists ? l.ready : l.notBuilt}
+              </span>
+            </div>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
+              <span className="text-muted/70 w-16 shrink-0 select-none">{l.commandLabel}</span>
+              <span className="text-muted break-all">{launch.command} {launch.args.join(' ')}</span>
+              <span className="text-muted shrink-0">{l.runModeLabel}: <span className="text-bright">{launch.packaged ? l.packagedMode : l.devMode}</span></span>
+              <span className="text-muted shrink-0">{l.versionLabel}: <span className="text-bright">{launch.version}</span></span>
+            </div>
+          </div>
+          {!launch.serverPathExists && (
+            <p className="text-[12px] text-danger mt-2">{l.notBuiltHint}</p>
+          )}
+        </Panel>
+      ) : (
+        <Panel title={l.statusTitle}>
+          <p className="text-[12px] text-muted">{l.noDesktop}</p>
         </Panel>
       )}
 

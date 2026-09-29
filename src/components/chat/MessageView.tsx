@@ -47,58 +47,67 @@ export function MessageView({ msg, price, live, onTrace }: {
         : 'text-muted border-line-soft'
 
   return (
-    <div className={`border-l-2 pl-3 ${isUser ? 'border-phosphor/50' : 'border-line-soft'}`}>
-      <div className="flex items-center gap-2 flex-wrap">
-        <span className={`text-[11px] uppercase tracking-wider ${isUser ? 'text-phosphor' : 'text-muted'}`}>
-          {isUser ? l.roleUser : l.roleAssistant}
-        </span>
-        {!isUser && <span className={`text-[10px] px-1.5 border ${badgeCls}`}>{badge}</span>}
-        {!isUser && meta.rounds !== undefined && meta.rounds > 1 && (
-          <span className="text-[10px] text-muted">{l.roundsLabel.replace('{n}', String(meta.rounds))}</span>
-        )}
-        {!!text && <CopyBtn text={text} />}
-      </div>
+    /* 分侧气泡：用户右对齐 + 品牌描边，助手左对齐 + 中性描边。
+       原来两边共用同一条 2px 左边线、只换颜色，扫一眼分不清谁说的 ——
+       对齐方向 + 描边颜色双重编码，谁讲的哪段一眼可辨。 */
+    <div className={isUser ? 'flex justify-end' : undefined}>
+      <div className={`rounded-lg px-3 py-2 ${
+        isUser
+          ? 'max-w-[88%] border border-phosphor/25 bg-phosphor-faint/40'
+          : 'border border-line-soft bg-panel-2/25'
+      }`}>
+        <div className={`flex items-center gap-2 flex-wrap ${isUser ? 'justify-end' : ''}`}>
+          <span className={`text-[11px] uppercase tracking-wider ${isUser ? 'text-phosphor' : 'text-muted'}`}>
+            {isUser ? l.roleUser : l.roleAssistant}
+          </span>
+          {!isUser && <span className={`text-[10px] px-1.5 border ${badgeCls}`}>{badge}</span>}
+          {!isUser && meta.rounds !== undefined && meta.rounds > 1 && (
+            <span className="text-[10px] text-muted">{l.roundsLabel.replace('{n}', String(meta.rounds))}</span>
+          )}
+          {!!text && <CopyBtn text={text} className="ml-auto" />}
+        </div>
 
-      <div className="mt-1.5 space-y-2">
-        {msg.parts.map((part, i) => {
-          if (part.type === 'text') {
-            if (isUser) {
-              return (
-                <pre key={i} className="text-[12.5px] whitespace-pre-wrap break-words text-bright">{part.text}</pre>
-              )
+        <div className="mt-1.5 space-y-2">
+          {msg.parts.map((part, i) => {
+            if (part.type === 'text') {
+              if (isUser) {
+                return (
+                  <pre key={i} className="text-[12.5px] whitespace-pre-wrap break-words text-bright">{part.text}</pre>
+                )
+              }
+              return part.text ? <Markdown key={i} text={part.text} /> : null
             }
-            return part.text ? <Markdown key={i} text={part.text} /> : null
-          }
-          if (part.type === 'reasoning') {
-            return <ReasoningBlock key={i} text={part.text} l={l} autoOpen={live && part.state === 'streaming'} />
-          }
-          if (part.type === 'dynamic-tool' || part.type.startsWith('tool-')) {
-            const view = toolById.get((part as { toolCallId?: string }).toolCallId ?? '')
-            return view ? <ToolBlock key={i} part={view} l={l} /> : null
-          }
-          return null
-        })}
+            if (part.type === 'reasoning') {
+              return <ReasoningBlock key={i} text={part.text} l={l} autoOpen={live && part.state === 'streaming'} />
+            }
+            if (part.type === 'dynamic-tool' || part.type.startsWith('tool-')) {
+              const view = toolById.get((part as { toolCallId?: string }).toolCallId ?? '')
+              return view ? <ToolBlock key={i} part={view} l={l} /> : null
+            }
+            return null
+          })}
 
-        {live && !text && !tools.length && !msg.parts.some((p) => p.type === 'reasoning' && p.text) && (
-          <div className="text-[12px] text-muted">{l.streaming}…</div>
-        )}
-        {!live && !text && tools.length > 0 && (
-          <div className="text-[11.5px] text-muted">{l.onlyToolNoAnswer}</div>
+          {live && !text && !tools.length && !msg.parts.some((p) => p.type === 'reasoning' && p.text) && (
+            <div className="text-[12px] text-muted">{l.streaming}…</div>
+          )}
+          {!live && !text && tools.length > 0 && (
+            <div className="text-[11.5px] text-muted">{l.onlyToolNoAnswer}</div>
+          )}
+        </div>
+
+        {meta.error && <div className="mt-1.5"><ErrorNote msg={meta.error} /></div>}
+        {!isUser && !!meta.meta && (
+          <InlineMetrics
+            meta={meta.meta}
+            text={text}
+            tools={tools.length}
+            rounds={meta.rounds}
+            l={l}
+            price={price}
+            onTrace={onTrace ? () => onTrace(msg.id) : undefined}
+          />
         )}
       </div>
-
-      {meta.error && <div className="mt-1.5"><ErrorNote msg={meta.error} /></div>}
-      {!isUser && !!meta.meta && (
-        <InlineMetrics
-          meta={meta.meta}
-          text={text}
-          tools={tools.length}
-          rounds={meta.rounds}
-          l={l}
-          price={price}
-          onTrace={onTrace ? () => onTrace(msg.id) : undefined}
-        />
-      )}
     </div>
   )
 }
