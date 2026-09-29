@@ -1,7 +1,7 @@
 {
   "name": "devtoolbox",
   "private": false,
-  "version": "1.5.0",
+  "version": "1.6.0",
   "type": "module",
   "description": "DevOps Toolbox - a local toolkit for developers & security researchers (Electron + React) · 程序员与安全研究员的本地工具箱（Electron + React）",
   "author": {
