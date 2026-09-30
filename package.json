@@ -1,7 +1,7 @@
 {
   "name": "devtoolbox",
   "private": false,
-  "version": "1.6.0",
+  "version": "1.7.0",
   "type": "module",
   "description": "DevOps Toolbox - a local toolkit for developers & security researchers (Electron + React) · 程序员与安全研究员的本地工具箱（Electron + React）",
   "author": {
@@ -36,6 +36,10 @@
     "smoke:chatstore": "esbuild scripts/smoke-chatstore.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/smoke-chatstore.mjs --log-level=error && node node_modules/.cache/smoke-chatstore.mjs",
     "smoke:schema": "esbuild scripts/smoke-schema.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/smoke-schema.mjs --log-level=error && node node_modules/.cache/smoke-schema.mjs",
     "smoke:httpcodec": "esbuild scripts/smoke-httpcodec.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/smoke-httpcodec.mjs --log-level=error && node node_modules/.cache/smoke-httpcodec.mjs",
+    "smoke:httpenv": "esbuild scripts/smoke-httpenv.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/smoke-httpenv.mjs --log-level=error && node node_modules/.cache/smoke-httpenv.mjs",
+    "smoke:httpsnap": "esbuild scripts/smoke-httpsnap.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/smoke-httpsnap.mjs --log-level=error && node node_modules/.cache/smoke-httpsnap.mjs",
+    "smoke:httpsave": "esbuild scripts/smoke-httpsave.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/smoke-httpsave.mjs --log-level=error && node node_modules/.cache/smoke-httpsave.mjs",
+    "smoke:sse": "esbuild scripts/smoke-sse.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/smoke-sse.mjs --log-level=error && node node_modules/.cache/smoke-sse.mjs",
     "smoke:agentrules": "esbuild scripts/smoke-agentrules.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/smoke-agentrules.mjs --log-level=error && node node_modules/.cache/smoke-agentrules.mjs",
     "smoke:chatagent": "esbuild scripts/smoke-chatagent.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/smoke-chatagent.mjs --log-level=error && node node_modules/.cache/smoke-chatagent.mjs",
     "smoke:chattrace": "esbuild scripts/smoke-chat-trace.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/smoke-chat-trace.mjs --log-level=error && node node_modules/.cache/smoke-chat-trace.mjs",
