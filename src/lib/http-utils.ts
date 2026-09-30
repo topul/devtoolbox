@@ -101,6 +101,46 @@ export function headerValueOf(headers: [string, string][], name: string): string
   return hit ? hit[1] : null
 }
 
+/** 按扩展名猜 Content-Type（上传体默认值）；认不出一律 octet-stream */
+const CT_BY_EXT: Record<string, string> = {
+  json: 'application/json', txt: 'text/plain', xml: 'application/xml', html: 'text/html',
+  pdf: 'application/pdf', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg',
+  gif: 'image/gif', svg: 'image/svg+xml', zip: 'application/zip', csv: 'text/csv',
+  js: 'text/javascript', wasm: 'application/wasm', mp4: 'video/mp4',
+}
+
+export function guessContentType(name: string): string {
+  const ext = name.split('.').pop()?.toLowerCase() ?? ''
+  return CT_BY_EXT[ext] ?? 'application/octet-stream'
+}
+
+/** 解码后的响应体（正文文本 + 元信息），响应展示与快照保存共用一份解码 */
+export interface DecodedBody {
+  ct: string | null
+  bytes: Uint8Array
+  text: string
+  charset: string
+  binary: boolean
+  pretty: string | null
+  cookies: CookieInfo[]
+}
+
+export function decodeResponseBody(response: { headers: [string, string][]; bodyBase64: string }): DecodedBody {
+  const ct = headerValueOf(response.headers, 'content-type')
+  const bytes = b64ToBytes(response.bodyBase64)
+  const charset = detectCharset(ct)
+  const text = bytesToText(bytes, charset)
+  return {
+    ct,
+    bytes,
+    text,
+    charset,
+    binary: isProbablyBinary(bytes),
+    pretty: prettyJson(text),
+    cookies: parseSetCookies(response.headers),
+  }
+}
+
 export type StatusClass = 'ok' | 'redirect' | 'client' | 'server' | 'none'
 
 export function statusClass(status: number | null): StatusClass {
@@ -209,8 +249,27 @@ export function loadJson<T>(key: string, fallback: T): T {
   }
 }
 
-export function saveJson(key: string, value: unknown): void {
+/** 写入成功与否。配额满 / 隐私模式下 localStorage 会静默抛异常，调用方必须能感知 */
+export function saveJson(key: string, value: unknown): boolean {
   try {
     localStorage.setItem(key, JSON.stringify(value))
-  } catch { /* 配额或隐私模式，忽略 */ }
+    return true
+  } catch {
+    return false
+  }
+}
+
+/* ================= 入库裁剪 ================= */
+
+/**
+ * 历史 / 收藏条目里 bodyRaw 的存储上限（字符）。
+ * 这些条目只用于「回填表单」，不是响应数据；一条 2MB 的请求正文就足以
+ * 顶穿 localStorage 配额（~5MB/origin，全应用共享），导致整批历史静默丢失。
+ */
+export const MAX_SAVED_BODY_CHARS = 64_000
+
+/** 超长正文入库前截断并打标记；发送路径不走这里（发送必须用原文） */
+export function trimBodyForStorage<T extends { bodyRaw: string; bodyTrimmed?: boolean }>(d: T): T {
+  if (d.bodyRaw.length <= MAX_SAVED_BODY_CHARS) return d
+  return { ...d, bodyRaw: d.bodyRaw.slice(0, MAX_SAVED_BODY_CHARS), bodyTrimmed: true }
 }

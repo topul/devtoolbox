@@ -2,10 +2,16 @@ import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { Panel, Btn, TA, Input, Select, ErrorNote, CopyBtn, Drawer, NoteList } from '../components/ui'
 import { CodeSnippets } from '../components/http/CodeSnippets'
 import { RequestTransfer } from '../components/http/RequestTransfer'
+import { EnvPanel, newEnv, type HttpEnv } from '../components/http/EnvPanel'
+import { SnapshotPanel, SNAPSHOT_KEY, addSnapshot, snapshotFromResponse, type ResponseSnapshot } from '../components/http/SnapshotPanel'
+import { KVEditor, type Row } from '../components/http/KVEditor'
 import { useLocalized } from '../lib/i18n'
 import { httpClientL } from '../lib/locales/httpclient'
+import { evalJsonPath } from '../lib/toolkit'
+import { applyEnvVars, mergeMissing, type EnvApplyResult } from '../lib/toolkit'
 import type { HttpRequestResult, HttpRequestSpec } from '../lib/http-types'
 import {
+  buildWireRequest,
   docFromRequestSpec,
   generateCode,
   mergeRequests,
@@ -17,14 +23,7 @@ import * as U from '../lib/http-utils'
 
 /* ================= 类型 ================= */
 
-interface Row {
-  id: string
-  name: string
-  value: string
-  enabled: boolean
-}
-
-type BodyMode = 'none' | 'json' | 'xml' | 'text' | 'html' | 'javascript' | 'form' | 'multipart'
+type BodyMode = 'none' | 'json' | 'xml' | 'text' | 'html' | 'javascript' | 'form' | 'multipart' | 'binary'
 type AuthType = 'none' | 'basic' | 'bearer' | 'apikey'
 type Tab = 'params' | 'headers' | 'body' | 'auth' | 'options'
 type RespTab = 'body' | 'headers' | 'cookies' | 'timing' | 'sent' | 'snippets'
@@ -62,6 +61,16 @@ interface Draft {
   options: OptState
   status?: number | null
   durationMs?: number
+  /** bodyRaw 入库时被截断过；回填时提示，防止把截断稿当原文发出去 */
+  bodyTrimmed?: boolean
+}
+
+/** 选中的上传文件；只活在内存里（base64 不进 localStorage，否则一条就顶穿配额） */
+interface PickedFile {
+  name: string
+  base64: string
+  bytes: number
+  contentType: string
 }
 
 const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS', 'TRACE']
@@ -75,11 +84,13 @@ const BODY_CT: Record<BodyMode, string> = {
   javascript: 'application/javascript',
   form: 'application/x-www-form-urlencoded',
   multipart: '', // 发送时带 boundary
+  binary: '', // 发送时用文件自身的 Content-Type
 }
 
 const HISTORY_KEY = 'devtoolbox-http-history'
 const SAVED_KEY = 'devtoolbox-http-saved'
 const DRAFT_KEY = 'devtoolbox-http-draft'
+const ENVS_KEY = 'devtoolbox-http-envs'
 const MAX_HISTORY = 50
 
 /** 词条对象类型：zh / en 结构一致，取 zh 分支即可 */
@@ -182,72 +193,6 @@ function draftFromDoc(doc: RequestDoc, name: string, at: number): Draft {
   }
 }
 
-/* ================= KV 编辑器 ================= */
-
-function KVEditor({ rows, onChange, addLabel, nameLabel, valueLabel, removeLabel, headerSuggest }: {
-  rows: Row[]
-  onChange: (rows: Row[]) => void
-  addLabel: string
-  nameLabel: string
-  valueLabel: string
-  removeLabel: string
-  headerSuggest?: boolean
-}) {
-  const update = (id: string, patch: Partial<Row>): void =>
-    onChange(rows.map((r) => (r.id === id ? { ...r, ...patch } : r)))
-  return (
-    <div className="space-y-1.5">
-      {rows.length === 0 && <div className="text-[11.5px] text-muted">—</div>}
-      {rows.map((r) => (
-        <div key={r.id} className="flex items-center gap-1.5">
-          <input
-            type="checkbox"
-            checked={r.enabled}
-            onChange={(e) => update(r.id, { enabled: e.target.checked })}
-            className="shrink-0 accent-[color:var(--c-phosphor)]"
-          />
-          <input
-            value={r.name}
-            onChange={(e) => update(r.id, { name: e.target.value })}
-            placeholder={nameLabel}
-            spellCheck={false}
-            list={headerSuggest ? 'http-header-names' : undefined}
-            className="w-1/3 min-w-0 bg-panel-2 border border-line-soft px-2 py-1 text-[12px] text-bright placeholder:text-muted/50 focus:border-phosphor/40"
-          />
-          <input
-            value={r.value}
-            onChange={(e) => update(r.id, { value: e.target.value })}
-            placeholder={valueLabel}
-            spellCheck={false}
-            className="flex-1 min-w-0 bg-panel-2 border border-line-soft px-2 py-1 text-[12px] text-bright placeholder:text-muted/50 focus:border-phosphor/40"
-          />
-          <button
-            onClick={() => onChange(rows.filter((x) => x.id !== r.id))}
-            className="shrink-0 text-muted hover:text-danger px-1.5 text-[13px]"
-            title={removeLabel}
-          >×</button>
-        </div>
-      ))}
-      <Btn variant="ghost" onClick={() => onChange([...rows, row()])}>+ {addLabel}</Btn>
-      {headerSuggest && <HeaderSuggestList />}
-    </div>
-  )
-}
-
-const HEADER_NAMES = [
-  'Accept', 'Accept-Encoding', 'Accept-Language', 'Authorization', 'Cache-Control', 'Content-Type',
-  'Cookie', 'Origin', 'Referer', 'User-Agent', 'X-Requested-With', 'X-Forwarded-For', 'X-API-Key',
-  'If-None-Match', 'If-Modified-Since', 'Range',
-]
-
-function HeaderSuggestList() {
-  return (
-    <datalist id="http-header-names">
-      {HEADER_NAMES.map((h) => <option key={h} value={h} />)}
-    </datalist>
-  )
-}
-
 /* ================= 主组件 ================= */
 
 export function HttpClientTool() {
@@ -275,9 +220,21 @@ export function HttpClientTool() {
   const [saveName, setSaveName] = useState('')
   const [proxyInfo, setProxyInfo] = useState<{ running: boolean; port: number } | null>(null)
   /** 次要功能收在抽屉里：主界面只留「发请求 → 看响应」这条主线，别把它割开 */
-  const [panel, setPanel] = useState<'code' | 'transfer' | 'proxy' | 'history' | null>(null)
+  const [panel, setPanel] = useState<'code' | 'transfer' | 'proxy' | 'history' | 'envs' | 'snaps' | null>(null)
+  /** 重发次数（1-20）：压测初探用，顺序发送失败即停 */
+  const [repeat, setRepeat] = useState(1)
+  /** binary 上传文件（内存态，不持久化） */
+  const [filePick, setFilePick] = useState<PickedFile | null>(null)
+  /** multipart 文件字段：行（名字可持久化部分走 docBody 占位）+ 内存中的文件数据 */
+  const [fileFields, setFileFields] = useState<{ id: string; name: string }[]>([])
+  const [fileFieldData, setFileFieldData] = useState<Record<string, PickedFile>>({})
   /** 抽屉里产生的提示，关掉抽屉后要留在主界面上，否则用户看不到「填好了」 */
   const [transferNote, setTransferNote] = useState<string[]>([])
+  /** 环境变量：存原文（{{}} 占位符），发送时才插值 */
+  const [envStore, setEnvStore] = useState<{ envs: HttpEnv[]; activeId: string | null }>(() =>
+    U.loadJson(ENVS_KEY, { envs: [] as HttpEnv[], activeId: null }))
+  /** 响应快照：解码后的正文文本，供「保存 → 再发一次 → 对比」 */
+  const [snapshots, setSnapshots] = useState<ResponseSnapshot[]>(() => U.loadJson<ResponseSnapshot[]>(SNAPSHOT_KEY, []))
 
   /* ---- 初始化：抓包代理状态（历史/收藏由 useState 惰性读取） ---- */
   useEffect(() => {
@@ -288,17 +245,88 @@ export function HttpClientTool() {
 
   /* ---- 当前草稿持久化：代理、超时、请求头等配置重启后仍在 ---- */
   const draftSnapshot = useMemo(() => ({ method, url, headers, bodyMode, bodyRaw, fields, auth, options }), [method, url, headers, bodyMode, bodyRaw, fields, auth, options])
-  useEffect(() => {
-    U.saveJson(DRAFT_KEY, { ...draftSnapshot, id: 'draft', at: Date.now() })
-  }, [draftSnapshot])
+
+  /** 所有 localStorage 写入收敛在这里：失败必须在主界面上可感知，绝不静默丢数据 */
+  const persist = useCallback((key: string, value: unknown): void => {
+    if (!U.saveJson(key, value)) setTransferNote([l.errors.storageFull])
+  }, [l])
 
   useEffect(() => {
-    U.saveJson(HISTORY_KEY, history.slice(0, MAX_HISTORY))
-  }, [history])
+    persist(DRAFT_KEY, { ...draftSnapshot, id: 'draft', at: Date.now() })
+  }, [draftSnapshot, persist])
 
   useEffect(() => {
-    U.saveJson(SAVED_KEY, saved)
-  }, [saved])
+    persist(HISTORY_KEY, history.slice(0, MAX_HISTORY))
+  }, [history, persist])
+
+  useEffect(() => {
+    persist(SAVED_KEY, saved)
+  }, [saved, persist])
+
+  useEffect(() => {
+    persist(ENVS_KEY, envStore)
+  }, [envStore, persist])
+
+  useEffect(() => {
+    persist(SNAPSHOT_KEY, snapshots)
+  }, [snapshots, persist])
+
+  /** 主进程选文件 → 内存态 PickedFile；base64 不落盘 */
+  const pickInto = useCallback(async (apply: (f: PickedFile | null) => void): Promise<void> => {
+    const api = window.electronAPI?.http
+    if (!api) {
+      setTransferNote([l.errors.desktopOnly])
+      return
+    }
+    const r = await api.pickFile()
+    if (!r.ok) {
+      if (!r.canceled) {
+        setTransferNote([r.error === 'FILE_TOO_LARGE' ? l.body.fileTooLarge : `${l.errors.requestFailed}: ${r.error ?? ''}`])
+      }
+      return
+    }
+    apply({ name: r.name ?? 'file', base64: r.base64 ?? '', bytes: r.bytes ?? 0, contentType: U.guessContentType(r.name ?? '') })
+  }, [l])
+
+  const pickBodyFile = useCallback(() => void pickInto(setFilePick), [pickInto])
+
+  /** 把响应里的 Set-Cookie 汇成一个 Cookie 请求头：同名替换，没有就追加 */
+  const addCookieHeader = useCallback((value: string) => {
+    setHeaders((rows) => {
+      const i = rows.findIndex((r) => r.name.toLowerCase() === 'cookie')
+      if (i >= 0) return rows.map((r, j) => (j === i ? { ...r, value, enabled: true } : r))
+      return [...rows, { id: U.newRowId(), name: 'Cookie', value, enabled: true }]
+    })
+    setTransferNote([l.headers.cookieAdded])
+  }, [l])
+
+  const pickFieldFile = useCallback((rowId: string) => {
+    void pickInto((f) => { if (f) setFileFieldData((m) => ({ ...m, [rowId]: f })) })
+  }, [pickInto])
+
+  /** 保存当前响应为快照；二进制响应不存，给出提示 */
+  const saveSnapshot = useCallback(() => {
+    if (!response) return
+    const decoded = U.decodeResponseBody(response)
+    const snap = snapshotFromResponse(response, decoded)
+    if (!snap) {
+      setTransferNote([l.snaps.saveBinary])
+      return
+    }
+    setSnapshots((prev) => addSnapshot(prev, snap))
+    setTransferNote([l.snaps.saved])
+  }, [response, l])
+
+  /** 激活环境的变量表 → 查找映射；未启用环境时为 null（发送路径零开销） */
+  const envMap = useMemo<Record<string, string> | null>(() => {
+    const env = envStore.envs.find((e) => e.id === envStore.activeId)
+    if (!env) return null
+    const map: Record<string, string> = {}
+    for (const v of env.vars) {
+      if (v.enabled && v.name.trim()) map[v.name.trim()] = v.value
+    }
+    return map
+  }, [envStore])
 
   /* ---- URL ↔ 参数双向同步 ---- */
   useEffect(() => {
@@ -336,7 +364,9 @@ export function HttpClientTool() {
     setOptions({ ...DEFAULT_OPTIONS, ...(d.options ?? {}) })
     setResponse(null)
     setError(null)
-  }, [])
+    // 截断稿必须亮明身份：回填的是前 64k，直接发出去不是用户当初的完整请求
+    if (d.bodyTrimmed) setTransferNote([l.history.bodyTrimmed(U.MAX_SAVED_BODY_CHARS)])
+  }, [l])
 
   /** 把解析出来的 curl / 导入的单条请求填进表单。只覆盖请求本身，不动超时等出口配置。 */
   const applyDoc = useCallback((doc: RequestDoc, name?: string) => {
@@ -423,18 +453,52 @@ export function HttpClientTool() {
     return { boundary, body: lines.join('\r\n') }
   }, [bodyMode, fields])
 
-  const builtBody = useMemo((): { text: string | null; contentType: string | null } => {
-    if (bodyMode === 'none') return { text: null, contentType: null }
+  /** multipart 含文件字段时走字节拼装（文本 part 用 UTF-8 编码，文件 part 直接还原字节） */
+  const multipartBinary = useMemo(() => {
+    if (bodyMode !== 'multipart') return null
+    const withFile = fileFields.filter((f) => f.name && fileFieldData[f.id])
+    if (withFile.length === 0) return null
+    const boundary = `----DevToolboxBoundary${Math.random().toString(36).slice(2, 10)}`
+    const enc = new TextEncoder()
+    const parts: Uint8Array[] = []
+    const pushText = (s: string): void => { parts.push(enc.encode(s)) }
+    for (const f of fields.filter((x) => x.enabled && x.name)) {
+      pushText(`--${boundary}\r\nContent-Disposition: form-data; name="${f.name}"\r\n\r\n${f.value}\r\n`)
+    }
+    for (const f of withFile) {
+      const file = fileFieldData[f.id]
+      pushText(`--${boundary}\r\nContent-Disposition: form-data; name="${f.name}"; filename="${file.name}"\r\nContent-Type: ${file.contentType}\r\n\r\n`)
+      parts.push(U.b64ToBytes(file.base64))
+      pushText('\r\n')
+    }
+    pushText(`--${boundary}--\r\n`)
+    const total = parts.reduce((n, p) => n + p.length, 0)
+    const body = new Uint8Array(total)
+    let off = 0
+    for (const p of parts) { body.set(p, off); off += p.length }
+    return { boundary, base64: U.bytesToB64(body) }
+  }, [bodyMode, fields, fileFields, fileFieldData])
+
+  const builtBody = useMemo((): { text: string | null; base64: string | null; contentType: string | null } => {
+    if (bodyMode === 'none') return { text: null, base64: null, contentType: null }
+    if (bodyMode === 'binary') {
+      return filePick
+        ? { text: null, base64: filePick.base64, contentType: filePick.contentType }
+        : { text: null, base64: null, contentType: null }
+    }
     if (bodyMode === 'form') {
       const body = U.buildQueryRows(fields)
-      return body ? { text: body, contentType: BODY_CT.form } : { text: null, contentType: null }
+      return body ? { text: body, base64: null, contentType: BODY_CT.form } : { text: null, base64: null, contentType: null }
     }
-    if (bodyMode === 'multipart' && multipart) {
-      return { text: multipart.body, contentType: `multipart/form-data; boundary=${multipart.boundary}` }
+    if (bodyMode === 'multipart') {
+      const ct = `multipart/form-data; boundary=${(multipartBinary ?? multipart)?.boundary ?? ''}`
+      if (multipartBinary) return { text: null, base64: multipartBinary.base64, contentType: ct }
+      if (multipart) return { text: multipart.body, base64: null, contentType: ct }
+      return { text: null, base64: null, contentType: null }
     }
-    if (!bodyRaw.trim()) return { text: null, contentType: null }
-    return { text: bodyRaw, contentType: BODY_CT[bodyMode] || null }
-  }, [bodyMode, bodyRaw, fields, multipart])
+    if (!bodyRaw.trim()) return { text: null, base64: null, contentType: null }
+    return { text: bodyRaw, base64: null, contentType: BODY_CT[bodyMode] || null }
+  }, [bodyMode, bodyRaw, fields, multipart, multipartBinary, filePick])
 
   /* ---- 认证派生请求头 ---- */
   const authHeaders = useMemo((): [string, string][] => authHeaderPairs(auth), [auth])
@@ -444,7 +508,23 @@ export function HttpClientTool() {
     buildFinalHeaders({ headers, authHeaders, bodyContentType: builtBody.contentType }),
   [headers, authHeaders, builtBody])
 
-  const docBody = useCallback((): RequestBody => bodyFromParts(bodyMode, fields, bodyRaw), [bodyMode, fields, bodyRaw])
+  const docBody = useCallback((): RequestBody => {
+    // binary / 文件字段进中立文档时用 <<file: ...>> 占位，导出与代码生成不内嵌文件内容
+    if (bodyMode === 'binary') {
+      return filePick ? { kind: 'text', text: `<<file: ${filePick.name}>>` } : { kind: 'none' }
+    }
+    const base = bodyFromParts(bodyMode, fields, bodyRaw)
+    if (bodyMode === 'multipart' && base.kind === 'fields' && fileFields.some((f) => f.name)) {
+      return {
+        ...base,
+        fields: [
+          ...base.fields,
+          ...fileFields.filter((f) => f.name).map((f) => [f.name, `<<file: ${fileFieldData[f.id]?.name ?? '?'}>>`] as [string, string]),
+        ],
+      }
+    }
+    return base
+  }, [bodyMode, fields, bodyRaw, filePick, fileFields, fileFieldData])
 
   /** 中立文档：生成代码 / 导出 / 复制 JSON 的唯一输入 */
   const currentDoc = useCallback((): RequestDoc => ({
@@ -473,11 +553,43 @@ export function HttpClientTool() {
       setError(l.errors.desktopOnly)
       return
     }
+    /* ---- 环境变量插值：只在这一步替换，表单 / 收藏 / 导出始终是 {{}} 原文 ---- */
+    let sendUrl = target.includes('://') ? target : `http://${target}`
+    let sendHeaders = finalHeaders()
+    let sendBodyText = builtBody.text
+    if (envMap) {
+      const f = (s: string): EnvApplyResult => applyEnvVars(s, envMap)
+      const urlRes = f(sendUrl)
+      const headerRes = sendHeaders.map(([n, v]) => [f(n), f(v)] as const)
+      // 表单按字段插值后再编码，替换值里的 & = 不会破坏 urlencoded 结构
+      const fieldRes = bodyMode === 'form'
+        ? fields.map((x) => [f(x.name), f(x.value)] as const)
+        : null
+      const bodyRes = bodyMode === 'form' || sendBodyText == null ? null : f(sendBodyText)
+      const missing = mergeMissing([
+        urlRes,
+        ...headerRes.flat(),
+        ...(fieldRes ?? []).flat(),
+        ...(bodyRes ? [bodyRes] : []),
+      ])
+      if (missing.length > 0) {
+        setError(l.errors.missingVars(missing))
+        return
+      }
+      sendUrl = urlRes.text
+      sendHeaders = headerRes.map(([rn, rv], i) => [rn.text, rv.text])
+      if (fieldRes) {
+        sendBodyText = U.buildQueryRows(fields.map((x, i) => ({ ...x, name: fieldRes[i][0].text, value: fieldRes[i][1].text })))
+      } else if (bodyRes) {
+        sendBodyText = bodyRes.text
+      }
+    }
     const spec: HttpRequestSpec = {
       method,
-      url: target.includes('://') ? target : `http://${target}`,
-      headers: finalHeaders(),
-      bodyText: builtBody.text,
+      url: sendUrl,
+      headers: sendHeaders,
+      bodyText: sendBodyText,
+      bodyBase64: builtBody.base64,
       timeoutMs: options.timeout,
       followRedirects: options.follow,
       maxRedirects: options.maxRedirects,
@@ -487,20 +599,36 @@ export function HttpClientTool() {
     setSending(true)
     setError(null)
     try {
-      const res = await api.send(spec)
-      setResponse(res)
-      setSentSpec(spec)
-      setView('pretty')
-      setRespTab('body')
-      if (!res.ok) setError(`${l.errors.requestFailed}: ${res.error ?? ''}`)
-      const entry: Draft = { ...draft(), status: res.status, durationMs: res.timings.totalMs }
-      setHistory((prev) => [entry, ...prev].slice(0, MAX_HISTORY))
+      let last: HttpRequestResult | null = null
+      const runs: string[] = []
+      /* 重发 ×N：顺序发送，失败即停；最后一次的响应进入响应区 */
+      for (let i = 0; i < repeat; i++) {
+        const res = await api.send(spec)
+        last = res
+        if (!res.ok) {
+          // 网络错误码给一条可执行建议，别让用户对着 ECONNREFUSED 发呆
+          const hint = l.errHints[res.errorCode ?? '']
+          setError(`${l.errors.requestFailed}: ${res.error ?? ''}${hint ? `\n${hint}` : ''}`)
+          break
+        }
+        runs.push(`${res.status} ${U.formatDuration(res.timings.totalMs)}`)
+      }
+      if (last) {
+        setResponse(last)
+        setSentSpec(spec)
+        setView('pretty')
+        setRespTab('body')
+        // 入库前裁剪超长正文：发送仍用原文，历史只负责回填表单
+        const entry: Draft = { ...U.trimBodyForStorage(draft()), status: last.status, durationMs: last.timings.totalMs }
+        setHistory((prev) => [entry, ...prev].slice(0, MAX_HISTORY))
+      }
+      if (repeat > 1 && runs.length > 0) setTransferNote([l.misc.repeatDone(runs.length, runs.join(' · '))])
     } catch (err) {
       setError(`${l.errors.requestFailed}: ${(err as Error).message}`)
     } finally {
       setSending(false)
     }
-  }, [url, method, finalHeaders, builtBody, options, l, draft])
+  }, [url, method, finalHeaders, builtBody, options, l, draft, envMap, bodyMode, fields, repeat])
 
   /* ---- 快捷键 ---- */
   useEffect(() => {
@@ -546,6 +674,13 @@ export function HttpClientTool() {
           spellCheck={false}
           className="flex-1 min-w-0 bg-panel-2 border border-line-soft px-2.5 py-1.5 text-[12.5px] text-bright placeholder:text-muted/50 focus:border-phosphor/40"
         />
+        <input
+          value={String(repeat)}
+          onChange={(e) => setRepeat(Math.min(20, Math.max(1, Number(e.target.value.replace(/\D/g, '')) || 1)))}
+          title={l.misc.repeatTip}
+          spellCheck={false}
+          className="w-12 shrink-0 bg-panel-2 border border-line-soft px-1.5 py-1.5 text-[12px] text-bright text-center focus:border-phosphor/40"
+        />
         <Btn variant="primary" onClick={() => void send()} disabled={sending}>
           {sending ? l.sending : l.send}
         </Btn>
@@ -562,6 +697,12 @@ export function HttpClientTool() {
         </Btn>
         <Btn onClick={() => setPanel('history')}>
           {l.history.title}{history.length > 0 ? ` · ${history.length}` : ''}
+        </Btn>
+        <Btn
+          onClick={() => setPanel('envs')}
+          className={envMap ? 'border-phosphor/50 text-phosphor' : ''}
+        >
+          {l.envs.title} · {envStore.envs.find((e) => e.id === envStore.activeId)?.name?.trim() || l.envs.none}
         </Btn>
         <span className="text-[10.5px] text-muted">{l.misc.sendTip}</span>
       </div>
@@ -631,12 +772,62 @@ export function HttpClientTool() {
                 { value: 'javascript', label: l.body.javascript },
                 { value: 'form', label: l.body.form },
                 { value: 'multipart', label: l.body.multipart },
+                { value: 'binary', label: l.body.binary },
               ]}
             />
             {(bodyMode === 'form' || bodyMode === 'multipart') && (
               <KVEditor rows={fields} onChange={setFields} addLabel={l.kv.add} nameLabel={l.kv.name} valueLabel={l.kv.value} removeLabel={l.kv.remove} />
             )}
-            {bodyMode !== 'none' && bodyMode !== 'form' && bodyMode !== 'multipart' && (
+            {bodyMode === 'binary' && (
+              <div className="space-y-2">
+                {filePick ? (
+                  <div className="flex items-center gap-2 border border-line-soft bg-panel-2 px-3 py-2 text-[12px]">
+                    <span className="text-phosphor break-all">{filePick.name}</span>
+                    <span className="text-muted shrink-0">{U.formatBytes(filePick.bytes)}</span>
+                    <button onClick={() => setFilePick(null)} className="ml-auto text-muted hover:text-danger px-1" title={l.body.clearFile}>×</button>
+                  </div>
+                ) : (
+                  <div className="text-[11.5px] text-muted">{l.body.noFile}</div>
+                )}
+                <Btn variant="ghost" onClick={pickBodyFile}>{filePick ? l.body.replaceFile : l.body.pickFile}</Btn>
+                {filePick && <div className="text-[11px] text-muted">{l.body.contentType}: <span className="text-phosphor">{filePick.contentType}</span> · {l.body.fileNotPersisted}</div>}
+              </div>
+            )}
+            {bodyMode === 'multipart' && (
+              <div className="space-y-1.5">
+                <div className="text-[11px] text-muted">{l.body.fileFieldsTitle}</div>
+                {fileFields.length === 0 && <div className="text-[11.5px] text-muted">—</div>}
+                {fileFields.map((f) => (
+                  <div key={f.id} className="flex items-center gap-1.5">
+                    <input
+                      value={f.name}
+                      onChange={(e) => setFileFields((rows) => rows.map((r) => (r.id === f.id ? { ...r, name: e.target.value } : r)))}
+                      placeholder={l.kv.name}
+                      spellCheck={false}
+                      className="w-1/3 min-w-0 bg-panel-2 border border-line-soft px-2 py-1 text-[12px] text-bright placeholder:text-muted/50 focus:border-phosphor/40"
+                    />
+                    <span className="flex-1 min-w-0 text-[12px] text-dim truncate">
+                      {fileFieldData[f.id] ? `${fileFieldData[f.id].name} · ${U.formatBytes(fileFieldData[f.id].bytes)}` : l.body.noFile}
+                    </span>
+                    <Btn variant="ghost" onClick={() => pickFieldFile(f.id)}>{l.body.pickFile}</Btn>
+                    <button
+                      onClick={() => {
+                        setFileFields((rows) => rows.filter((r) => r.id !== f.id))
+                        setFileFieldData((m) => {
+                          const next = { ...m }
+                          delete next[f.id]
+                          return next
+                        })
+                      }}
+                      className="shrink-0 text-muted hover:text-danger px-1.5 text-[13px]"
+                      title={l.kv.remove}
+                    >×</button>
+                  </div>
+                ))}
+                <Btn variant="ghost" onClick={() => setFileFields((rows) => [...rows, { id: U.newRowId(), name: '' }])}>+ {l.body.addFileField}</Btn>
+              </div>
+            )}
+            {bodyMode !== 'none' && bodyMode !== 'form' && bodyMode !== 'multipart' && bodyMode !== 'binary' && (
               <>
                 <TA value={bodyRaw} onChange={setBodyRaw} label={l.body.mode} rows={10} placeholder={l.body.placeholder} />
                 <div className="flex items-center gap-2 flex-wrap">
@@ -734,6 +925,10 @@ export function HttpClientTool() {
               </span>
               <span className="text-[11px] text-muted">{U.formatDuration(response.timings.totalMs)}</span>
               <span className="text-[11px] text-muted">{U.formatBytes(response.bodyBytes)}</span>
+              <button onClick={saveSnapshot} className="text-[11px] text-muted hover:text-phosphor">{l.snaps.save}</button>
+              <button onClick={() => setPanel('snaps')} className="text-[11px] text-muted hover:text-phosphor">
+                {l.snaps.title}{snapshots.length > 0 ? ` · ${snapshots.length}` : ''}
+              </button>
               <button onClick={() => setResponse(null)} className="text-[11px] text-muted hover:text-phosphor">{l.misc.clearResponse}</button>
             </div>
           }
@@ -745,6 +940,7 @@ export function HttpClientTool() {
             setView={setView}
             response={response}
             spec={sentSpec}
+            onAddCookie={addCookieHeader}
             l={l}
           />
         </Panel>
@@ -806,7 +1002,7 @@ export function HttpClientTool() {
             setSaveName={setSaveName}
             onLoad={loadDraft}
             onSave={() => {
-              const entry: Draft = { ...draft(), name: saveName.trim() || `${method} ${url.slice(0, 40)}` }
+              const entry: Draft = { ...U.trimBodyForStorage(draft()), name: saveName.trim() || `${method} ${url.slice(0, 40)}` }
               setSaved((s) => [entry, ...s].slice(0, 40))
               setSaveName('')
             }}
@@ -817,19 +1013,53 @@ export function HttpClientTool() {
           />
         </Drawer>
       )}
+      {panel === 'snaps' && (
+        <Drawer title={l.snaps.title} onClose={closePanel} width={760}>
+          <SnapshotPanel
+            snapshots={snapshots}
+            current={response ? U.decodeResponseBody(response).text : null}
+            onRemove={(id) => setSnapshots((prev) => prev.filter((s) => s.id !== id))}
+            l={l}
+          />
+        </Drawer>
+      )}
+      {panel === 'envs' && (
+        <Drawer title={l.envs.title} onClose={closePanel} width={640}>
+          <EnvPanel
+            envs={envStore.envs}
+            activeId={envStore.activeId}
+            onActivate={(id) => setEnvStore((s) => ({ ...s, activeId: id }))}
+            onAdd={() => setEnvStore((s) => {
+              const env = newEnv()
+              return { envs: [...s.envs, env], activeId: s.activeId ?? env.id }
+            })}
+            onUpdate={(id, patch) => setEnvStore((s) => ({
+              ...s,
+              envs: s.envs.map((e) => (e.id === id ? { ...e, ...patch } : e)),
+            }))}
+            onRemove={(id) => setEnvStore((s) => ({
+              ...s,
+              envs: s.envs.filter((e) => e.id !== id),
+              activeId: s.activeId === id ? null : s.activeId,
+            }))}
+            l={l}
+          />
+        </Drawer>
+      )}
     </div>
   )
 }
 
 /* ================= 响应视图 ================= */
 
-function ResponseTabs({ respTab, setRespTab, view, setView, response, spec, l }: {
+function ResponseTabs({ respTab, setRespTab, view, setView, response, spec, onAddCookie, l }: {
   respTab: RespTab
   setRespTab: (t: RespTab) => void
   view: ViewMode
   setView: (v: ViewMode) => void
   response: HttpRequestResult
   spec: HttpRequestSpec | null
+  onAddCookie: (value: string) => void
   l: L
 }) {
   /** 代码片段按「实际发出去的请求」生成，便于与当前表单对照 */
@@ -838,21 +1068,22 @@ function ResponseTabs({ respTab, setRespTab, view, setView, response, spec, l }:
     [spec, response],
   )
 
-  const decoded = useMemo(() => {
-    const ct = U.headerValueOf(response.headers, 'content-type')
-    const bytes = U.b64ToBytes(response.bodyBase64)
-    const charset = U.detectCharset(ct)
-    const text = U.bytesToText(bytes, charset)
-    return {
-      ct,
-      bytes,
-      text,
-      charset,
-      binary: U.isProbablyBinary(bytes),
-      pretty: U.prettyJson(text),
-      cookies: U.parseSetCookies(response.headers),
+  /** 实际发出的 wire 报文（请求行 + 头 + 正文） */
+  const wire = useMemo(() => buildWireRequest(sentDoc), [sentDoc])
+
+  const decoded = useMemo(() => U.decodeResponseBody(response), [response])
+
+  /** JSON 路径过滤（$.a.b[0] 语法，复用 toolkit 的 evalJsonPath）；仅 JSON 响应可用 */
+  const [jsonPath, setJsonPath] = useState('')
+  const pathHits = useMemo<{ text: string; error: string | null }>(() => {
+    if (!jsonPath.trim() || !decoded.pretty) return { text: '', error: null }
+    try {
+      const hits = evalJsonPath(JSON.parse(decoded.text), jsonPath)
+      return { text: hits.map((h) => JSON.stringify(h, null, 2)).join('\n---\n'), error: null }
+    } catch (err) {
+      return { text: '', error: (err as Error).message }
     }
-  }, [response])
+  }, [jsonPath, decoded])
 
   const tabs: { id: RespTab; label: string }[] = [
     { id: 'body', label: l.response.body },
@@ -898,6 +1129,21 @@ function ResponseTabs({ respTab, setRespTab, view, setView, response, spec, l }:
             {response.truncated && <span className="text-danger">{l.response.truncated}</span>}
             <CopyBtn text={decoded.text} className="ml-auto" />
           </div>
+          {decoded.pretty && (
+            <div className="space-y-1">
+              <input
+                value={jsonPath}
+                onChange={(e) => setJsonPath(e.target.value)}
+                placeholder={l.response.jsonPathHint}
+                spellCheck={false}
+                className="w-full bg-panel-2 border border-line-soft px-2 py-1 text-[12px] text-bright placeholder:text-muted/50 focus:border-phosphor/40"
+              />
+              {pathHits.error && <div className="text-[11px] text-amber">{l.response.jsonPathBad}: {pathHits.error}</div>}
+              {pathHits.text && (
+                <pre className="codeblock max-h-[300px] overflow-auto bg-panel-2 border border-phosphor/30 px-3 py-2 text-[12px] text-bright">{pathHits.text}</pre>
+              )}
+            </div>
+          )}
           {decoded.bytes.length === 0 ? (
             <div className="text-[12px] text-muted">{l.response.noBody}</div>
           ) : (
@@ -921,6 +1167,11 @@ function ResponseTabs({ respTab, setRespTab, view, setView, response, spec, l }:
       {respTab === 'cookies' && (
         <div className="space-y-2">
           {decoded.cookies.length === 0 && <div className="text-[12px] text-muted">{l.response.cookieNone}</div>}
+          {decoded.cookies.length > 0 && (
+            <Btn variant="ghost" onClick={() => onAddCookie(decoded.cookies.map((c) => `${c.name}=${c.value}`).join('; '))}>
+              {l.response.cookieToHeader(decoded.cookies.length)}
+            </Btn>
+          )}
           {decoded.cookies.map((c, i) => (
             <div key={i} className="border border-line-soft bg-panel-2 px-3 py-2 space-y-0.5">
               <div className="text-[12px]">
@@ -977,8 +1228,13 @@ function ResponseTabs({ respTab, setRespTab, view, setView, response, spec, l }:
             ))}
           </div>
           {spec?.bodyText && <pre className="codeblock max-h-[240px] overflow-auto bg-panel-2 border border-line-soft px-3 py-2 text-[12px] text-bright">{spec.bodyText}</pre>}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <CopyBtn text={generateCode('curl', sentDoc)} />
+            <CopyBtn text={wire} label={l.response.copyWire} />
+          </div>
+          <div>
+            <div className="text-[11px] text-muted mb-1">{l.response.wire}</div>
+            <pre className="codeblock max-h-[240px] overflow-auto bg-panel-2 border border-line-soft px-3 py-2 text-[12px] text-bright">{wire}</pre>
           </div>
         </div>
       )}

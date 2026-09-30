@@ -1,5 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type { HttpRequestResult, HttpRequestSpec, HttpTransferAPI } from '../../src/lib/http-types'
+import type { SseAPI } from '../../src/lib/sse-types'
+import type { WsAPI } from '../../src/lib/ws-types'
 import type { ChatEvent, ChatSendResult, ChatSendSpec, ChatToolServer, ChatTraceResult, McpProbeResult } from '../../src/lib/chat-types'
 import type { McpInfo } from '../../src/lib/mcp-types'
 import type {
@@ -129,6 +131,8 @@ export interface ElectronAPI {
   quitAndInstall: () => Promise<void>
   onUpdaterEvent: (callback: (evt: UpdaterEvent) => void) => () => void
   http: HttpAPI
+  sse: SseAPI
+  ws: WsAPI
   proxy: ProxyAPI
   mcp: McpAPI
   chat: ChatAPI
@@ -158,6 +162,26 @@ const api: ElectronAPI = {
     send: (spec) => ipcRenderer.invoke('http:send', spec),
     exportFile: (payload) => ipcRenderer.invoke('http:export-file', payload),
     importFile: (title) => ipcRenderer.invoke('http:import-file', title),
+    pickFile: () => ipcRenderer.invoke('http:pick-file'),
+  },
+  sse: {
+    send: (spec) => ipcRenderer.invoke('sse:send', spec),
+    abort: (id) => ipcRenderer.invoke('sse:abort', id),
+    onEvent: (callback) => {
+      const listener = (_event: Electron.IpcRendererEvent, evt: Parameters<typeof callback>[0]): void => callback(evt)
+      ipcRenderer.on('sse:event', listener)
+      return () => ipcRenderer.removeListener('sse:event', listener)
+    },
+  },
+  ws: {
+    connect: (spec) => ipcRenderer.invoke('ws:connect', spec),
+    send: (id, data) => ipcRenderer.invoke('ws:send', id, data),
+    close: (id, code, reason) => ipcRenderer.invoke('ws:close', id, code, reason),
+    onEvent: (callback) => {
+      const listener = (_event: Electron.IpcRendererEvent, evt: Parameters<typeof callback>[0]): void => callback(evt)
+      ipcRenderer.on('ws:event', listener)
+      return () => ipcRenderer.removeListener('ws:event', listener)
+    },
   },
   mcp: {
     info: () => ipcRenderer.invoke('mcp:info'),

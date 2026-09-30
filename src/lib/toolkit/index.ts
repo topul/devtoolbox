@@ -10,6 +10,7 @@
  * 新增工具时，逻辑放这里、界面放 `src/tools`，别把实现写回组件里。
  */
 export * from './codec'
+export * from './env'
 export * from './hash'
 export * from './ids'
 export * from './json'

@@ -10,10 +10,12 @@
 import {
   CODE_TARGETS,
   MULTIPART_BOUNDARY,
+  buildWireRequest,
   tokenizeCommand,
   buildRequestFile,
   effectiveHeaders,
   generateCode,
+  emptyDoc,
   materializeBody,
   mergeRequests,
   parseCurlCommand,
@@ -404,6 +406,35 @@ const RICH: RequestDoc = {
   eq('base64: 空串', utf8ToBase64(''), '')
   eq('base64: 补齐两位', utf8ToBase64('a'), 'YQ==')
   eq('base64: 补齐一位', utf8ToBase64('ab'), 'YWI=')
+}
+
+/* ================= wire 报文预览 ================= */
+
+{
+  const wire = buildWireRequest({
+    ...emptyDoc(),
+    method: 'get',
+    url: 'https://api.example.com/v1/users?limit=10',
+    headers: [['Accept', 'application/json']],
+  })
+  includes('wire: 请求行用 path+query', wire, 'GET /v1/users?limit=10 HTTP/1.1')
+  notIncludes('wire: 不含 scheme 与主机名于请求行', wire, 'https://api.example.com/v1/users')
+  includes('wire: 头逐行展示', wire, 'Accept: application/json')
+  notIncludes('wire: 无正文时空行不出现', wire, '\n\n')
+}
+{
+  const wire = buildWireRequest({
+    ...emptyDoc(),
+    method: 'POST',
+    url: 'https://api.example.com/x',
+    headers: [['Content-Type', 'text/plain']],
+    body: { kind: 'text', text: 'hello' },
+  })
+  includes('wire: 正文跟在空行后', wire, '\n\nhello')
+}
+{
+  const wire = buildWireRequest({ ...emptyDoc(), url: 'not a url' })
+  includes('wire: 非法 URL 原样展示', wire, 'not a url HTTP/1.1')
 }
 
 /* ================= 汇总 ================= */

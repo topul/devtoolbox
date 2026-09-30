@@ -88,4 +88,18 @@ export interface HttpTransferAPI {
   exportFile: (payload: { title: string; name: string; content: string }) => Promise<HttpTransferResult>
   /** 从文件读取请求 JSON；取消时 canceled=true */
   importFile: (title: string) => Promise<HttpTransferResult>
+  /** 选择本地文件作为上传体；取消时 canceled=true，过大时 error=FILE_TOO_LARGE */
+  pickFile: () => Promise<HttpPickFileResult>
+}
+
+/** pickFile 的返回：正文以 Base64 传输，8MB 上限（与请求导入一致） */
+export interface HttpPickFileResult {
+  ok: boolean
+  canceled?: boolean
+  /** 文件名（不含路径），multipart filename 用 */
+  name?: string
+  base64?: string
+  bytes?: number
+  /** 稳定错误码（FILE_TOO_LARGE）或原始 fs 报错信息 */
+  error?: string
 }

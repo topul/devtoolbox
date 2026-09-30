@@ -554,6 +554,23 @@ export interface CurlInput {
   proxy?: string | null
 }
 
+/**
+ * 原始 wire 报文预览：`GET /path?query HTTP/1.1` + 头 + 正文。
+ * 只供「实际发出的请求」页签展示，不参与发送；正文经 materializeBody 归一。
+ */
+export function buildWireRequest(doc: RequestDoc): string {
+  let path = doc.url || '/'
+  try {
+    const u = new URL(doc.url)
+    const p = `${u.pathname}${u.search}`
+    if (p) path = p
+  } catch { /* 非法 URL 原样展示，让用户自己看出问题 */ }
+  const lines = [`${doc.method.toUpperCase()} ${path} HTTP/1.1`]
+  for (const [k, v] of doc.headers) lines.push(`${k}: ${v}`)
+  const { text } = materializeBody(doc)
+  return lines.join('\n') + (text ? `\n\n${text}` : '')
+}
+
 export function buildCurl(o: CurlInput): string {
   return generateCode('curl', {
     method: o.method,

@@ -15,7 +15,11 @@ import { buildClientConfig, configHints, resolveMcpLaunch } from '../mcp/paths'
 import { safeExternalUrl } from '../../src/lib/external-link'
 import { CaptureProxy } from './proxy/server'
 import { SystemProxyManager } from './systemproxy'
-import type { HttpRequestSpec, HttpRequestResult, HttpTransferResult } from '../../src/lib/http-types'
+import { startSse, abortSse } from './sse-client'
+import { connectWs, sendWs, closeWs } from './ws-client'
+import type { SseSendSpec } from '../../src/lib/sse-types'
+import type { WsSendSpec } from '../../src/lib/ws-types'
+import type { HttpRequestSpec, HttpRequestResult, HttpTransferResult, HttpPickFileResult } from '../../src/lib/http-types'
 import type { ChatEvent, ChatSendResult, ChatSendSpec, ChatToolServer, ChatTraceResult } from '../../src/lib/chat-types'
 import type { AgentScanSpec, RulesTarget } from '../../src/lib/agentrules-types'
 import type { McpClientEvent, McpConnectSpec } from '../../src/lib/mcpclient-types'
@@ -338,9 +342,30 @@ function setupHttpTransferIpc(): void {
       return { ok: false, path: '', error: (err as Error).message }
     }
   })
-}
 
-/** 会话 → HAR 1.2，方便导入 Chrome DevTools / Charles 对照 */
+  // 上传体选择：只回文件名与 Base64 正文，路径不回流渲染进程
+  ipcMain.handle('http:pick-file', async (): Promise<HttpPickFileResult> => {
+    const win = mainWindow
+    const options: Electron.OpenDialogOptions = { properties: ['openFile'] }
+    const result = win && !win.isDestroyed()
+      ? await dialog.showOpenDialog(win, options)
+      : await dialog.showOpenDialog(options)
+    const filePath = result.canceled ? '' : result.filePaths[0] ?? ''
+    if (!filePath) return { ok: false, canceled: true }
+    try {
+      if (fs.statSync(filePath).size > 8 * 1024 * 1024) return { ok: false, error: 'FILE_TOO_LARGE' }
+      const buf = fs.readFileSync(filePath)
+      return {
+        ok: true,
+        name: filePath.split(/[\\/]/).pop() ?? 'file',
+        base64: buf.toString('base64'),
+        bytes: buf.length,
+      }
+    } catch (err) {
+      return { ok: false, error: (err as Error).message }
+    }
+  })
+}
 function toHar(sessions: ProxySession[]): string {
   const entries = sessions.map((s) => {
     const reqBody = s.reqBodyBase64 ? Buffer.from(s.reqBodyBase64, 'base64') : Buffer.alloc(0)
@@ -506,6 +531,39 @@ ipcMain.handle('mcp:info', (): McpInfo => {
 
 setupProxyIpc()
 setupHttpTransferIpc()
+setupSseIpc()
+setupWsIpc()
+
+/* ================= WebSocket 调试 ================= */
+
+function setupWsIpc(): void {
+  ipcMain.handle('ws:connect', (e, spec: WsSendSpec): void => {
+    const { sender } = e
+    connectWs(spec, (evt) => {
+      if (!sender.isDestroyed()) sender.send('ws:event', evt)
+    })
+  })
+  ipcMain.handle('ws:send', (_e, id: string, data: string): { ok: boolean; error?: string } => {
+    return sendWs(id, data)
+  })
+  ipcMain.handle('ws:close', (_e, id: string, code?: number, reason?: string): void => {
+    closeWs(id, code, reason)
+  })
+}
+
+/* ================= SSE 调试 ================= */
+
+function setupSseIpc(): void {
+  ipcMain.handle('sse:send', (e, spec: SseSendSpec): void => {
+    const { sender } = e
+    startSse(spec, (evt) => {
+      if (!sender.isDestroyed()) sender.send('sse:event', evt)
+    })
+  })
+  ipcMain.handle('sse:abort', (_e, id: string): void => {
+    abortSse(id)
+  })
+}
 
 /* ================= 流式对话（AI 调试） ================= */
 

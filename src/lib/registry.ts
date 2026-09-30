@@ -11,6 +11,8 @@ import { YamlTool, JsonPathTool, CssTool } from '../tools/dataformats'
 import { ColorTool, ImgBase64Tool, StringEscapeTool } from '../tools/converters'
 import { UrlParserTool, UserAgentTool, IpIntTool, CookieTool } from '../tools/network'
 import { HttpClientTool } from '../tools/httpclient'
+import { SseTool } from '../tools/sse'
+import { WsTool } from '../tools/ws'
 import { TrafficProxyTool } from '../tools/proxy'
 import { XorTool, RotTool, VigenereTool, PrivescTool } from '../tools/offsec'
 import { McpTool } from '../tools/mcp'
@@ -160,6 +162,8 @@ export const TOOLS: ToolDef[] = [
   // HTTP 调试
   { id: 'http-client', category: 'http', keywords: ['http', 'https', 'postman', 'rest', 'api', '请求', '接口', 'curl', 'fetch', '接口测试'], hot: true, component: HttpClientTool },
   { id: 'traffic-proxy', category: 'http', keywords: ['proxy', '抓包', 'mitm', 'charles', 'fiddler', 'wireshark', '代理', '重放', 'replay', 'https', '证书'], hot: true, component: TrafficProxyTool },
+  { id: 'sse', category: 'http', keywords: ['sse', 'server-sent', 'events', 'eventsource', '流', '推送', 'streaming', '实时'], component: SseTool },
+  { id: 'websocket', category: 'http', keywords: ['websocket', 'ws', 'wss', 'socket', '长连接', '实时'], component: WsTool },
 
   // Formatters
   { id: 'json', category: 'format', keywords: ['json', '格式化', '压缩', '校验'], hot: true, component: JsonTool },
