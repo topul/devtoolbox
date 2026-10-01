@@ -19,6 +19,7 @@ import {
   type ModelProfile,
 } from '../../lib/chat-config'
 import type { ModelPrice } from '../../lib/toolkit'
+import { WEB_BUILD } from '../../lib/platform'
 import { SkillsSection } from './SkillsSection'
 import { ServerProbe } from './ServerProbe'
 
@@ -129,10 +130,10 @@ export function SettingsDrawer({
 
         {/* ---------- 工具调用 ---------- */}
         <section className="space-y-3 border-t border-line-soft pt-4">
-          <h3 className="text-[12px] font-semibold text-bright">{l.toolsEnable}</h3>
+          <h3 className="text-[12px] font-semibold text-bright">{WEB_BUILD ? l.toolsEnableWeb : l.toolsEnable}</h3>
           <label className="flex items-center gap-2 text-[12.5px] cursor-pointer">
             <input type="checkbox" checked={settings.toolsEnabled} onChange={(e) => patchSettings({ toolsEnabled: e.target.checked })} className="accent-phosphor" />
-            {l.toolsEnable}
+            {WEB_BUILD ? l.toolsEnableWeb : l.toolsEnable}
           </label>
           {settings.toolsEnabled && toolServerErr && <p className="text-[11.5px] text-amber">{toolServerErr}</p>}
           {settings.toolsEnabled && (
@@ -154,7 +155,7 @@ export function SettingsDrawer({
         <section className="border-t border-line-soft pt-4">
           <div className="flex items-center justify-between gap-2">
             <h3 className="text-[12px] font-semibold text-bright">{l.customServersTitle}</h3>
-            <Btn variant="ghost" onClick={() => setServers((p) => [...p, { id: `s${Math.random().toString(36).slice(2, 10)}`, label: '', kind: 'stdio' as const, command: '', args: '', env: '', url: '', headers: '' }])}>
+            <Btn variant="ghost" onClick={() => setServers((p) => [...p, { id: `s${Math.random().toString(36).slice(2, 10)}`, label: '', kind: WEB_BUILD ? ('http' as const) : ('stdio' as const), command: '', args: '', env: '', url: '', headers: '' }])}>
               {l.addServer}
             </Btn>
           </div>
@@ -167,7 +168,8 @@ export function SettingsDrawer({
                     placeholder={l.serverLabelPh}
                     className="bg-transparent border border-line-soft rounded-md px-2 py-1 text-[12.5px] text-bright flex-1 min-w-0 focus:outline-none focus:border-phosphor/40" />
                   <div className="flex shrink-0 rounded-md overflow-hidden border border-line-soft">
-                    {(['stdio', 'http'] as const).map((k2) => (
+                    {/* 浏览器版没有进程模型：stdio 选项直接隐藏，免得配了也白配 */}
+                    {(['stdio', 'http'] as const).filter((k2) => !WEB_BUILD || k2 === 'http').map((k2) => (
                       <button key={k2} onClick={() => setServers((p) => p.map((x, j) => (j === i ? { ...x, kind: k2 } : x)))}
                         className={`px-2 py-1 text-[10.5px] transition-colors ${sv.kind === k2 ? 'bg-phosphor-faint text-phosphor' : 'text-muted hover:text-bright'}`}>
                         {k2 === 'stdio' ? l.serverKindStdio : l.serverKindHttp}

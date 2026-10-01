@@ -53,6 +53,7 @@ import {
 } from '../lib/chat-config'
 import { costOf, estimateMessages, findPrice, uuidV4, type ModelPrice } from '../lib/toolkit'
 import type { ChatMessage, ChatSendSpec } from '../lib/chat-types'
+import { WEB_BUILD } from '../lib/platform'
 import { titleFromText, type ChatSessionMeta } from '../lib/chatstore-types'
 
 /**
@@ -131,6 +132,11 @@ export function ChatTool(): React.ReactElement {
 
   // 工具调用的服务端就是本应用自己的 MCP 服务端，启动配置由主进程算出
   useEffect(() => {
+    if (WEB_BUILD) {
+      // 浏览器没有进程模型：内置本机工具不可用。如实说明，并把用户引向 HTTP 自定义源。
+      setToolServerErr(l.toolsWebOnly)
+      return
+    }
     const api = typeof window !== 'undefined' ? window.electronAPI?.mcp : undefined
     if (!api) return
     let alive = true

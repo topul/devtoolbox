@@ -74,6 +74,10 @@ export default defineConfig({
     root: '.',
     base: './',
     plugins: [react(), injectCsp()],
+    define: {
+      // 桌面形态：不隐藏 desktopOnly 工具
+      __DTB_WEB__: JSON.stringify(false),
+    },
     resolve: {
       alias: {
         '@': resolve(__dirname, 'src')

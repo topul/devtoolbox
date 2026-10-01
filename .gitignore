@@ -8,5 +8,9 @@ release/
 # Electron
 Thumbs.db
 
+# 浏览器 / 插件版构建产物（由 build:ext 生成，勿入库）
+dist-extension/
+devtoolbox-extension-*.zip
+
 # Local assistant workspace notes
 .workbuddy/

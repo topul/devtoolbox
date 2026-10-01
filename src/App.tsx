@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react'
 import { Command } from 'cmdk'
-import { TOOLS, SECTIONS, sectionOf, searchTools, ToolDef, CategoryId, SectionId } from './lib/registry'
+import { TOOLS, SECTIONS, sectionOf, searchTools, toolsInSection, visibleToolCount, ToolDef, CategoryId, SectionId } from './lib/registry'
 import { useTheme } from './lib/theme'
 import { useUiZoom } from './lib/uiZoom'
 import { useSidebarCollapsed, useOpenSections } from './lib/sidebar'
@@ -93,7 +93,7 @@ function AppInner() {
   const grouped = useMemo(() => {
     const map = new Map<SectionId, SectionGroup>()
     for (const sec of SECTIONS) {
-      const tools = TOOLS.filter(t => sectionOf(t.category) === sec.id)
+      const tools = toolsInSection(sec.id)
       if (!tools.length) continue
       const cats = new Map<CategoryId, ToolDef[]>()
       for (const cat of sec.categories) {
@@ -240,7 +240,7 @@ function AppInner() {
                 view === 'home' ? 'bg-phosphor-faint text-phosphor font-medium' : 'text-muted hover:text-bright hover:bg-panel-2',
               )}
             >
-              ⌂ {t.homeNav} <span className="text-muted/60 text-[10.5px]">({TOOLS.length})</span>
+              ⌂ {t.homeNav} <span className="text-muted/60 text-[10.5px]">({visibleToolCount()})</span>
             </button>
 
             {[...grouped.entries()].map(([sec, entry]) => {
@@ -433,7 +433,7 @@ function CommandPalette({ open, onOpenChange, onOpenTool }: {
         <Command.Empty>{t.cmdkEmpty}</Command.Empty>
         <Command.Group heading={t.quickNav}>
           <Command.Item value="nav-chat" onSelect={() => run(null)}>✦ {t.chatNav}</Command.Item>
-          <Command.Item value="nav-home" onSelect={() => run('home')}>⌂ {t.homeNav} <span className="cmdk-count">({TOOLS.length})</span></Command.Item>
+          <Command.Item value="nav-home" onSelect={() => run('home')}>⌂ {t.homeNav} <span className="cmdk-count">({visibleToolCount()})</span></Command.Item>
         </Command.Group>
         {groups.map(([sec, tools]) => (
           <Command.Group key={sec} heading={`${SECTION_ICONS[sec]} ${sectionName(sec)}`}>
@@ -475,7 +475,7 @@ function HomeView({ grouped, onOpen }: {
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-bright">
             BUGBUCKET<span className="text-phosphor">.BOX</span>
           </h1>
-          <p className="mt-3 text-[13.5px] text-muted max-w-2xl leading-relaxed">{t.hero(TOOLS.length)}</p>
+          <p className="mt-3 text-[13.5px] text-muted max-w-2xl leading-relaxed">{t.hero(visibleToolCount())}</p>
           <div className="mt-5 flex gap-2 flex-wrap text-[11.5px]">
             {t.heroChips.map(k => (
               <span key={k} className="px-2.5 py-0.5 rounded-full border border-line text-muted bg-panel">{k}</span>

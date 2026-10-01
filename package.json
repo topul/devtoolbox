@@ -17,6 +17,7 @@
     "build:mcp": "node scripts/build-mcp.mjs",
     "build": "npm run build:app && npm run build:mcp",
     "build:web": "vite build",
+    "build:ext": "vite build --config vite.config.extension.ts && node scripts/build-extension.mjs",
     "preview": "vite preview",
     "package": "npm run build && electron-builder",
     "package:win": "npm run build && electron-builder --win",

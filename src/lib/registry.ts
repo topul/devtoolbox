@@ -1,5 +1,6 @@
 import React from 'react'
 import { TOOLS_L, CATEGORY_L, SECTION_L, type ToolId } from './locales/registry'
+import { WEB_BUILD } from './platform'
 import { Base64Tool, UrlTool, UnicodeTool, RadixTool, HtmlEntityTool, MorseTool } from '../tools/encoding'
 import { JsonTool, SqlTool, XmlTool, MarkdownTool } from '../tools/format'
 import { UuidTool, PasswordTool, QrTool, FakeDataTool } from '../tools/generators'
@@ -33,6 +34,8 @@ export interface ToolDef {
   category: CategoryId
   keywords: string[]
   hot?: boolean
+  /** 依赖本机进程/文件系统的能力，浏览器（插件）构建里隐藏 */
+  desktopOnly?: boolean
   component: React.ComponentType
 }
 
@@ -107,7 +110,8 @@ export function sectionOf(cat: CategoryId): SectionId {
 export function toolsInSection(id: SectionId): ToolDef[] {
   const sec = SECTIONS.find((s) => s.id === id)
   if (!sec) return []
-  return sec.categories.flatMap((cat) => TOOLS.filter((t) => t.category === cat))
+  const pool = visibleTools()
+  return sec.categories.flatMap((cat) => pool.filter((t) => t.category === cat))
 }
 
 /** 一个组里的工具数量（导航里显示计数用） */
@@ -137,6 +141,19 @@ export function verifyNavigation(): string[] {
   return problems
 }
 
+/**
+ * 当前构建应该展示的工具。浏览器（插件）构建没有本机进程：
+ * stdio MCP、抓包代理这类能力物理上做不到，藏起来比点进去报「不可用」诚实。
+ */
+export function visibleTools(): ToolDef[] {
+  return WEB_BUILD ? TOOLS.filter((t) => !t.desktopOnly) : TOOLS
+}
+
+/** 当前构建可见的工具数（侧栏/首页计数用） */
+export function visibleToolCount(): number {
+  return visibleTools().length
+}
+
 export const TOOLS: ToolDef[] = [
   // Encoding
   // NOTE: `keywords` are extra bilingual search aliases (matched in both locales).
@@ -161,7 +178,7 @@ export const TOOLS: ToolDef[] = [
 
   // HTTP 调试
   { id: 'http-client', category: 'http', keywords: ['http', 'https', 'postman', 'rest', 'api', '请求', '接口', 'curl', 'fetch', '接口测试'], hot: true, component: HttpClientTool },
-  { id: 'traffic-proxy', category: 'http', keywords: ['proxy', '抓包', 'mitm', 'charles', 'fiddler', 'wireshark', '代理', '重放', 'replay', 'https', '证书'], hot: true, component: TrafficProxyTool },
+  { id: 'traffic-proxy', category: 'http', keywords: ['proxy', '抓包', 'mitm', 'charles', 'fiddler', 'wireshark', '代理', '重放', 'replay', 'https', '证书'], hot: true, desktopOnly: true, component: TrafficProxyTool },
   { id: 'sse', category: 'http', keywords: ['sse', 'server-sent', 'events', 'eventsource', '流', '推送', 'streaming', '实时'], component: SseTool },
   { id: 'websocket', category: 'http', keywords: ['websocket', 'ws', 'wss', 'socket', '长连接', '实时'], component: WsTool },
 
@@ -213,8 +230,8 @@ export const TOOLS: ToolDef[] = [
   { id: 'chmod', category: 'reference', keywords: ['chmod', '权限', '755', 'linux'], component: ChmodTool },
 
   // AI 接入
-  { id: 'mcp-server', category: 'ai', keywords: ['mcp', 'ai', 'agent', '智能体', '大模型', 'claude', 'cursor', '接入', '工具调用'], hot: true, component: McpTool },
-  { id: 'mcp-inspector', category: 'ai', keywords: ['mcp', 'inspector', '客户端', '连接', '调用', '工具调用', 'jsonrpc', 'stdio', '调试'], hot: true, component: McpInspectorTool },
+  { id: 'mcp-server', category: 'ai', keywords: ['mcp', 'ai', 'agent', '智能体', '大模型', 'claude', 'cursor', '接入', '工具调用'], hot: true, desktopOnly: true, component: McpTool },
+  { id: 'mcp-inspector', category: 'ai', keywords: ['mcp', 'inspector', '客户端', '连接', '调用', '工具调用', 'jsonrpc', 'stdio', '调试'], hot: true, desktopOnly: true, component: McpInspectorTool },
   { id: 'tool-schema', category: 'ai', keywords: ['schema', 'json schema', '工具定义', '函数调用', 'function calling', 'typescript', 'pydantic', 'openai', 'mcp', '转换', '校验'], hot: true, component: ToolSchemaTool },
   { id: 'agent-rules', category: 'ai', keywords: ['agents.md', 'agents', 'cursorrules', 'claude', '规则文件', '项目说明', '扫描', '仓库结构', 'onboarding', 'ai 协作'], hot: true, component: AgentRulesTool },
   { id: 'chat-compare', category: 'ai', keywords: ['对比', '多模型', '测评', '评测', 'compare', '模型选型', '并排', '首字延迟', 'benchmark'], hot: true, component: ChatCompareTool },
@@ -226,9 +243,10 @@ export const TOOLS: ToolDef[] = [
  * "格式化" still works in the en UI. `keywords` holds extra bilingual aliases.
  */
 export function searchTools(q: string): ToolDef[] {
-  if (!q.trim()) return TOOLS
+  if (!q.trim()) return visibleTools()
   const query = q.trim().toLowerCase()
-  return TOOLS.filter(t => {
+  const pool = visibleTools()
+  return pool.filter(t => {
     const zh = TOOLS_L.zh[t.id]
     const en = TOOLS_L.en[t.id]
     const haystack = [
