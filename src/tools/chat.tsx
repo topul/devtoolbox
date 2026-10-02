@@ -19,7 +19,7 @@ import { SettingsDrawer } from '../components/chat/SettingsDrawer'
 import { TraceDrawer } from '../components/chat/TraceView'
 import { useLocalized } from '../lib/i18n'
 import { chatL } from '../lib/locales/chat'
-import { createIpcChatTransport, type ChatTransportHost } from '../lib/chat-transport'
+import { createIpcChatTransport } from '../lib/chat-transport'
 import {
   messageMeta,
   messageText,

@@ -127,7 +127,8 @@ function startUpstream() {
       if (mode === 'badframe') {
         // 半截 JSON 与注释行都出现过，解析器不能因此断流
         res.write(': keep-alive comment\n\n')
-        res.write('data: {"model":"mock-model","choices":[{"delta":{"content":"前半"'), res.write('}]\n\n')
+        res.write('data: {"model":"mock-model","choices":[{"delta":{"content":"前半"}')
+        res.write('}]\n\n')
       }
 
       let i = 0

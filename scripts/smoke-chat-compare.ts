@@ -2,7 +2,6 @@
  * 多模型对比 —— 归组逻辑验收。
  * 用假事件序列驱动 applyCompareEvent，断言列状态机与指标归集。
  */
-import * as assert from 'node:assert'
 import {
   allReady,
   applyCompareEvent,

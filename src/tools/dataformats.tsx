@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import { Btn, TA, Input, ErrorNote, Select } from '../components/ui'
+import { Btn, TA, Input, ErrorNote } from '../components/ui'
 import { useLocalized } from '../lib/i18n'
 import { dataformatsL } from '../lib/locales/dataformats'
 import { evalJsonPath, jsonToYaml, yamlToJson } from '../lib/toolkit'

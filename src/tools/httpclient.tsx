@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react'
+import React, { useState, useMemo, useEffect, useCallback } from 'react'
 import { Panel, Btn, TA, Input, Select, ErrorNote, CopyBtn, Drawer, NoteList } from '../components/ui'
 import { CodeSnippets } from '../components/http/CodeSnippets'
 import { RequestTransfer } from '../components/http/RequestTransfer'
@@ -577,7 +577,7 @@ export function HttpClientTool() {
         return
       }
       sendUrl = urlRes.text
-      sendHeaders = headerRes.map(([rn, rv], i) => [rn.text, rv.text])
+      sendHeaders = headerRes.map(([rn, rv]) => [rn.text, rv.text])
       if (fieldRes) {
         sendBodyText = U.buildQueryRows(fields.map((x, i) => ({ ...x, name: fieldRes[i][0].text, value: fieldRes[i][1].text })))
       } else if (bodyRes) {
@@ -983,6 +983,9 @@ export function HttpClientTool() {
             <div className="flex items-center gap-2 flex-wrap">
               <Btn
                 variant="ghost"
+                // useBuiltinProxy 是 useCallback 创建的回调（不是 hook），
+                // rules-of-hooks 按 use 前缀命名误判，这里显式豁免
+                // eslint-disable-next-line react-hooks/rules-of-hooks
                 onClick={() => void useBuiltinProxy()}
                 title={proxyInfo?.running ? l.options.capturedTip : l.options.capturedUnavailable}
               >

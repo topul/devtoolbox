@@ -233,7 +233,7 @@ await (async () => {
   eq(bridge.specs[0].model, 'demo-model', 'spec 带上当前模型')
   eq(bridge.specs[0].messages.length, 1, '首次请求只带用户消息')
   eq(bridge.specs[0].messages[0].content, '帮我算个哈希', '历史内容来自界面消息')
-  typeof bridge.specs[0].requestId === 'string' && ok(bridge.specs[0].requestId!.startsWith('id-'), '请求 id 由 transport 生成并贯穿事件')
+  if (typeof bridge.specs[0].requestId === 'string') ok(bridge.specs[0].requestId!.startsWith('id-'), '请求 id 由 transport 生成并贯穿事件')
 })()
 
 /* ================= 3. 用户取消 ================= */

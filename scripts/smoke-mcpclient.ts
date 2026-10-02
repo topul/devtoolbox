@@ -45,17 +45,6 @@ function eq(name: string, actual: unknown, expected: unknown): void {
 function includes(name: string, haystack: string, needle: string): void {
   ok(name, haystack.includes(needle), `未在「${haystack.slice(0, 200)}」中找到 ${JSON.stringify(needle)}`)
 }
-function waitFor(cond: () => boolean, timeoutMs: number): Promise<void> {
-  return new Promise((resolve) => {
-    const t0 = Date.now()
-    const tick = (): void => {
-      if (cond() || Date.now() - t0 > timeoutMs) resolve()
-      else setTimeout(tick, 10)
-    }
-    tick()
-  })
-}
-
 /** 每个用例都独立的控制器 + 事件收集器 */
 function makeHarness(): { events: McpClientEvent[]; ctl: ReturnType<typeof createMcpClientController> } {
   const events: McpClientEvent[] = []

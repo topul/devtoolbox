@@ -9,7 +9,7 @@
  *
  * 传输方式：换行分隔的 JSON-RPC（LSP 风格），单条消息内不得出现裸换行。
  */
-import { MCP_TOOLS, toProtocolTools } from '../../src/lib/mcp-catalog'
+import { toProtocolTools } from '../../src/lib/mcp-catalog'
 import { HANDLERS, type ToolArgs, type ToolResult } from './tools'
 
 /** 声明支持的协议版本，按新到旧排列；首项即服务端默认版本 */

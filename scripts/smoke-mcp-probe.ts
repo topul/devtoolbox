@@ -4,7 +4,6 @@
  * 用真实进程驱动：内置 MCP 服务端（真实 spawn）、坏命令、不可达 HTTP。
  * 不 mock McpClient —— 探测的价值就在真实连接行为。
  */
-import * as assert from 'node:assert'
 import * as path from 'node:path'
 import { probeServer } from '../electron/main/mcp-probe'
 import type { ChatToolServer } from '../src/lib/chat-types'
@@ -26,6 +25,9 @@ const stdio = (over: Partial<ChatToolServer> = {}): ChatToolServer => ({
 
 /* ================= 正常路径：真实内置服务端 ================= */
 
+// 前置分号：上一行是 `=> ({...})` 箭头函数，行首的 `{` 需要显式断开，
+// 否则 TS 解析器会把裸块当对象字面量继续解析（esbuild/node 不挑，ESLint 挑）。
+;
 {
   const r = await probeServer(stdio(), 30_000)
   ok('内置服务端探测成功', r.ok, r.error ?? '')

@@ -63,7 +63,6 @@ function startModel() {
     req.on('end', () => {
       const body = JSON.parse(Buffer.concat(chunks).toString('utf8'))
       const messages = body.messages as any[]
-      const first = String(messages.find((m) => m.role === 'user')?.content ?? '')
       const toolMsgs = messages.filter((m) => m.role === 'tool').length
 
       if (body.model === 'error401') {

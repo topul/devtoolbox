@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import { Btn, TA, Input, ErrorNote, Panel, Stat, Select, CopyBtn } from '../components/ui'
+import { Btn, TA, Input, ErrorNote, Stat, Select, CopyBtn } from '../components/ui'
 import { useLocalized } from '../lib/i18n'
 import { textL } from '../lib/locales/text'
 import {

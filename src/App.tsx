@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react'
+import React, { useState, useMemo, useEffect, useCallback, Suspense } from 'react'
 import { Command } from 'cmdk'
 import { TOOLS, SECTIONS, sectionOf, searchTools, toolsInSection, visibleToolCount, ToolDef, CategoryId, SectionId } from './lib/registry'
 import { useTheme } from './lib/theme'
@@ -566,7 +566,10 @@ function ToolView({ tool, onBack }: { tool: ToolDef; onBack: () => void }) {
           </div>
         </div>
         <div className="p-4">
-          <C />
+          {/* 工具组件按需懒加载：分片拉取期间显示轻量占位，避免布局跳动 */}
+          <Suspense fallback={<div className="py-16 text-center text-[13px] text-muted">…</div>}>
+            <C />
+          </Suspense>
         </div>
       </div>
     </div>

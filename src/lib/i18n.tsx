@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react'
 import { TOOLS_L, CATEGORY_L, SECTION_L, SECTION_DESC_L, type ToolId } from './locales/registry'
-import { UI, COMMON, type UIStrings, type Locale } from './locales/ui'
+import { UI, type UIStrings, type Locale } from './locales/ui'
 import type { CategoryId, SectionId } from './registry'
 
 export type { Locale } from './locales/ui'

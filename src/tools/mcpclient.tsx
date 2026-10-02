@@ -23,7 +23,6 @@ import type {
  * 在人工视角下的同一个入口。
  */
 
-type L = typeof mcpclientL['zh']
 type Tab = 'tools' | 'resources' | 'prompts'
 
 interface TimelineItem {

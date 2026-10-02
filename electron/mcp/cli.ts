@@ -50,7 +50,7 @@ function printList(): void {
     lines.push(`[${g}]`)
     for (const t of items) {
       const params = Object.entries(t.inputSchema.properties)
-        .map(([k, v]) => (t.inputSchema.required?.includes(k) ? k : `${k}?`))
+        .map(([k]) => (t.inputSchema.required?.includes(k) ? k : `${k}?`))
         .join(', ')
       lines.push(`  ${t.name}(${params})`)
       lines.push(`      ${t.description}`)

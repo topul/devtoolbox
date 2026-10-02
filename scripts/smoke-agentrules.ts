@@ -143,7 +143,6 @@ for (const fw of ['React', 'Electron', 'Vite', 'Express', 'Vitest']) {
   ok(`框架识别到 ${fw}`, facts.frameworks.includes(fw), JSON.stringify(facts.frameworks))
 }
 
-const cmdNames = facts.commands.map((c) => c.name)
 ok('带上了包管理器安装命令', facts.commands.some((c) => c.kind === 'install' && c.command === 'pnpm install'), JSON.stringify(facts.commands.slice(0, 3)))
 ok('读到了 dev 脚本', facts.commands.some((c) => c.command === 'npm run dev'))
   ok('preview 归入开发', facts.commands.some((c) => c.name === 'preview' && c.kind === 'dev'))

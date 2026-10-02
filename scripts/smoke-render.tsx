@@ -39,52 +39,54 @@ const store = new Map<string, string>()
 const locales = ['zh', 'en'] as const
 let failures = 0
 
-// --- 导航结构自检 ----------------------------------------------------------
-// SECTIONS 与 SECTION_OF 是两处手写，这里保证它们不跑偏，且分组不重不漏
-{
-  const navProblems = verifyNavigation()
-  if (navProblems.length) {
-    failures++
-    console.log(`导航结构有问题：${navProblems.join(' | ')}`)
-  }
-  const covered = SECTIONS.reduce((n, s) => n + toolsInSection(s.id).length, 0)
-  if (covered !== TOOLS.length) {
-    failures++
-    console.log(`分组只覆盖了 ${covered}/${TOOLS.length} 个工具`)
-  }
-}
-
-for (const locale of locales) {
-  currentLocale = locale
-  for (const tool of TOOLS) {
-    const C = tool.component
-    try {
-      const html = renderToStaticMarkup(
-        <I18nProvider>
-          <C />
-        </I18nProvider>,
-      )
-      const problems: string[] = []
-      if (!html.trim()) problems.push('empty markup')
-      if (html.includes('>undefined<')) problems.push('rendered literal "undefined"')
-      // Note only: a few tools legitimately render pure ASCII on first paint
-      // (e.g. the JWT tool shows "Header / Payload" placeholders).
-      if (locale === 'zh' && !/[\u4e00-\u9fff]/.test(html)) {
-        console.log(`[zh] ${tool.id.padEnd(14)} note: first paint is ASCII-only (labels are technical terms)`)
-      }
-      if (locale === 'en' && /[\u4e00-\u9fff]/.test(html)) {
-        const sample = html.match(/[\u4e00-\u9fff]+/g)!.slice(0, 6).join(' ')
-        problems.push(`en render still contains Chinese: ${sample}`)
-      }
-      if (problems.length) {
-        failures++
-        console.log(`[${locale}] ${tool.id.padEnd(14)} ${problems.join(' | ')}`)
-      }
-    } catch (err) {
+async function main() {
+  // --- 导航结构自检 ----------------------------------------------------------
+  // SECTIONS 与 SECTION_OF 是两处手写，这里保证它们不跑偏，且分组不重不漏
+  {
+    const navProblems = verifyNavigation()
+    if (navProblems.length) {
       failures++
-      console.log(`[${locale}] ${tool.id.padEnd(14)} THREW: ${(err as Error).message}`)
+      console.log(`导航结构有问题：${navProblems.join(' | ')}`)
+    }
+    const covered = SECTIONS.reduce((n, s) => n + toolsInSection(s.id).length, 0)
+    if (covered !== TOOLS.length) {
+      failures++
+      console.log(`分组只覆盖了 ${covered}/${TOOLS.length} 个工具`)
     }
   }
+
+  for (const locale of locales) {
+    currentLocale = locale
+    for (const tool of TOOLS) {
+      // registry 里的 component 是 lazy 的，同步 SSR 拿不到 —— 直接 await load 工厂
+      const C = (await tool.load()).default
+      try {
+        const html = renderToStaticMarkup(
+          <I18nProvider>
+            <C />
+          </I18nProvider>,
+        )
+        const problems: string[] = []
+        if (!html.trim()) problems.push('empty markup')
+        if (html.includes('>undefined<')) problems.push('rendered literal "undefined"')
+        // Note only — a few tools legitimately render pure ASCII on first paint
+        // (e.g. the JWT tool shows "Header / Payload" placeholders).
+        if (locale === 'zh' && !/[\u4e00-\u9fff]/.test(html)) {
+          console.log(`[zh] ${tool.id.padEnd(14)} note: first paint is ASCII-only (labels are technical terms)`)
+        }
+        if (locale === 'en' && /[\u4e00-\u9fff]/.test(html)) {
+          const sample = html.match(/[\u4e00-\u9fff]+/g)!.slice(0, 6).join(' ')
+          problems.push(`en render still contains Chinese: ${sample}`)
+        }
+        if (problems.length) {
+          failures++
+          console.log(`[${locale}] ${tool.id.padEnd(14)} ${problems.join(' | ')}`)
+        }
+      } catch (err) {
+        failures++
+        console.log(`[${locale}] ${tool.id.padEnd(14)} THREW: ${(err as Error).message}`)
+      }
+    }
 
   // whole-app render (home view)
   try {
@@ -119,5 +121,8 @@ for (const locale of locales) {
   }
 }
 
-console.log(failures === 0 ? `\nOK: ${TOOLS.length * locales.length} tool renders + 2 app renders passed` : `\n${failures} problem(s)`)
-process.exit(failures === 0 ? 0 : 1)
+  console.log(failures === 0 ? `\nOK: ${TOOLS.length * locales.length} tool renders + 2 app renders passed` : `\n${failures} problem(s)`)
+  process.exit(failures === 0 ? 0 : 1)
+}
+
+main()

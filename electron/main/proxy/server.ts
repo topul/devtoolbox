@@ -18,7 +18,6 @@ import { RuleSet, applyHeaderOps, replaceText } from './rules'
 import type {
   InterceptDecision,
   InterceptRequest,
-  ProxyRule,
   ProxySession,
 } from '../../../src/lib/proxy-types'
 

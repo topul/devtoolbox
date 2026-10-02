@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef } from 'react'
-import { Btn, TA, Input, ErrorNote, CopyBtn, Select } from '../components/ui'
+import { Btn, TA, Input, ErrorNote, CopyBtn } from '../components/ui'
 import { useLocalized } from '../lib/i18n'
 import { convertersL } from '../lib/locales/converters'
 import { CHAIN_CODECS, chainDecode, chainEncode, type ChainCodec } from '../lib/toolkit'

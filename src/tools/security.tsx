@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import { Panel, Btn, TA, Input, Select, ErrorNote, KV, CopyBtn, Stat } from '../components/ui'
+import { Panel, Input, Select, KV, CopyBtn, ErrorNote } from '../components/ui'
 import { securityL } from '../lib/locales/security'
 import { useLocalized } from '../lib/i18n'
 import { chmodFromBits, chmodFromOctal, cidrInfo, type ChmodPerm } from '../lib/toolkit'

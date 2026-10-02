@@ -127,8 +127,7 @@ export interface ChmodEntry {
   symbolic: string
 }
 
-const CHMOD_BITS = ['ur', 'uw', 'ux', 'gr', 'gw', 'gx', 'or', 'ow', 'ox'] as const
-export type ChmodBit = (typeof CHMOD_BITS)[number]
+export type ChmodBit = 'ur' | 'uw' | 'ux' | 'gr' | 'gw' | 'gx' | 'or' | 'ow' | 'ox'
 export type ChmodPerm = Record<ChmodBit, boolean>
 
 export function chmodFromBits(perm: ChmodPerm): ChmodEntry {

@@ -1,6 +1,6 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import QRCode from 'qrcode'
-import { Panel, Btn, TA, Input, Select, Stat, ErrorNote, CopyBtn } from '../components/ui'
+import { Btn, TA, Input, Select, Stat, ErrorNote, CopyBtn } from '../components/ui'
 import { useLocalized, useI18n } from '../lib/i18n'
 import { genL } from '../lib/locales/generators'
 import { fakeRowsToCsv, generateFakeRows, generatePassword, generateUuids } from '../lib/toolkit'
@@ -67,6 +67,8 @@ export function PasswordTool() {
     }
   }
 
+  // 仅挂载时生成一次：后续重生成走「重新生成」按钮，不是配置变化的联动
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(gen, [])
   const s = strength(bits)
 
@@ -177,6 +179,8 @@ export function FakeDataTool() {
       enDomains: l.enDomains,
     }, parseInt(count) || 10))
   }
+  // 同上：挂载即生成一批，之后只走按钮触发，避免输入 count 时反复重建行
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(gen, [])
 
   const asJson = JSON.stringify(rows, null, 2)

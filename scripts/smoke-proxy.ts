@@ -21,7 +21,7 @@ import { gzipSync } from 'node:zlib'
 import { CaptureProxy } from '../electron/main/proxy/server'
 import { performRequest } from '../electron/main/http'
 import { createRule } from '../electron/main/proxy/rules'
-import type { InterceptDecision, InterceptRequest, ProxyRule, ProxySession } from '../src/lib/proxy-types'
+import type { InterceptDecision, InterceptRequest, ProxySession } from '../src/lib/proxy-types'
 
 let passed = 0
 const failures: string[] = []
