@@ -2,9 +2,11 @@
 
 > A local, AI-first toolkit for developers and security researchers. Built with Electron + React + TypeScript.
 
+[![CI](https://github.com/topul/devtoolbox/actions/workflows/ci.yml/badge.svg)](https://github.com/topul/devtoolbox/actions/workflows/ci.yml)
+
 [🇨🇳 中文文档](./README.zh-CN.md)
 
-DevOps Toolbox opens straight into an AI chat. Ask in plain language and it can call its built-in tools — HTTP client, traffic capture, encoding/hashing, JWT, recon, and more — to actually get the job done. Beyond the chat, it also ships as a standalone toolbox of **53 utilities across 11 categories**.
+DevOps Toolbox opens straight into an AI chat. Ask in plain language and it can call its built-in tools — HTTP client, traffic capture, encoding/hashing, JWT, recon, and more — to actually get the job done. Beyond the chat, it also ships as a standalone toolbox of **65 utilities across 11 categories**.
 
 ## Features
 
@@ -70,6 +72,7 @@ The streaming chat runs on a custom IPC transport (the AI SDK's `useChat` wired 
 
 ```bash
 npm run typecheck       # type-check the renderer and node sides
+npm run lint            # ESLint (unused code, hooks misuse)
 npm run i18n:check      # ensure zh/en locale keys stay in sync
 npm run smoke:render    # SSR smoke test for every tool (both languages)
 npm run smoke:chat      # streaming chat

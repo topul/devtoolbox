@@ -2,9 +2,11 @@
 
 > 面向开发者与安全研究员的本地 AI 优先工具箱，基于 Electron + React + TypeScript 构建。
 
+[![CI](https://github.com/topul/devtoolbox/actions/workflows/ci.yml/badge.svg)](https://github.com/topul/devtoolbox/actions/workflows/ci.yml)
+
 [🇺🇸 English](./README.md)
 
-DevOps Toolbox 打开即进入 AI 对话。用自然语言提问，它即可调用内置工具——HTTP 客户端、流量抓包、编解码/哈希、JWT、侦察等——真正把事办成。除对话外，它本身也是一套**覆盖 11 大类、53 个工具**的独立工具箱。
+DevOps Toolbox 打开即进入 AI 对话。用自然语言提问，它即可调用内置工具——HTTP 客户端、流量抓包、编解码/哈希、JWT、侦察等——真正把事办成。除对话外，它本身也是一套**覆盖 11 大类、65 个工具**的独立工具箱。
 
 ## 功能特性
 
@@ -70,6 +72,7 @@ scripts/              冒烟测试与真机截图 / 布局体检脚本
 
 ```bash
 npm run typecheck       # 渲染层与主进程两侧类型检查
+npm run lint            # ESLint（死代码 / hooks 误用）
 npm run i18n:check      # 校验中英文词条键结构一致
 npm run smoke:render    # 全部工具的 SSR 冒烟（双语）
 npm run smoke:chat      # 流式对话
