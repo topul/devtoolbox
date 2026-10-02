@@ -14,3 +14,7 @@ devtoolbox-extension-*.zip
 
 # Local assistant workspace notes
 .workbuddy/
+
+# 编辑器本地配置
+.vscode/
+.idea/

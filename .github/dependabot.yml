@@ -1,0 +1,26 @@
+version: 2
+updates:
+  # 依赖更新：每周一早上（北京时间）开 PR；Electron / Vite 这类大版本单独一条，
+  # 不和一堆小更新混在一起，review 起来能单独看破坏性变更
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: "Asia/Shanghai"
+    open-pull-requests-limit: 5
+    labels: [dependencies]
+    commit-message:
+      prefix: chore(deps)
+
+  # Actions 版本漂移也会悄悄坏 CI：checkout / setup-node 与 ci.yml、build.yml 共用
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      timezone: "Asia/Shanghai"
+    labels: [ci]
+    commit-message:
+      prefix: chore(ci)

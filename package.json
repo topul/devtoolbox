@@ -27,6 +27,7 @@
     "release": "npm run build && electron-builder --publish never",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json",
     "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
     "i18n:check": "esbuild src/lib/locales/*.ts --outdir=node_modules/.cache/locales --format=esm --out-extension:.js=.mjs --log-level=error && node scripts/check-locale-parity.mjs node_modules/.cache/locales",
     "smoke:assets": "node scripts/check-built-assets.mjs",
     "smoke:main": "node scripts/check-main-imports.mjs out/main/index.js out/preload/index.cjs",
@@ -84,9 +85,12 @@
     "electron": "^41.7.1",
     "electron-builder": "^26.15.3",
     "electron-vite": "^5.0.0",
+    "eslint": "^10.11.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.6.3",
+    "typescript-eslint": "^8.71.0",
     "vite": "^6.4.3"
   },
   "allowScripts": {
