@@ -15,6 +15,8 @@ import { buildClientConfig, configHints, resolveMcpLaunch } from '../mcp/paths'
 import { safeExternalUrl } from '../../src/lib/external-link'
 import { CaptureProxy } from './proxy/server'
 import { SystemProxyManager } from './systemproxy'
+import { probeTls } from './tls-probe'
+import type { TlsProbe } from '../../src/lib/tls-types'
 import { startSse, abortSse } from './sse-client'
 import { connectWs, sendWs, closeWs } from './ws-client'
 import type { SseSendSpec } from '../../src/lib/sse-types'
@@ -554,6 +556,21 @@ function setupWsIpc(): void {
 /* ================= SSE 调试 ================= */
 
 function setupSseIpc(): void {
+  ipcMain.handle('tls:probe', async (_e, host: string, port: number, timeoutMs: number) => {
+    // 探测本身不会抛（连接失败也返回结构化结果），这里只兜住极端情况
+    try {
+      return await probeTls(String(host ?? ''), Number(port) || 0, Number(timeoutMs) || 10000)
+    } catch (err) {
+      return {
+        ok: false, errorCode: 'PROBE_FAILED', errorDetail: (err as Error).message,
+        host: String(host ?? ''), port: Number(port) || 0,
+        protocol: '', cipher: '', cipherName: '', cipherSuiteName: '', alpn: '', sni: '',
+        certs: [], elapsedMs: 0, authorized: false, authorizationError: '',
+        isIpHost: false,
+      } satisfies TlsProbe
+    }
+  })
+
   ipcMain.handle('sse:send', (e, spec: SseSendSpec): void => {
     const { sender } = e
     startSse(spec, (evt) => {

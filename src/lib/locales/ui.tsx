@@ -1,4 +1,5 @@
 import React from 'react'
+import type { PaletteCommandKind } from '../palette'
 
 /**
  * UI shell strings (sidebar, home view, updater toast, common buttons).
@@ -38,6 +39,8 @@ export interface UIStrings {
   heroChips: string[]
   /** ⌘K 命令面板：空结果提示 */
   cmdkEmpty: string
+  /** ⌘K 命令面板：命令型条目分组标题（切主题/语言等全局动作） */
+  cmdkActions: string
   /** ⌘K 命令面板：快捷导航分组标题 */
   quickNav: string
   /** ⌘K 命令面板：底部按键提示（↑↓ / ↵） */
@@ -85,6 +88,7 @@ export const UI: Record<Locale, UIStrings> = {
     jumpToSection: '跳到分组',
     heroChips: ['MCP 服务端', '流式对话', '工具调用', 'Agent 规则', 'JSON', 'JWT'],
     cmdkEmpty: '没有匹配的工具',
+    cmdkActions: '操作',
     quickNav: '快捷入口',
     cmdkSelect: '选择',
     cmdkOpen: '打开',
@@ -129,6 +133,7 @@ export const UI: Record<Locale, UIStrings> = {
     jumpToSection: 'Jump to group',
     heroChips: ['MCP server', 'Streaming chat', 'Tool calling', 'Agent rules', 'JSON', 'JWT'],
     cmdkEmpty: 'No matching tools',
+    cmdkActions: 'Actions',
     quickNav: 'Quick access',
     cmdkSelect: 'Select',
     cmdkOpen: 'Open',
@@ -154,6 +159,13 @@ export const COMMON: Record<Locale, {
   imageBlocked: string
   /** 抽屉 / 弹层关闭按钮的无障碍标签 */
   close: string
+  /** 危险操作的行内二次确认（如「清空」点一次变「确认清空 / 取消」） */
+  confirm: string
+  cancel: string
+  /** 结果区被截断时的提示：已显示多少、共多少 */
+  showingOf: (shown: number, total: number) => string
+  /** 结果区空状态的引导：告诉用户这里该放什么 */
+  emptyResult: string
 }> = {
   zh: {
     copy: '复制',
@@ -161,6 +173,10 @@ export const COMMON: Record<Locale, {
     openInBrowser: '在浏览器中打开',
     imageBlocked: '图片未加载（外链资源被安全策略拦截）',
     close: '关闭',
+    confirm: '确认',
+    cancel: '取消',
+    showingOf: (shown, total) => `已显示 ${shown} / ${total} 行`,
+    emptyResult: '结果会显示在这里',
   },
   en: {
     copy: 'Copy',
@@ -168,5 +184,33 @@ export const COMMON: Record<Locale, {
     openInBrowser: 'Open in browser',
     imageBlocked: 'Image not loaded (external resource blocked by policy)',
     close: 'Close',
+    confirm: 'Confirm',
+    cancel: 'Cancel',
+    showingOf: (shown, total) => `Showing ${shown} of ${total} lines`,
+    emptyResult: 'Result will appear here',
+  },
+}
+
+/**
+ * 命令面板「命令型条目」的文案。
+ *
+ * 按 kind 取（而不是按 id）：新增命令时只补一个 kind 的文案，
+ * 不用记得给每条命令各写一遍 —— 漏一处就是界面上少一段。
+ * 双语键完全一致由 i18n:check 把关。
+ */
+export const PALETTE_LABEL: Record<Locale, Record<PaletteCommandKind, string>> = {
+  zh: {
+    theme: '切换主题',
+    locale: '切换语言',
+    zoom: '界面缩放',
+    sidebar: '折叠 / 展开侧栏',
+    update: '检查更新',
+  },
+  en: {
+    theme: 'Toggle theme',
+    locale: 'Switch language',
+    zoom: 'UI scale',
+    sidebar: 'Collapse / expand sidebar',
+    update: 'Check for updates',
   },
 }

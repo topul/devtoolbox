@@ -1,5 +1,6 @@
 // Electron bridge types, as seen from the renderer process
 import type { HttpRequestResult, HttpRequestSpec, HttpTransferAPI } from './lib/http-types'
+import type { TlsAPI } from './lib/tls-types'
 import type { SseAPI } from './lib/sse-types'
 import type { WsAPI } from './lib/ws-types'
 import type { ChatEvent, ChatSendResult, ChatSendSpec, ChatToolServer, ChatTraceResult, McpProbeResult } from './lib/chat-types'
@@ -120,6 +121,7 @@ export interface ElectronAPI {
   quitAndInstall: () => Promise<void>
   onUpdaterEvent: (callback: (evt: UpdaterEvent) => void) => () => void
   http: HttpAPI
+  tls: TlsAPI
   sse: SseAPI
   ws: WsAPI
   proxy: ProxyAPI

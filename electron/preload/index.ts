@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type { HttpRequestResult, HttpRequestSpec, HttpTransferAPI } from '../../src/lib/http-types'
+import type { TlsAPI } from '../../src/lib/tls-types'
 import type { SseAPI } from '../../src/lib/sse-types'
 import type { WsAPI } from '../../src/lib/ws-types'
 import type { ChatEvent, ChatSendResult, ChatSendSpec, ChatToolServer, ChatTraceResult, McpProbeResult } from '../../src/lib/chat-types'
@@ -131,6 +132,7 @@ export interface ElectronAPI {
   quitAndInstall: () => Promise<void>
   onUpdaterEvent: (callback: (evt: UpdaterEvent) => void) => () => void
   http: HttpAPI
+  tls: TlsAPI
   sse: SseAPI
   ws: WsAPI
   proxy: ProxyAPI
@@ -163,6 +165,9 @@ const api: ElectronAPI = {
     exportFile: (payload) => ipcRenderer.invoke('http:export-file', payload),
     importFile: (title) => ipcRenderer.invoke('http:import-file', title),
     pickFile: () => ipcRenderer.invoke('http:pick-file'),
+  },
+  tls: {
+    probe: (host, port, timeoutMs) => ipcRenderer.invoke('tls:probe', host, port, timeoutMs),
   },
   sse: {
     send: (spec) => ipcRenderer.invoke('sse:send', spec),

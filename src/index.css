@@ -28,9 +28,12 @@
  * 无意义改动。这里只换值：中性底色 + 翡翠绿 accent，对比度全部对齐 WCAG AA
  * （正文 ≥7:1，次要文字 ≥4.5:1）。
  *
- * 对比度速查（AA 阈值 4.5:1，正文 AAA 阈值 7:1）：
+ * 对比度速查（数值由 scripts/smoke-ux 实算，改色后跑一次确认）：
  *   暗色 正文 #cbd5e1 on #14171c ≈ 10.9:1 · muted #8a97a8 ≈ 5.4:1
- *   亮色 正文 #334155 on #ffffff ≈ 8.4:1 · muted #64748b ≈ 4.8:1
+ *   亮色 正文 #334155 on #ffffff ≈ 8.4:1 · muted #5b6472 on #f1f3f6 ≈ 5.4:1
+ *
+ * 注意：次要文字要按**实际落点底色**（--c-bg / --c-panel-2）算，不是纯白。
+ * 旧的 muted #64748b 在 #f1f3f6 上只有 4.28:1，达不到 4.5，已压深为 #5b6472。
  */
 
 :root,
@@ -60,7 +63,7 @@
   --c-scrollbar-hover: rgba(148, 163, 184, 0.4);
   --c-selection-bg: rgba(52, 211, 153, 0.25);
   --c-selection-fg: #ecfdf5;
-  --c-focus: rgba(52, 211, 153, 0.5);
+  --c-focus: #34d399;
   /* glow 仅保留变量兼容旧类，值已归零（终端辉光效果下线） */
   --glow-strength: 0;
   --glow-spread: 0;
@@ -71,7 +74,7 @@
   --c-hl-fn: #7dd3fc;
   --c-hl-typ: #67e8f9;
   --c-hl-var: #e879f9;
-  --c-hl-com: #6b7a8d;
+  --c-hl-com: #7d8b9c;
   color-scheme: dark;
 }
 
@@ -81,10 +84,10 @@
   --c-text-bright: #0f172a;
   --c-text-dim: #475569;
   --c-text-card: #0f172a;
-  --c-phosphor: #059669;
-  --c-phosphor-hover: #047857;
+  --c-phosphor: #047857;
+  --c-phosphor-hover: #065f46;
   --c-phosphor-glow: #047857;
-  --c-phosphor-dim: #a7f3d0;
+  --c-phosphor-dim: #059669;
   --c-phosphor-faint: rgba(5, 150, 105, 0.08);
   --c-panel: #ffffff;
   --c-panel-2: #f1f3f6;
@@ -92,7 +95,7 @@
   --c-line-soft: #eceff3;
   --c-amber: #b45309;
   --c-danger: #dc2626;
-  --c-muted: #64748b;
+  --c-muted: #5b6472;
   --c-on-phosphor: #ffffff;
   --c-overlay: rgba(15, 23, 42, 0.4);
   --c-scanline: rgba(0, 0, 0, 0);
@@ -101,7 +104,8 @@
   --c-scrollbar-hover: rgba(15, 23, 42, 0.32);
   --c-selection-bg: rgba(5, 150, 105, 0.18);
   --c-selection-fg: #06281c;
-  --c-focus: rgba(5, 150, 105, 0.4);
+  /* 焦点环必须是不透明实色：半透明色合成后对比度会塌到 1.6:1，键盘用户看不见焦点在哪 */
+  --c-focus: #047857;
   --glow-strength: 0;
   --glow-spread: 0;
   /* 亮色下把同一套语义色压深，否则黄/绿在白底上几乎看不见 */
@@ -176,9 +180,12 @@ textarea { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, C
 /* 代码场景显式找回落等宽字体（body 已换成无衬线） */
 pre, code, kbd, samp { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
 
+/* 焦点环：2px 实线 + 2px 外偏移。
+   旧值是 1px 且 offset 为负，环紧贴边框内侧、几乎贴字，等于没有焦点指示。
+   offset 取正还需要各控件留出border 余量（FIELD_CLS 的 focus:border-phosphor/50 也在标示聚焦态）。 */
 textarea:focus, input:focus, select:focus, button:focus-visible {
-  outline: 1px solid var(--c-focus);
-  outline-offset: -1px;
+  outline: 2px solid var(--c-focus);
+  outline-offset: 2px;
 }
 
 /* ==================== 宽屏适配 ==================== */
@@ -248,6 +255,27 @@ textarea:focus, input:focus, select:focus, button:focus-visible {
 .anim-drawer-out  { animation: drawer-out var(--dur-fast) ease-in both; }
 .anim-pop-in      { animation: pop-in var(--dur-base) var(--ease-out) both; }
 .anim-pop-out     { animation: pop-out var(--dur-fast) ease-in both; }
+
+/*
+ * 动效降级：系统开了「减少动态效果」就把所有动画与过渡压到接近 0。
+ *
+ * 为什么要做（评审 P2）：抽屉/面板的位移动画对前庭功能敏感的用户不只是"晃"，
+ * 而是会引发眩晕与恶心。`animation-duration: 0.01ms` 而不是 `none`——后者会让
+ * 依赖 animationend 的逻辑收不到事件；压到0.01ms 相当于动画立刻结束但事件照发。
+ *
+ * transition 也要压：折叠区（collapse-grid）的展开收起是纯 transition，
+ * 只关 animation 关不掉它。
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
 
 /* 折叠容器高度过渡：grid-rows 0fr/1fr 切换（配合 ui.tsx 的 Collapse） */
 .collapse-grid {

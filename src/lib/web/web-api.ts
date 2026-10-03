@@ -151,6 +151,14 @@ export function buildWebApi(): ElectronAPI {
         hints: [],
       }),
     },
+    tls: {
+    probe: async () => ({
+      ok: false, errorCode: 'DESKTOP_ONLY', errorDetail: 'TLS probing is not available in the browser build',
+      host: '', port: 443, protocol: '', cipher: '', cipherName: '', cipherSuiteName: '',
+      alpn: '', sni: '', certs: [], elapsedMs: 0, authorized: false,
+      authorizationError: '', isIpHost: false,
+    }),
+  },
     mcpClient: {
       connect: async () => {
         throw new Error('浏览器版不支持 stdio MCP 连接，请使用桌面版或 Streamable HTTP 服务端')
