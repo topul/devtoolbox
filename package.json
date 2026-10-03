@@ -36,6 +36,11 @@
     "smoke:mcpclient": "esbuild scripts/smoke-mcpclient.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/smoke-mcpclient.mjs --log-level=error && node node_modules/.cache/smoke-mcpclient.mjs",
     "smoke:chat": "esbuild scripts/smoke-chat.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/smoke-chat.mjs --log-level=error && node node_modules/.cache/smoke-chat.mjs",
     "smoke:chatstore": "esbuild scripts/smoke-chatstore.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/smoke-chatstore.mjs --log-level=error && node node_modules/.cache/smoke-chatstore.mjs",
+    "smoke:sqlcheck": "esbuild scripts/smoke-sqlcheck.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/smoke-sqlcheck.mjs --log-level=error && node node_modules/.cache/smoke-sqlcheck.mjs",
+    "smoke:tls": "esbuild scripts/smoke-tls.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/smoke-tls.mjs --log-level=error --external:node-forge && node node_modules/.cache/smoke-tls.mjs",
+    "smoke:har": "esbuild scripts/smoke-har.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/smoke-har.mjs --log-level=error && node node_modules/.cache/smoke-har.mjs",
+    "smoke:graphql": "esbuild scripts/smoke-graphql.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/smoke-graphql.mjs --log-level=error && node node_modules/.cache/smoke-graphql.mjs",
+    "smoke:regexreplace": "esbuild scripts/smoke-regexreplace.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/smoke-regexreplace.mjs --log-level=error && node node_modules/.cache/smoke-regexreplace.mjs",
     "smoke:schema": "esbuild scripts/smoke-schema.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/smoke-schema.mjs --log-level=error && node node_modules/.cache/smoke-schema.mjs",
     "smoke:httpcodec": "esbuild scripts/smoke-httpcodec.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/smoke-httpcodec.mjs --log-level=error && node node_modules/.cache/smoke-httpcodec.mjs",
     "smoke:httpenv": "esbuild scripts/smoke-httpenv.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/smoke-httpenv.mjs --log-level=error && node node_modules/.cache/smoke-httpenv.mjs",
@@ -54,7 +59,8 @@
     "smoke:render": "esbuild scripts/smoke-render.tsx --bundle --platform=node --format=esm --outfile=node_modules/.cache/smoke.mjs --loader:.tsx=tsx --jsx=automatic --log-level=error --external:qrcode --external:react --external:react-dom --external:react/jsx-runtime --external:cmdk --external:@radix-ui/* --external:react-remove-scroll --external:aria-hidden && node node_modules/.cache/smoke.mjs",
     "smoke:proxy": "esbuild scripts/smoke-proxy.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/smoke-proxy.mjs --log-level=error --external:node-forge && node node_modules/.cache/smoke-proxy.mjs",
     "smoke:systemproxy": "esbuild scripts/check-systemproxy.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/check-systemproxy.mjs --log-level=error && node node_modules/.cache/check-systemproxy.mjs",
-    "smoke:chatui": "esbuild scripts/smoke-chatui.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/smoke-chatui.mjs --log-level=error --loader:.tsx=tsx --jsx=automatic --external:react --external:react-dom --external:react/jsx-runtime && node node_modules/.cache/smoke-chatui.mjs"
+    "smoke:chatui": "esbuild scripts/smoke-chatui.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/smoke-chatui.mjs --log-level=error --loader:.tsx=tsx --jsx=automatic --external:react --external:react-dom --external:react/jsx-runtime && node node_modules/.cache/smoke-chatui.mjs",
+    "smoke:ux": "esbuild scripts/smoke-ux.tsx --bundle --platform=node --format=esm --outfile=node_modules/.cache/smoke-ux.mjs --log-level=error --loader:.tsx=tsx --jsx=automatic --external:qrcode --external:react --external:react-dom --external:react/jsx-runtime && node node_modules/.cache/smoke-ux.mjs"
   },
   "dependencies": {
     "@ai-sdk/react": "^2.0.264",

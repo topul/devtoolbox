@@ -51,6 +51,36 @@ ipcMain.handle('theme:get', () => 'dark')
 ipcMain.handle('theme:set', () => 'dark')
 ipcMain.handle('updater:check', () => undefined)
 // 请求导入/导出：只在点击时才会用到，打桩是为了截图时点得到、且不刷 No handler 噪声
+ipcMain.handle('tls:probe', () => ({
+  ok: true, host: 'example.com', port: 443,
+  protocol: 'TLSv1.3',
+  cipher: 'TLS_AES_256_GCM_SHA384',
+  cipherName: 'TLS_AES_256_GCM_SHA384',
+  cipherSuiteName: '0x1302',
+  alpn: 'h2', sni: 'example.com',
+  certs: [
+    {
+      subject: '*.example.com', issuer: 'R3',
+      notBefore: '2026-01-15T00:00:00.000Z', notAfter: '2027-02-15T00:00:00.000Z',
+      daysLeft: 221, serial: '0A1B2C3D4E5F60718293A4B5C6D7E8F9012345678',
+      domains: ['*.example.com', 'example.com'], isCa: false,
+      fingerprint256: '9F:2C:4A:1B:8D:33:5E:7A:0C:91:2F:4D:88:B3:5A:19:E7:42:C6:11:8D:95:A3:0F:7B:24:E1:53:6C:9A:2D:80:BF:C1:37',
+      fingerprint1: '4A:7C:19:E3:52:8B:0D:6F:A1:94:27:C3:58:BE:71:0A:9D:84:F2:36:5C:1B:E7:40:D3:A8:5C',
+      sigAlg: 'ecdsa-with-SHA384', pubkeyAlg: 'EC (secp384r1)', keyBits: 384,
+    },
+    {
+      subject: 'R3', issuer: 'ISRG Root X1',
+      notBefore: '2020-03-30T00:00:00.000Z', notAfter: '2035-03-30T00:00:00.000Z',
+      daysLeft: 3179, serial: '4098F3B4A8C5D2E7F1A9B3C6D8E2F40516273849',
+      domains: [], isCa: true,
+      fingerprint256: 'A0:1B:2C:3D:4E:5F:60:71:82:93:A4:B5:C6:D7:E8:F9:0A:1B:2C:3D:4E:5F:60:71:82:93:A4:B5:C6:D7:E8:F9',
+      fingerprint1: '1B:2C:3D:4E:5F:60:71:82:93:A4:B5:C6:D7:E8:F9:0A:1B:2C:3D:4E:5F:60:71:82:93',
+      sigAlg: 'sha256WithRSAEncryption', pubkeyAlg: 'RSA', keyBits: 2048,
+    },
+  ],
+  elapsedMs: 86, authorized: true, authorizationError: '', isIpHost: false,
+}))
+
 ipcMain.handle('http:export-file', () => ({ ok: false, canceled: true, path: '' }))
 ipcMain.handle('http:import-file', () => ({ ok: false, canceled: true, path: '' }))
 ipcMain.handle('proxy:state', () => ({
