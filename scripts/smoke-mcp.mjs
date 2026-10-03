@@ -58,6 +58,8 @@ const FIXTURES = {
   hash: { text: 'abc', algorithm: 'SHA256' },
   hmac: { text: 'message', key: 'secret', algorithm: 'SHA256' },
   aes_crypt: { text: 'hello', key: 'k', mode: 'ECB', op: 'encrypt' },
+  jwt_sign: { op: 'sign', algo: 'HS256', key: 'secret', payload: '{"sub":"1234567890","name":"Ada"}' },
+  totp: { op: 'generate', secret: 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ' },
   jwt_decode: {
     token:
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c',
@@ -86,6 +88,18 @@ const FIXTURES = {
     target: 'typescript',
   },
   diff: { a: 'a\nb\nc', b: 'a\nx\nc', format: 'text' },
+  // GraphQL：解析一份 introspection 响应（不需要网络）
+  graphql_parse_schema: { payload: '{"data":{"__schema":{"types":[{"kind":"OBJECT","name":"Query","fields":[{"name":"user","description":"按 id 取用户","type":{"kind":"OBJECT","name":"User"},"args":[{"name":"id","type":{"kind":"SCALAR","name":"ID"},"defaultValue":null}],"enumValues":null}],"enumValues":null},{"kind":"OBJECT","name":"User","fields":[{"name":"email","description":null,"type":{"kind":"SCALAR","name":"String"},"args":[],"enumValues":null}],"enumValues":null}],"types":[]}}}' },
+  // HAR：解析一份 Chrome 风格样本
+  har_analyze: { har: '{"log":{"version":"1.2","creator":{"name":"DevTools"},"pages":[],"entries":[{"startedDateTime":"2026-03-01T10:00:00.000Z","time":120,"_resourceType":"document","request":{"method":"GET","url":"https://example.com/a.js","headers":[{"name":"Host","value":"example.com"}],"queryString":[]},"response":{"status":200,"statusText":"OK","headers":[{"name":"content-type","value":"text/javascript"}],"content":{"size":2048,"mimeType":"text/javascript","text":"console.log(1)"},"redirectURL":"","headersSize":180,"bodySize":512},"timings":{"blocked":1,"dns":10,"connect":20,"send":1,"wait":80,"receive":8,"ssl":15},"serverIPAddress":"93.184.216.34","connection":"443"}]}}' },
+  // TLS：探一个本地不存在的端口（离线可重复，失败也是结构化结果）
+  tls_inspect: { host: '127.0.0.1', port: 1, timeoutMs: 1500 },
+  // SQL：静态检查
+  sql_lint: { sql: "SELECT * FROM users WHERE name LIKE '%x%' AND user_id = '123' LIMIT 100000" },
+  // SQL：解读 EXPLAIN 文本表
+  sql_explain: { explain: '| 1 | SIMPLE | users | ALL | 152000 | Using where |', dialect: 'mysql' },
+
+  regex_replace: { pattern: '(\\w+)\\s*=\\s*(\\w+)', replacement: '$2 = $1', text: 'foo=1\nbar=22', flags: 'g' },
   regex_test: { pattern: '(\\d+)-(\\d+)', text: 'call 12-34 and 56-78', flags: 'g' },
 
   timestamp_convert: { timestamp: '1758160000' },

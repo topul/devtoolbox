@@ -240,6 +240,50 @@ export const MCP_TOOLS: McpToolSpec[] = [
     },
   },
   {
+    name: 'jwt_sign',
+    title: 'JWT 签名 / 验签',
+    titleEn: 'JWT sign / verify',
+    description:
+      '用 HS256/HS384/HS512 签发 JWT，或校验已有 token 的签名。验签时会检测算法混淆（声明 HS256 实用 RS256 之类）。不支持 RS/ES/PS —— 那些需要私钥。',
+    descriptionEn:
+      'Issue a JWT with HS256/HS384/HS512, or verify the signature of an existing token. Verification flags algorithm confusion (e.g. a token declaring HS256). RS/ES/PS are not supported because they need a private key.',
+    group: 'crypto',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        op: p('string', '操作', 'Operation', { enum: ['sign', 'verify'], default: 'sign' }),
+        algo: p('string', '签名算法', 'Signing algorithm', { enum: ['HS256', 'HS384', 'HS512'], default: 'HS256' }),
+        key: p('string', 'HMAC 密钥', 'HMAC secret'),
+        payload: p('string', 'Payload（JSON 字符串）', 'Payload (JSON string)'),
+        token: p('string', '要校验的 JWT', 'JWT to verify'),
+      },
+      required: ['op', 'key'],
+    },
+  },
+  {
+    name: 'totp',
+    title: 'TOTP 动态验证码',
+    titleEn: 'TOTP codes',
+    description:
+      '离线生成或校验 TOTP 2FA 验证码。secret 支持 Base32 文本或整条 otpauth:// 链接；参数默认 SHA-1 / 6 位 / 30 秒，与 Google、GitHub 等主流验证器兼容。纯本地计算，不发起任何网络请求。',
+    descriptionEn:
+      'Generate or verify TOTP 2FA codes offline. The secret accepts Base32 text or a whole otpauth:// link; defaults are SHA-1 / 6 digits / 30s, matching Google, GitHub and other mainstream authenticators. Purely local — no network calls.',
+    group: 'crypto',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        op: p('string', '操作', 'Operation', { enum: ['generate', 'verify'], default: 'generate' }),
+        secret: p('string', 'Base32 密钥或 otpauth:// 链接', 'Base32 secret or otpauth:// link'),
+        code: p('string', '要校验的验证码', 'Code to verify'),
+        digits: p('number', '位数', 'Digits', { default: 6 }),
+        period: p('number', '时间步长（秒）', 'Time step (seconds)', { default: 30 }),
+        algo: p('string', '摘要算法', 'Digest algorithm', { enum: ['SHA1', 'SHA256', 'SHA512'], default: 'SHA1' }),
+      },
+      required: ['op', 'secret'],
+    },
+  },
+
+  {
     name: 'jwt_decode',
     title: 'JWT 解码',
     titleEn: 'JWT decode',
@@ -455,6 +499,119 @@ export const MCP_TOOLS: McpToolSpec[] = [
         flags: p('string', '标志位', 'Flags', { default: 'g' }),
       },
       required: ['pattern', 'text'],
+    },
+  },
+
+  {
+    name: 'regex_replace',
+    title: '正则替换',
+    titleEn: 'Regex replace',
+    description:
+      '按正则批量替换文本，返回替换后的完整结果与命中数量。支持 $1…$9 捕获组、$<name> 命名组、$&整体匹配。零宽匹配（如 a*）不会死循环；引用不存在的组原样输出。适合键值交换、引号风格统一、驼峰↔下划线等批量重构。',
+    descriptionEn:
+      'Bulk-replace text by regex and return the full result plus the match count. Supports $1…$9 capture groups, $<name> named groups and $& for the whole match. Zero-width patterns (e.g. a*) cannot loop forever; references to non-existent groups are left verbatim. Useful for key/value swaps, quote-style unification and camel↔snake refactors.',
+    group: 'text',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        pattern: p('string', '正则表达式（不含首尾斜杠）', 'Pattern without surrounding slashes'),
+        replacement: p('string', '替换串，支持 $1 / $<name> 引用捕获组', 'Replacement string; $1 / $<name> reference capture groups'),
+        text: p('string', '待处理的原文', 'Source text to process'),
+        flags: p('string', '标志位（不含 g 时只替换第一处）', 'Flags (without g only the first match is replaced)', { default: 'g' }),
+      },
+      required: ['pattern', 'replacement', 'text'],
+    },
+  },
+
+  /* ================= http ================= */
+
+  {
+    name: 'graphql_parse_schema',
+    title: 'GraphQL Schema 解析',
+    titleEn: 'GraphQL schema parse',
+    description:
+      '解析 GraphQL introspection 响应，列出 Query/Mutation 字段、类型、入参与枚举值。只做解析不发请求 —— 适合在写查询前先摸清有哪些字段可用，以及排查"字段不存在"类错误。返回的入参列表可直接用来构造 variables。',
+    descriptionEn:
+      'Parse a GraphQL introspection response and list Query/Mutation fields, types, arguments and enum values. Parsing only, no request is sent — useful before writing a query and for diagnosing "field does not exist" errors. The returned argument list can be used to build variables directly.',
+    group: 'http',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        payload: p('string', 'introspection 响应（JSON 文本或已解析的对象）', 'Introspection response (JSON text or an already-parsed object)'),
+      },
+      required: ['payload'],
+    },
+  },
+  {
+    name: 'har_analyze',
+    title: 'HAR 文件解析',
+    titleEn: 'HAR analyze',
+    description:
+      '解析 HAR（HTTP Archive）内容，输出请求数、传输量、失败数、按域名汇总的带宽占用，以及每条请求的时序与状态。相比直接读原始 JSON，能一眼看出「哪个域名最占带宽」和「哪些请求失败了」。兼容 Chrome/Firefox 的私有字段。',
+    descriptionEn:
+      'Parse HAR (HTTP Archive) content and report request count, transferred bytes, failures, per-host bandwidth usage, plus per-request timing and status. Easier than reading raw JSON for spotting "which host eats bandwidth" and "which requests failed". Handles Chrome/Firefox private fields.',
+    group: 'http',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        har: p('string', 'HAR 文件内容（JSON 文本）', 'HAR file content (JSON text)'),
+        limit: p('number', '最多列出多少条请求明细', 'How many request rows to list', { default: 30 }),
+      },
+      required: ['har'],
+    },
+  },
+  {
+    name: 'tls_inspect',
+    title: 'TLS 握手详情',
+    titleEn: 'TLS handshake',
+    description:
+      '与目标建立一次 TLS 连接并立即断开，返回协议版本、加密套件、ALPN、SNI 与完整证书链（主题/签发者/有效期/指纹/签名算法）。用于排查证书过期、缺少中间证书导致的验证失败、以及服务端支持的协议版本。',
+    descriptionEn:
+      'Open one TLS connection to the target and close it immediately; returns protocol version, cipher suite, ALPN, SNI and the full certificate chain (subject/issuer/validity/fingerprints/signature algorithm). Useful for diagnosing expired certificates, verification failures caused by a missing intermediate, and which protocol versions the server accepts.',
+    group: 'net',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        host: p('string', '主机名或 IP', 'Hostname or IP'),
+        port: p('number', '端口，默认 443', 'Port, defaults to 443', { default: 443 }),
+        timeoutMs: p('number', '握手超时（毫秒）', 'Handshake timeout in ms', { default: 10000 }),
+      },
+      required: ['host'],
+    },
+  },
+  {
+    name: 'sql_lint',
+    title: 'SQL 静态检查',
+    titleEn: 'SQL lint',
+    description:
+      '按常见慢查询成因检查 SQL：SELECT *、前导通配 LIKE、隐式类型转换、NOT IN、列被函数包裹、逗号连接、大 OFFSET、超大 LIMIT。按严重度分级并给出可执行的改写建议。纯静态分析，不连数据库 —— 没有表结构所以无法确定列类型，隐式转换只按命名约定提示（用 sql_explain 看真实计划）。',
+    descriptionEn:
+      'Check SQL for common slow-query causes: SELECT *, leading-wildcard LIKE, implicit type conversion, NOT IN, columns wrapped in functions, comma joins, large OFFSET, huge LIMIT. Severity-graded with concrete rewrite suggestions. Purely static — no database connection; without the schema it cannot determine column types, so implicit conversions are flagged by naming convention only (use sql_explain for the real plan).',
+    group: 'data',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        sql: p('string', '待检查的 SQL', 'SQL to check'),
+      },
+      required: ['sql'],
+    },
+  },
+  {
+    name: 'sql_explain',
+    title: 'SQL 执行计划解读',
+    titleEn: 'SQL EXPLAIN reader',
+    description:
+      '解析 EXPLAIN 输出（MySQL 8 / PostgreSQL 的 JSON 格式，或 CLI 的文本表格），按访问方式与扫描行数标出高风险节点（全表扫描、扫行过多）。把用户从库里的真实执行计划粘进来即可，不需要数据库连接。',
+    descriptionEn:
+      'Parse EXPLAIN output (MySQL 8 / PostgreSQL JSON, or the CLI text table) and flag high-risk access nodes (full scans, too many rows scanned) by access type and estimated rows. Paste the plan from your own database — no connection needed.',
+    group: 'data',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        explain: p('string', 'EXPLAIN 的输出（JSON 或文本表格）', 'EXPLAIN output (JSON or text table)'),
+        dialect: p('string', '数据库方言', 'Database dialect', { default: 'mysql', enum: ['mysql', 'postgres'] }),
+      },
+      required: ['explain'],
     },
   },
 

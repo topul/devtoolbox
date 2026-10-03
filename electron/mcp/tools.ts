@@ -41,13 +41,30 @@ import {
   jsonValidate,
   jsonToYaml,
   jwtDecode,
+  jwtSign,
+  jwtVerify,
   jwtIsExpired,
+  totp,
+  totpVerify,
+  totpRemaining,
+  parseOtpauth,
   lineDiff,
   parseCookie,
   parseToolSchema,
   parseUrl,
   parseUserAgent,
   radixConvert,
+  buildWaterfall,
+  extractTable,
+  formatBytes,
+  parseIntrospection,
+  lintSql,
+  parseExplain,
+  parseHar,
+  regexReplace,
+  suggestIndex,
+  whereColumns,
+  summarizeByHost,
   regexTest,
   renderSchema,
   SCHEMA_TARGETS,
@@ -65,6 +82,7 @@ import {
 } from '../../src/lib/toolkit'
 import { genL } from '../../src/lib/locales/generators'
 import { performRequest } from '../main/http'
+import { probeTls } from '../main/tls-probe'
 
 export type ToolArgs = Record<string, unknown>
 export type ToolResult = string | Record<string, unknown>
@@ -204,6 +222,45 @@ export const HANDLERS: Record<string, ToolHandler> = {
     const text = str(a, 'text')
     const key = str(a, 'key')
     return op === 'encrypt' ? aesEncrypt(text, key, mode) : aesDecrypt(text, key, mode)
+  },
+
+  jwt_sign: async (a) => {
+    const op = str(a, 'op') === 'verify' ? 'verify' : 'sign'
+    const key = str(a, 'key')
+    const algo = optEnum(a, 'algo', ['HS256', 'HS384', 'HS512'] as const) ?? 'HS256'
+    if (op === 'verify') {
+      const r = await jwtVerify(str(a, 'token'), key, algo)
+      return r.valid ? `验签通过（${algo}）` : `验签未通过：${r.reason}`
+    }
+    let body: Record<string, unknown>
+    try {
+      const parsed: unknown = JSON.parse(str(a, 'payload'))
+      if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) throw new Error('BAD_PAYLOAD')
+      body = parsed as Record<string, unknown>
+    } catch {
+      throw new Error('BAD_PAYLOAD')
+    }
+    const r = await jwtSign(algo, body, key)
+    return r.token
+  },
+
+  totp: async (a) => {
+    const op = str(a, 'op') === 'verify' ? 'verify' : 'generate'
+    const raw = str(a, 'secret')
+    // otpauth:// 链接里自带 digits / period / algorithm，优先级低于显式传参
+    const meta = raw.trim().toLowerCase().startsWith('otpauth://') ? parseOtpauth(raw) : undefined
+    const secret = meta ? meta.secret : raw
+    const opts = {
+      digits: Number(str(a, 'digits', false)) || meta?.digits || 6,
+      period: Number(str(a, 'period', false)) || meta?.period || 30,
+      algo: optEnum(a, 'algo', ['SHA1', 'SHA256', 'SHA512'] as const) ?? meta?.algo ?? 'SHA1',
+    }
+    if (op === 'verify') {
+      const r = await totpVerify(secret, str(a, 'code'), undefined, opts)
+      return r.valid ? `校验通过（允许 ±${r.window} 步漂移）` : '校验未通过'
+    }
+    const code = await totp(secret, undefined, opts)
+    return `${code}（剩余 ${totpRemaining(undefined, opts.period)} 秒）`
   },
 
   jwt_decode: (a) => {
@@ -353,6 +410,187 @@ export const HANDLERS: Record<string, ToolHandler> = {
     const format = enumArg(a, 'format', ['text', 'json'] as const, 'text')
     if (format === 'json') return { add, del, lines }
     return `+${add} 行 / -${del} 行\n\n` + diffAsText(a1, b1)
+  },
+
+  /* ---------- GraphQL / HAR / TLS / SQL ---------- */
+
+  graphql_parse_schema: (a) => {
+    let payload: unknown = a.payload
+    if (typeof payload === 'string') {
+      try {
+        payload = JSON.parse(payload)
+      } catch (e) {
+        return `payload 不是合法 JSON：${(e as Error).message}`
+      }
+    }
+    let schema
+    try {
+      schema = parseIntrospection(payload)
+    } catch {
+      return '无法解析：响应里没有 __schema（可能服务端禁用了 introspection，或这不是 introspection 响应）'
+    }
+    const fieldLines = (title: string, fields: typeof schema.queryFields): string =>
+      fields.length === 0
+        ? `${title}:（无）`
+        : `${title}:\n` + fields
+            .map(f => {
+              const args = f.args.length
+                ? `(${f.args.map(x => `${x.name}: ${x.type}`).join(', ')})`
+                : '()'
+              return `  ${f.name}${args}: ${f.type}${f.desc ? `  // ${f.desc}` : ''}`
+            })
+            .join('\n')
+    const enums = schema.types.filter(t => t.enumValues.length > 0)
+    const enumText = enums.length === 0
+      ? ''
+      : '\n\n枚举:\n' + enums.map(t => `  ${t.name}: ${t.enumValues.join(' | ')}`).join('\n')
+    const others = schema.types.filter(t => t.name !== 'Query' && t.name !== 'Mutation' && t.enumValues.length === 0)
+    const otherText = others.length === 0
+      ? ''
+      : '\n\n其他类型:\n' + others
+          .map(t => `  ${t.name}${t.desc ? `  // ${t.desc}` : ''} (${t.fields.length} 字段)`)
+          .join('\n')
+    return [
+      `共 ${schema.types.length} 个类型（原始 ${schema.typeCount} 个，已过滤内置标量）`,
+      '',
+      fieldLines('Query 字段', schema.queryFields),
+      '',
+      fieldLines('Mutation 字段', schema.mutationFields),
+      enumText,
+      otherText,
+    ].join('\n')
+  },
+
+  har_analyze: (a) => {
+    const limit = num(a, 'limit', 30)
+    let sum
+    try {
+      sum = parseHar(str(a, 'har'))
+    } catch {
+      return '不是合法的 HAR（需要 HAR 1.x 结构：log.entries）'
+    }
+    const failed = sum.entries.filter(e => e.isFailed)
+    const hosts = summarizeByHost(sum.entries)
+    const waterfall = buildWaterfall(sum.entries)
+    const totalBytes = sum.entries.reduce((n, e) => n + (e.transferSize > 0 ? e.transferSize : 0), 0)
+    const head = [
+      `HAR ${sum.version || '(未标注版本)'} · ${sum.creator || '未知导出工具'} · ${sum.pageCount} 页`,
+      `共 ${sum.entries.length} 个请求，传输 ${formatBytes(totalBytes)}，失败 ${failed.length} 个`,
+      '',
+      '按域名占用:',
+      ...hosts.map(h => `  ${h.host}  ${h.count} 个  ${formatBytes(h.bytes)}${h.failed ? `  失败 ${h.failed}` : ''}`),
+    ]
+    const rows = waterfall.slice(0, limit).map(r =>
+      `${String(r.status || 'ERR').padStart(3)} ${String(r.time + 'ms').padStart(8)}  ${r.method.padEnd(4)} ${r.host}${r.isFailed ? '  ✗' : ''}`,
+    )
+    if (rows.length === 0) return head.join('\n')
+    const more = waterfall.length > rows.length ? `\n…（共 ${waterfall.length} 条，此处显示前 ${rows.length} 条）` : ''
+    const failText = failed.length
+      ? `\n\n失败请求:\n${failed.slice(0, 10).map(e => `  ${e.status || 'ERR'} ${e.url}${e.error ? `  ${e.error}` : ''}`).join('\n')}`
+      : ''
+    return [...head, '', '请求明细（按开始时间）:', ...rows, more, failText].join('\n')
+  },
+
+  tls_inspect: async (a) => {
+    const host = str(a, 'host')
+    const r = await probeTls(host, num(a, 'port', 443), num(a, 'timeoutMs', 10000))
+    if (!r.ok) {
+      const known: Record<string, string> = {
+        TIMEOUT: '连接超时，目标没有完成 TLS 握手',
+        ECONNREFUSED: '连接被拒绝，目标端口没在监听',
+        ENOTFOUND: '域名解析失败',
+        CERT_HAS_EXPIRED: '证书已过期',
+        DEPTH_ZERO_SELF_SIGNED_CERT: '自签名证书，不受信任',
+        UNABLE_TO_VERIFY_LEAF_SIGNATURE: '无法验证证书签名（通常是缺少中间证书）',
+        ERR_TLS_CERT_ALTNAME_INVALID: '证书域名与目标不匹配',
+        PROTOCOL_VERSION: '协议版本不兼容',
+      }
+      const why = known[r.errorCode ?? ''] ?? '连接失败'
+      return `${host}:${r.port} 握手失败（${r.errorCode ?? '未知'}）：${why}${r.errorDetail ? `\n原始错误: ${r.errorDetail}` : ''}`
+    }
+    const certs = r.certs.map((c, i) => {
+      const role = i === 0 ? '叶子(服务端)' : i === r.certs.length - 1 ? '根' : '中间'
+      const days = c.daysLeft < 0 ? `已过期 ${-c.daysLeft} 天` : `剩余 ${c.daysLeft} 天`
+      return [
+        `[${role}] ${c.subject}`,
+        `  签发者: ${c.issuer}`,
+        `  有效期: ${c.notBefore.slice(0, 10)} → ${c.notAfter ? c.notAfter.slice(0, 10) : '?'}（${days}）`,
+        c.domains.length ? `  域名: ${c.domains.join(' · ')}` : '',
+        `  类型: ${c.isCa ? 'CA 证书' : '终端证书'}${c.keyBits ? ` · ${c.pubkeyAlg} ${c.keyBits} 位` : ''}`,
+        c.sigAlg ? `  签名算法: ${c.sigAlg}` : '',
+        c.fingerprint256 ? `  SHA-256: ${c.fingerprint256}` : '',
+      ].filter(Boolean).join('\n')
+    })
+    return [
+      `${host}:${r.port} 握手成功（${r.elapsedMs}ms）`,
+      `  协议: ${r.protocol}${['TLSv1', 'TLSv1.1', 'SSLv3'].includes(r.protocol) ? '  ← 已被浏览器弃用' : ''}`,
+      `  加密套件: ${r.cipher}${r.cipherSuiteName ? ` (${r.cipherSuiteName})` : ''}`,
+      `  ALPN: ${r.alpn || '（未协商）'}`,
+      `  SNI: ${r.sni || (r.isIpHost ? '（IP 直连，无 SNI）' : '（未发送）')}`,
+      `  证书校验: ${r.authorized ? '受信任' : '不受信任'}${r.authorizationError ? ` — ${r.authorizationError}` : ''}`,
+      '',
+      `证书链（${r.certs.length} 张）:`,
+      ...certs,
+    ].join('\n')
+  },
+
+  sql_lint: (a) => {
+    const sql = str(a, 'sql')
+    const issues = lintSql(sql)
+    if (issues.length === 0) return '没有发现常见的慢查询成因。'
+    const order = { error: 0, warn: 1, info: 2 } as const
+    const sorted = [...issues].sort((x, y) => order[x.severity] - order[y.severity])
+    const body = sorted
+      .map(i => {
+        const sev = i.severity === 'error' ? '[会失效索引]' : i.severity === 'warn' ? '[值得关注]' : '[提示]'
+        return `${sev} L${i.line} ${i.message}\n  ${i.hint}`
+      })
+      .join('\n\n')
+    const idx = suggestIndex(extractTable(sql), whereColumns(sql), issues)
+    const idxText = idx.length
+      ? `\n\n索引建议:\n${idx.map(x => `  ${x.sql}\n  理由: ${x.reason}`).join('\n')}`
+      : ''
+    return `发现 ${issues.length} 个问题:\n\n${body}${idxText}`
+  },
+
+  sql_explain: (a) => {
+    const dialect = enumArg(a, 'dialect', ['mysql', 'postgres'] as const, 'mysql')
+    const r = parseExplain(str(a, 'explain'), dialect)
+    if (r.unparsed || r.tables.length === 0) {
+      return '无法识别这段输出。确认贴的是 EXPLAIN 的结果（JSON 或文本表格），不是 SQL 本身。'
+    }
+    const head = `共 ${r.tables.length} 个访问节点：`
+    const body = r.tables
+      .map(t => `[${t.risk === 'high' ? '高风险' : t.risk === 'mid' ? '中等' : '低风险'}] ${t.name}  ${t.type || '—'}  扫描 ${t.rows} 行  索引 ${t.key || '未走'}${t.extra ? `  ${t.extra}` : ''}`)
+      .join('\n')
+    const total = r.tables.reduce((n, t) => n + t.rows, 0)
+    const high = r.tables.filter(t => t.risk === 'high')
+    const advice = high.length === 0
+      ? '\n\n没有明显的全表扫描。'
+      : '\n\n优化方向:\n' + high.map(t => `  ${t.name}: ${t.type === 'ALL' || t.type === 'Seq Scan' ? '全表扫描，加 WHERE 条件并给过滤字段建索引' : '检查索引是否被用上'}`).join('\n')
+    return `${head}\n${body}\n\n合计扫描 ${total} 行${advice}`
+  },
+
+  regex_replace: (a) => {
+    let r
+    try {
+      r = regexReplace(
+        str(a, 'text'),
+        str(a, 'pattern'),
+        str(a, 'replacement'),
+        optStr(a, 'flags', 'g'),
+      )
+    } catch (e) {
+      return `正则不合法：${(e as Error).message}`
+    }
+    if (r.count === 0) return '没有匹配，文本未改动'
+    const head = `共替换 ${r.count} 处：\n`
+    // 输出太长时截断并说明 —— 直接甩几万行给模型既费token 又淹没重点
+    const LIMIT = 8000
+    const body = r.output.length > LIMIT
+      ? r.output.slice(0, LIMIT) + `\n…（输出共 ${r.output.length} 字符，已截断）`
+      : r.output
+    return head + body
   },
 
   regex_test: (a) => {
