@@ -79,7 +79,7 @@ export function SettingsDrawer({
                       onChange={(e) => editProfile(p.id, { label: e.target.value })}
                       placeholder={l.modelNamePh}
                       spellCheck={false}
-                      className="flex-1 min-w-0 bg-transparent border border-line-soft rounded-md px-2 py-1 text-[12.5px] text-bright focus:outline-none focus:border-phosphor/40"
+                      className="flex-1 min-w-0 bg-transparent border border-line-soft rounded-md px-2 py-1 text-[12.5px] text-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-phosphor focus-visible:outline-offset-2 focus:border-phosphor/40"
                     />
                     <span className={`shrink-0 text-[10px] px-1.5 py-0.5 rounded border ${ready ? 'text-phosphor border-phosphor/40' : 'text-amber border-amber/40'}`}>
                       {ready ? profileName(p) : l.modelIncomplete}
@@ -166,7 +166,7 @@ export function SettingsDrawer({
                 <div className="flex items-center gap-1.5">
                   <input value={sv.label} onChange={(e) => setServers((p) => p.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)))}
                     placeholder={l.serverLabelPh}
-                    className="bg-transparent border border-line-soft rounded-md px-2 py-1 text-[12.5px] text-bright flex-1 min-w-0 focus:outline-none focus:border-phosphor/40" />
+                    className="bg-transparent border border-line-soft rounded-md px-2 py-1 text-[12.5px] text-bright flex-1 min-w-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-phosphor focus-visible:outline-offset-2 focus:border-phosphor/40" />
                   <div className="flex shrink-0 rounded-md overflow-hidden border border-line-soft">
                     {/* 浏览器版没有进程模型：stdio 选项直接隐藏，免得配了也白配 */}
                     {(['stdio', 'http'] as const).filter((k2) => !WEB_BUILD || k2 === 'http').map((k2) => (
@@ -267,7 +267,7 @@ function PriceTable({ prices, setPrices, l }: {
           delete next[k]
           return next
         })}
-        className="bg-transparent border border-line-soft px-1.5 py-1 text-[12px] text-phosphor w-full focus:outline-none focus:border-phosphor/40"
+        className="bg-transparent border border-line-soft px-1.5 py-1 text-[12px] text-phosphor w-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-phosphor focus-visible:outline-offset-2 focus:border-phosphor/40"
       />
     )
   }
@@ -288,7 +288,7 @@ function PriceTable({ prices, setPrices, l }: {
               value={p.model}
               onChange={(e) => update(i, { model: e.target.value })}
               spellCheck={false}
-              className="bg-transparent border border-line-soft px-1.5 py-1 text-[12px] text-bright w-full focus:outline-none focus:border-phosphor/40"
+              className="bg-transparent border border-line-soft px-1.5 py-1 text-[12px] text-bright w-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-phosphor focus-visible:outline-offset-2 focus:border-phosphor/40"
             />
             {numCell(i, 'inPerM', p.inPerM)}
             {numCell(i, 'outPerM', p.outPerM)}

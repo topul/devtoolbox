@@ -161,7 +161,8 @@ function ToolBlock({ part, l }: { part: ToolPartView; l: L }): React.ReactElemen
     <div className="border border-line-soft bg-panel-2/60 px-2.5 py-1.5">
       <div className="flex items-center gap-2 flex-wrap">
         <span className="text-[11px] text-muted">→</span>
-        <span className="text-[12px] text-[#7ec8ff] break-all">{part.toolName}</span>
+        {/* 工具名走主题变量而不是硬编码色：那个浅蓝在亮色白底上只有 1.81:1，几乎看不见 */}
+        <span className="text-[12px] break-all" style={{ color: 'var(--c-hl-fn)' }}>{part.toolName}</span>
         <span className={`text-[10px] px-1.5 border ${cls}`}>{label}</span>
         {!!body && (
           <button onClick={() => setOpen((v) => !v)} className="text-[11px] text-muted hover:text-phosphor transition-colors">

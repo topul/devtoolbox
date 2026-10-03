@@ -92,7 +92,7 @@ export function SkillsSection({ settings, patchSettings }: {
           onKeyDown={(e) => { if (e.key === 'Enter') saveCurrent() }}
           placeholder={l.skillNamePh}
           spellCheck={false}
-          className="flex-1 min-w-0 bg-panel-2 border border-line-soft rounded-md px-2 py-1.5 text-[12.5px] text-bright focus:outline-none focus:border-phosphor/40"
+          className="flex-1 min-w-0 bg-panel-2 border border-line-soft rounded-md px-2 py-1.5 text-[12.5px] text-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-phosphor focus-visible:outline-offset-2 focus:border-phosphor/40"
         />
         <Btn variant="ghost" onClick={saveCurrent} disabled={!nameDraft.trim()}>+ {l.skillSaveAs}</Btn>
       </div>

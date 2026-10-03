@@ -94,7 +94,8 @@ function RoundBlock({ round, l }: { round: ChatTraceRound; l: L }): React.ReactE
           <div className="text-[11px] text-muted">{l.traceTools}</div>
           {round.tools.map((t, i) => (
             <div key={t.call.id || i} className="text-[11.5px] pl-2 border-l-2 border-phosphor/30">
-              <span className="text-[#7ec8ff] break-all">{t.call.name}</span>
+              {/* 走主题变量：硬编码色在亮色主题下几乎不可读（见 MessageView 同处说明） */}
+              <span className="break-all" style={{ color: 'var(--c-hl-fn)' }}>{t.call.name}</span>
               <span className="text-muted/70 break-all"> {t.call.args}</span>
               {t.result && (
                 <span className={t.result.ok && !t.result.isError ? 'text-muted' : 'text-danger'}>
