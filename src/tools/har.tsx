@@ -57,7 +57,7 @@ const SAMPLE = `{
  */
 export function HarTool() {
   const l = useLocalized(harL)
-  const [raw, setRaw] = usePersistedState('har', 'input', '')
+  const [raw, setRaw] = usePersistedState('har-analyze', 'input', '')
   const [parsed, setParsed] = useState<{ har: unknown; sum: HarSummary } | null>(null)
   const [err, setErr] = useState<string | null>(null)
   const [picked, setPicked] = useState<number | null>(null)

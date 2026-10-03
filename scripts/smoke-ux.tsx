@@ -1157,8 +1157,11 @@ function matchFocusable(el: FakeEl, sel: string): boolean {
 
   // 每个 toolId 必须真实存在于 registry —— 否则写进了一个永远不会被读到的键
   const regSrc = readFileSync(join(root, 'src/lib/registry.ts'), 'utf8')
+  // 键是 `toolId/field`，但 toolId 本身可能含连字符（har-analyze）——
+  // 按 / 截断会得到 'har' 这种不存在的 id。改成判断前缀是否命中 registry 里的任一 id。
+  const registryIds = new Set([...regSrc.matchAll(/id: '([a-z0-9-]+)'/g)].map(m => m[1]))
   const unknown = [...new Set([...seen.keys()].map(k => k.split('/')[0]))]
-    .filter(id => !regSrc.includes(`id: '${id}'`))
+    .filter(id => !registryIds.has(id))
   eq(unknown.length, 0, 'toolId 都在 registry 里存在（不存在：' + (unknown.join(', ') || '无') + '）')
 
   // 不该铺开的：这些是有网络/文件/会话依赖的，持久化它们会引入过期状态

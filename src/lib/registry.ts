@@ -240,10 +240,10 @@ const TOOL_SPECS: Omit<ToolDef, 'component'>[] = [
 
   // AI 接入
   { id: 'mcp-server', category: 'ai', keywords: ['mcp', 'ai', 'agent', '智能体', '大模型', 'claude', 'cursor', '接入', '工具调用'], hot: true, desktopOnly: true, load: () => import('../tools/mcp').then(m => ({ default: m.McpTool })) },
-  { id: 'mcp-inspector', category: 'ai', keywords: ['mcp', 'inspector', '客户端', '连接', '调用', '工具调用', 'jsonrpc', 'stdio', '调试'], hot: true, desktopOnly: true, load: () => import('../tools/mcpclient').then(m => ({ default: m.McpInspectorTool })) },
+  { id: 'mcp-inspector', category: 'ai', keywords: ['mcp', 'inspector', '客户端', '连接', '调用', '工具调用', 'jsonrpc', 'stdio', '调试'], desktopOnly: true, load: () => import('../tools/mcpclient').then(m => ({ default: m.McpInspectorTool })) },
   { id: 'tool-schema', category: 'ai', keywords: ['schema', 'json schema', '工具定义', '函数调用', 'function calling', 'typescript', 'pydantic', 'openai', 'mcp', '转换', '校验'], load: () => import('../tools/schema').then(m => ({ default: m.ToolSchemaTool })) },
   { id: 'agent-rules', category: 'ai', keywords: ['agents.md', 'agents', 'cursorrules', 'claude', '规则文件', '项目说明', '扫描', '仓库结构', 'onboarding', 'ai 协作'], load: () => import('../tools/agentrules').then(m => ({ default: m.AgentRulesTool })) },
-  { id: 'chat-compare', category: 'ai', keywords: ['对比', '多模型', '测评', '评测', 'compare', '模型选型', '并排', '首字延迟', 'benchmark'], hot: true, load: () => import('../tools/chatcompare').then(m => ({ default: m.ChatCompareTool })) },
+  { id: 'chat-compare', category: 'ai', keywords: ['对比', '多模型', '测评', '评测', 'compare', '模型选型', '并排', '首字延迟', 'benchmark'], load: () => import('../tools/chatcompare').then(m => ({ default: m.ChatCompareTool })) },
 ]
 
 export const TOOLS: ToolDef[] = TOOL_SPECS.map((spec) => ({ ...spec, component: lazy(spec.load) }))
