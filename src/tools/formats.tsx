@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Btn, TA, ErrorNote, Panel, Select } from '../components/ui'
+import { Btn, TA, ErrorNote, Panel, Select, usePersistedState } from '../components/ui'
 import { useLocalized } from '../lib/i18n'
 import { formatsL } from '../lib/locales/formats'
 import { csvToJson, jsonToCsv, jsonToToml, tomlToJson } from '../lib/toolkit'
@@ -28,7 +28,7 @@ name = "Nail"
 
 export function TomlTool() {
   const l = useLocalized(formatsL).toml
-  const [input, setInput] = useState(TOML_SAMPLE)
+  const [input, setInput] = usePersistedState('toml-json', 'input', TOML_SAMPLE)
   const [output, setOutput] = useState('')
   const [err, setErr] = useState<string | null>(null)
 
@@ -67,7 +67,7 @@ const CSV_SAMPLE = 'name,note\n"a,b","line1\nline2"\nplain,"say ""hi"""\n'
 
 export function CsvTool() {
   const l = useLocalized(formatsL).csv
-  const [input, setInput] = useState(CSV_SAMPLE)
+  const [input, setInput] = usePersistedState('csv-json', 'input', CSV_SAMPLE)
   const [output, setOutput] = useState('')
   const [err, setErr] = useState<string | null>(null)
   const [delimiter, setDelimiter] = useState(',')

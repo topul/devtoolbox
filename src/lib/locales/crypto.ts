@@ -8,12 +8,15 @@ export const cryptoL = {
     hash: {
       input: '输入文本',
       inputPh: '输入待计算哈希的内容，实时输出...',
+      empty: '在上方输入内容，这里会实时列出 MD5 / SHA-1 / SHA-256 / SHA-512 等全部摘要',
+      clear: '清空',
     },
     hmac: {
       key: '密钥 Key',
       algo: '算法',
       msg: '消息',
       out: 'HMAC 输出 (hex)',
+      needBoth: '需要同时填写密钥与消息',
     },
     aes: {
       needKey: '请输入密钥',
@@ -26,6 +29,7 @@ export const cryptoL = {
       enc: '加密 → Base64',
       dec: '解密 → 明文',
       out: '输出',
+      nothingYet: '点击上方按钮后，密文或明文会显示在这里',
       note: '* 纯前端本地运算，密钥不会上传。ECB 模式不安全，仅用于兼容性测试；正式场景请使用 CBC/GCM + 随机 IV。',
     },
     jwt: {
@@ -76,12 +80,15 @@ export const cryptoL = {
     hash: {
       input: 'Input Text',
       inputPh: 'Enter text to hash; output updates live...',
+      empty: 'Enter text above to see MD5 / SHA-1 / SHA-256 / SHA-512 digests all at once',
+      clear: 'Clear',
     },
     hmac: {
       key: 'Key',
       algo: 'Algorithm',
       msg: 'Message',
       out: 'HMAC Output (hex)',
+      needBoth: 'Both key and message are required',
     },
     aes: {
       needKey: 'Please enter a key',
@@ -94,6 +101,7 @@ export const cryptoL = {
       enc: 'Encrypt → Base64',
       dec: 'Decrypt → Plaintext',
       out: 'Output',
+      nothingYet: 'Click a button above; the result will appear here',
       note: '* Pure client-side local computation; the key is never uploaded. ECB mode is insecure and only for compatibility testing; use CBC/GCM + random IV in production.',
     },
     jwt: {

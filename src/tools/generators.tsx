@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'
 import QRCode from 'qrcode'
-import { Btn, TA, Input, Select, Stat, ErrorNote, CopyBtn } from '../components/ui'
+import { Btn, TA, Input, Select, Stat, ErrorNote, CopyBtn, usePersistedState } from '../components/ui'
 import { useLocalized, useI18n } from '../lib/i18n'
 import { genL } from '../lib/locales/generators'
 import { fakeRowsToCsv, generateFakeRows, generatePassword, generateUuids } from '../lib/toolkit'
@@ -115,7 +115,7 @@ export function PasswordTool() {
 
 export function QrTool() {
   const l = useLocalized(genL).qr
-  const [text, setText] = useState('')
+  const [text, setText] = usePersistedState('qrcode', 'text', '')
   const [size, setSize] = useState('256')
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [err, setErr] = useState<string | null>(null)

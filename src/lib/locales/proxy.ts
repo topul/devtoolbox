@@ -219,6 +219,7 @@ export const proxyL = {
     misc: {
       apply: '应用',
       close: '关闭',
+      working: '处理中…',
       copy: '复制',
       copied: '已复制',
       bytes: '字节',
@@ -444,6 +445,7 @@ export const proxyL = {
     misc: {
       apply: 'Apply',
       close: 'Close',
+      working: 'Working…',
       copy: 'Copy',
       copied: 'Copied',
       bytes: 'bytes',

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import { Btn, TA, Input, ErrorNote } from '../components/ui'
+import { Btn, TA, Input, ErrorNote, usePersistedState } from '../components/ui'
 import { useLocalized } from '../lib/i18n'
 import { dataformatsL } from '../lib/locales/dataformats'
 import { evalJsonPath, jsonToYaml, yamlToJson } from '../lib/toolkit'
@@ -10,7 +10,7 @@ import { evalJsonPath, jsonToYaml, yamlToJson } from '../lib/toolkit'
 
 export function YamlTool() {
   const l = useLocalized(dataformatsL).yaml
-  const [input, setInput] = useState('server:\n  host: 0.0.0.0\n  port: 8080\n  tags:\n    - web\n    - prod\n  tls: true')
+  const [input, setInput] = usePersistedState('yaml-json', 'input', 'server:\n  host: 0.0.0.0\n  port: 8080\n  tags:\n    - web\n    - prod\n  tls: true')
   const [output, setOutput] = useState('')
   const [err, setErr] = useState<string | null>(null)
 
@@ -42,8 +42,8 @@ export function YamlTool() {
 
 export function JsonPathTool() {
   const l = useLocalized(dataformatsL).jsonpath
-  const [json, setJson] = useState(l.sample)
-  const [path, setPath] = useState('$.store.book[*].price')
+  const [json, setJson] = usePersistedState('jsonpath', 'data', l.sample)
+  const [path, setPath] = usePersistedState('jsonpath', 'path', '$.store.book[*].price')
   const [err, setErr] = useState<string | null>(null)
 
   const result = useMemo(() => {
@@ -128,7 +128,7 @@ function minifyCss(css: string): string {
 
 export function CssTool() {
   const l = useLocalized(dataformatsL).css
-  const [input, setInput] = useState('body{color:#0f0; margin: 0}a:hover{ text-decoration : underline }')
+  const [input, setInput] = usePersistedState('css-format', 'input', 'body{color:#0f0; margin: 0}a:hover{ text-decoration : underline }')
   const [output, setOutput] = useState('')
 
   return (

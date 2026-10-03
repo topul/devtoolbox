@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import { Panel, Btn, TA, Input, ErrorNote, CopyBtn } from '../components/ui'
+import { Panel, Btn, TA, Input, ErrorNote, CopyBtn, usePersistedState } from '../components/ui'
 import { useLocalized } from '../lib/i18n'
 import { offsecL } from '../lib/locales/offsec'
 
@@ -21,8 +21,8 @@ const fromHex = (s: string): Uint8Array => {
 
 export function XorTool() {
   const l = useLocalized(offsecL).xor
-  const [input, setInput] = useState('flag{xor_1s_fun}')
-  const [key, setKey] = useState('key')
+  const [input, setInput] = usePersistedState('xor', 'input', 'flag{xor_1s_fun}')
+  const [key, setKey] = usePersistedState('xor', 'key', 'key')
   const [keyIsHex, setKeyIsHex] = useState(false)
   const [inputIsHex, setInputIsHex] = useState(false)
 
@@ -87,7 +87,7 @@ function rot47(s: string): string {
 
 export function RotTool() {
   const l = useLocalized(offsecL).rot
-  const [input, setInput] = useState('Uryyb Jbeyq')
+  const [input, setInput] = usePersistedState('rot', 'input', 'Uryyb Jbeyq')
   const [shift, setShift] = useState('13')
   const [brute, setBrute] = useState(false)
 
@@ -149,8 +149,8 @@ function vigenere(text: string, key: string, decrypt = false): string {
 
 export function VigenereTool() {
   const l = useLocalized(offsecL).vigenere
-  const [input, setInput] = useState('ATTACKATDAWN')
-  const [key, setKey] = useState('LEMON')
+  const [input, setInput] = usePersistedState('vigenere', 'input', 'ATTACKATDAWN')
+  const [key, setKey] = usePersistedState('vigenere', 'key', 'LEMON')
   const [output, setOutput] = useState('')
   const [mode, setMode] = useState<'enc' | 'dec'>('enc')
 

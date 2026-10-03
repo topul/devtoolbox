@@ -507,7 +507,7 @@ export function ChatTool(): React.ReactElement {
               onKeyDown={(e) => { if (e.key === 'Enter') void commitRename(); if (e.key === 'Escape') setRenaming(false) }}
               autoFocus
               spellCheck={false}
-              className="flex-1 min-w-0 bg-panel-2 border border-line-soft px-2 py-1 text-[12px] text-bright focus:outline-none focus:border-phosphor/40"
+              className="flex-1 min-w-0 bg-panel-2 border border-line-soft px-2 py-1 text-[12px] text-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-phosphor focus-visible:outline-offset-2 focus:border-phosphor/40"
             />
           ) : (
             <button

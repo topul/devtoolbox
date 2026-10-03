@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import { Panel, Input, Select, KV, CopyBtn, ErrorNote } from '../components/ui'
+import { Panel, Input, Select, KV, CopyBtn, ErrorNote, usePersistedState } from '../components/ui'
 import { securityL } from '../lib/locales/security'
 import { useLocalized } from '../lib/i18n'
 import { chmodFromBits, chmodFromOctal, cidrInfo, type ChmodPerm } from '../lib/toolkit'
@@ -81,7 +81,7 @@ export function PayloadCheatSheetTool() {
 
 export function PortRefTool() {
   const l = useLocalized(securityL).ports
-  const [q, setQ] = useState('')
+  const [q, setQ] = usePersistedState('ports', 'q', '')
   const filtered = l.data.filter(p =>
     !q || String(p.port).includes(q) || p.service.toLowerCase().includes(q.toLowerCase()) || p.note.toLowerCase().includes(q.toLowerCase()))
   return (
@@ -115,7 +115,7 @@ export function PortRefTool() {
 
 export function HttpStatusTool() {
   const l = useLocalized(securityL).httpStatus
-  const [q, setQ] = useState('')
+  const [q, setQ] = usePersistedState('http-status', 'q', '')
   const filtered = l.codes.filter(([c, n, d]) =>
     !q || String(c).includes(q) || n.toLowerCase().includes(q.toLowerCase()) || d.includes(q))
   const groups = l.groups
@@ -147,7 +147,7 @@ export function HttpStatusTool() {
 
 export function SubnetTool() {
   const l = useLocalized(securityL).subnet
-  const [input, setInput] = useState('192.168.1.10/24')
+  const [input, setInput] = usePersistedState('subnet', 'input', '192.168.1.10/24')
 
   const r = useMemo(() => {
     if (!input.trim()) return null

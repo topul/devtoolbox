@@ -5,6 +5,8 @@ import { useTheme } from './lib/theme'
 import { useUiZoom } from './lib/uiZoom'
 import { useSidebarCollapsed, useOpenSections } from './lib/sidebar'
 import { useI18n, I18nProvider } from './lib/i18n'
+import { PALETTE_COMMANDS, type PaletteCommandDef } from './lib/palette'
+import { PALETTE_LABEL } from './lib/locales/ui'
 import { getVersion } from './lib/version'
 import { UpdateToast, useUpdater } from './components/Updater'
 import { ChatTool } from './tools/chat'
@@ -260,7 +262,7 @@ function AppInner() {
                     <span className="ml-auto text-[10.5px] text-muted/60 shrink-0">{entry.tools.length}</span>
                   </button>
 
-                  <div className="collapse-grid" style={{ gridTemplateRows: open ? '1fr' : '0fr' }} aria-hidden={!open}>
+                  <div className="collapse-grid" style={{ gridTemplateRows: open ? '1fr' : '0fr' }} aria-hidden={!open} {...(open ? {} : { inert: '' as unknown as boolean })}>
                     <div>
                       <div className="pb-1 pl-3">
                         {[...entry.cats.entries()].map(([cat, items]) => (
@@ -396,7 +398,10 @@ function CommandPalette({ open, onOpenChange, onOpenTool }: {
   onOpenChange: (o: boolean) => void
   onOpenTool: (id: string | null) => void
 }) {
-  const { t, toolName, toolDesc, sectionName } = useI18n()
+  const { t, toolName, toolDesc, sectionName, locale, setLocale } = useI18n()
+  const { toggleTheme } = useTheme()
+  const zoom = useUiZoom()
+  const sidebar = useSidebarCollapsed()
   const [q, setQ] = useState('')
 
   const results = useMemo(() => searchTools(q), [q])
@@ -420,6 +425,26 @@ function CommandPalette({ open, onOpenChange, onOpenTool }: {
     onOpenChange(false)
   }, [onOpenTool, onOpenChange])
 
+  /** 命令型条目：点完就关面板，别让用户以为面板还在原地 */
+  const runCommand = useCallback((fn: () => void) => {
+    fn()
+    onOpenChange(false)
+  }, [onOpenChange])
+
+  // 命令只在输入为空（面板刚开、还没打字）时露出来：一旦在搜工具，
+  // 混进几条设置项会让结果变噪音
+  const showCommands = !q.trim()
+
+  const execute = useCallback((c: PaletteCommandDef) => {
+    switch (c.kind) {
+      case 'theme': return runCommand(toggleTheme)
+      case 'locale': return runCommand(() => setLocale(locale === 'zh' ? 'en' : 'zh'))
+      case 'zoom': return runCommand(zoom.cycle)
+      case 'sidebar': return runCommand(sidebar.toggle)
+      case 'update': return runCommand(() => { void window.electronAPI?.checkForUpdates() })
+    }
+  }, [runCommand, toggleTheme, locale, setLocale, zoom, sidebar])
+
   return (
     <Command.Dialog
       open={open}
@@ -431,10 +456,21 @@ function CommandPalette({ open, onOpenChange, onOpenTool }: {
       <Command.Input value={q} onValueChange={setQ} placeholder={t.searchPlaceholder} />
       <Command.List>
         <Command.Empty>{t.cmdkEmpty}</Command.Empty>
-        <Command.Group heading={t.quickNav}>
-          <Command.Item value="nav-chat" onSelect={() => run(null)}>✦ {t.chatNav}</Command.Item>
-          <Command.Item value="nav-home" onSelect={() => run('home')}>⌂ {t.homeNav} <span className="cmdk-count">({visibleToolCount()})</span></Command.Item>
-        </Command.Group>
+        {showCommands && (
+          <Command.Group heading={t.cmdkActions}>
+            {PALETTE_COMMANDS.map(c => (
+              <Command.Item key={c.id} value={c.id} onSelect={() => execute(c)}>
+                <span className="cmdk-name">{c.icon} {PALETTE_LABEL[locale][c.kind]}</span>
+              </Command.Item>
+            ))}
+          </Command.Group>
+        )}
+        {showCommands && (
+          <Command.Group heading={t.quickNav}>
+            <Command.Item value="nav-chat" onSelect={() => run(null)}>✦ {t.chatNav}</Command.Item>
+            <Command.Item value="nav-home" onSelect={() => run('home')}>⌂ {t.homeNav} <span className="cmdk-count">({visibleToolCount()})</span></Command.Item>
+          </Command.Group>
+        )}
         {groups.map(([sec, tools]) => (
           <Command.Group key={sec} heading={`${SECTION_ICONS[sec]} ${sectionName(sec)}`}>
             {tools.map(tool => (

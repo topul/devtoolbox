@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react'
-import { Input, Select, ErrorNote, Panel, KV, Stat, CopyBtn } from '../components/ui'
+import { Input, Select, ErrorNote, Panel, KV, Stat, CopyBtn, usePersistedState } from '../components/ui'
 import { useLocalized } from '../lib/i18n'
 import { timeL } from '../lib/locales/time'
 import {
@@ -100,7 +100,7 @@ export function TimestampTool() {
 
 export function CronTool() {
   const l = useLocalized(timeL).cron
-  const [expr, setExpr] = useState('0 3 * * 1-5')
+  const [expr, setExpr] = usePersistedState('cron', 'expr', '0 3 * * 1-5')
 
   const parsed = useMemo(() => cronParseFields(expr), [expr])
 
@@ -161,8 +161,8 @@ export function CronTool() {
 
 export function DateDiffTool() {
   const l = useLocalized(timeL).dateDiff
-  const [a, setA] = useState('')
-  const [b, setB] = useState('')
+  const [a, setA] = usePersistedState('date-diff', 'a', '')
+  const [b, setB] = usePersistedState('date-diff', 'b', '')
   const r = useMemo(() => {
     if (!a || !b) return null
     try {

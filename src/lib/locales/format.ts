@@ -14,10 +14,14 @@ export const formatL = {
       minify: '压缩',
       escape: '转义为字符串',
       unescape: '去除转义',
+      clear: '清空',
+      nothingYet: '点击上方按钮，处理结果会显示在这里',
     },
     sql: {
       input: '输入 SQL',
       output: '格式化结果',
+      calculating: '格式化中…',
+      nothingYet: '在上方输入 SQL，格式化结果会实时显示',
     },
     xml: {
       input: '输入 XML / HTML',
@@ -48,10 +52,14 @@ export const formatL = {
       minify: 'Minify',
       escape: 'Escape to String',
       unescape: 'Unescape',
+      clear: 'Clear',
+      nothingYet: 'Click a button above; the result will appear here',
     },
     sql: {
       input: 'Input SQL',
       output: 'Formatted Result',
+      calculating: 'Formatting…',
+      nothingYet: 'Enter SQL above to see the formatted result live',
     },
     xml: {
       input: 'Input XML / HTML',

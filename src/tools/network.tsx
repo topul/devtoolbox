@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react'
-import { Panel, Btn, TA, Input, ErrorNote, KV, CopyBtn } from '../components/ui'
+import React, { useMemo } from 'react'
+import { Panel, Btn, TA, Input, ErrorNote, KV, CopyBtn, usePersistedState } from '../components/ui'
 import { useLocalized } from '../lib/i18n'
 import { networkL } from '../lib/locales/network'
 import { ipConvert, parseCookie, parseUrl, parseUserAgent } from '../lib/toolkit'
@@ -10,7 +10,7 @@ import { ipConvert, parseCookie, parseUrl, parseUserAgent } from '../lib/toolkit
 
 export function UrlParserTool() {
   const l = useLocalized(networkL).urlParser
-  const [input, setInput] = useState('https://user:pass@api.example.com:8443/v1/users?id=42&token=abc%20def&tag=a&tag=b#section')
+  const [input, setInput] = usePersistedState('url-parser', 'input', 'https://user:pass@api.example.com:8443/v1/users?id=42&token=abc%20def&tag=a&tag=b#section')
 
   const parsed = useMemo(() => {
     if (!input.trim()) return null
@@ -71,7 +71,7 @@ const UA_EXAMPLES: [string, string][] = [
 
 export function UserAgentTool() {
   const l = useLocalized(networkL).uaParser
-  const [input, setInput] = useState('')
+  const [input, setInput] = usePersistedState('ua-parser', 'input', '')
   const info = useMemo(() => {
     const t = input.trim()
     if (!t) return null
@@ -112,7 +112,7 @@ export function UserAgentTool() {
 
 export function IpIntTool() {
   const l = useLocalized(networkL).ipInt
-  const [input, setInput] = useState('127.0.0.1')
+  const [input, setInput] = usePersistedState('ip-int', 'input', '127.0.0.1')
 
   const result = useMemo(() => {
     if (!input.trim()) return null
@@ -146,7 +146,7 @@ export function IpIntTool() {
 
 export function CookieTool() {
   const l = useLocalized(networkL).cookie
-  const [input, setInput] = useState('sessionid=abc123; Expires=Wed, 21 Oct 2026 07:28:00 GMT; Path=/; Domain=.example.com; Secure; HttpOnly; SameSite=Lax')
+  const [input, setInput] = usePersistedState('cookie', 'input', 'sessionid=abc123; Expires=Wed, 21 Oct 2026 07:28:00 GMT; Path=/; Domain=.example.com; Secure; HttpOnly; SameSite=Lax')
 
   const parsed = useMemo(() => {
     if (!input.trim()) return null

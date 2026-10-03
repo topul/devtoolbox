@@ -8,7 +8,7 @@
  * 即用即走：对比结果不持久化 —— 评测场景下旧对比没有回看价值，链路存档仍会接住它（ requestId 可查）。
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { Btn, CopyBtn, ErrorNote, Panel, TA, ToolGuide } from '../components/ui'
+import { Btn, CopyBtn, ErrorNote, Panel, TA, ToolGuide, usePersistedState } from '../components/ui'
 import { useLocalized } from '../lib/i18n'
 import { chatcompareL } from '../lib/locales/chatcompare'
 import {
@@ -26,7 +26,7 @@ export function ChatCompareTool(): React.ReactElement {
   // 页面加载时的档案快照：对比页不编辑档案，改档案请回对话页设置
   const profiles = useMemo(() => loadProfiles().filter(profileReady), [])
   const prices = useMemo(() => loadPrices(), [])
-  const [question, setQuestion] = useState('')
+  const [question, setQuestion] = usePersistedState('chat-compare', 'query', '')
   const [picked, setPicked] = useState<Set<string>>(() => new Set())
   const [cols, setCols] = useState<CompareColumn[]>([])
   const [warn, setWarn] = useState('')

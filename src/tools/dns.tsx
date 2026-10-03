@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Btn, CopyBtn, ErrorNote, Input, KV, Panel, Select, Stat } from '../components/ui'
+import { Btn, CopyBtn, ErrorNote, Input, KV, Panel, Select, Stat, ConfirmButton, usePersistedState, useAsyncAction } from '../components/ui'
 import { useLocalized } from '../lib/i18n'
 import { dnsL } from '../lib/locales/dns'
 import { base64ToUtf8 } from '../lib/toolkit'
@@ -25,14 +25,15 @@ const STATUS_CLS = {
 
 export function DnsLookupTool() {
   const l = useLocalized(dnsL)
-  const [domain, setDomain] = useState('')
-  const [type, setType] = useState<DnsRecordType>('A')
-  const [endpoint, setEndpoint] = useState(DOH_ENDPOINTS[0].id)
+  const [domain, setDomain] = usePersistedState('dns-lookup', 'domain', '')
+  const [type, setType] = usePersistedState<DnsRecordType>('dns-lookup', 'type', 'A')
+  const [endpoint, setEndpoint] = usePersistedState('dns-lookup', 'endpoint', DOH_ENDPOINTS[0].id)
   const [result, setResult] = useState<DnsResult | null>(null)
   const [err, setErr] = useState<string | null>(null)
-  const [busy, setBusy] = useState(false)
 
-  const query = async () => {
+  // busy 交给 useAsyncAction 管：它保证进入时防重入、结束时清 busy。
+  // 原来手写 setBusy(true)/finally setBusy(false)，漏了 finally 按钮就永久禁用。
+  const { busy, run } = useAsyncAction(async () => {
     setErr(null)
     setResult(null)
     const name = domain.trim()
@@ -45,7 +46,6 @@ export function DnsLookupTool() {
       setErr(l.errNoApi)
       return
     }
-    setBusy(true)
     try {
       const res = await api.send({
         method: 'GET',
@@ -61,10 +61,10 @@ export function DnsLookupTool() {
     } catch (e) {
       const msg = (e as Error).message
       setErr(msg === 'BAD_DOH_JSON' ? l.errBadResponse : l.errFailed + msg)
-    } finally {
-      setBusy(false)
     }
-  }
+  })
+
+  const reset = () => { setDomain(''); setResult(null); setErr(null) }
 
   const statusCls = result ? (result.status === 0 ? STATUS_CLS.ok : result.status === 3 ? STATUS_CLS.warn : STATUS_CLS.bad) : STATUS_CLS.ok
 
@@ -73,7 +73,7 @@ export function DnsLookupTool() {
       <SecNote scene="dns" />
       <div className="flex gap-2 items-end flex-wrap">
         <div className="flex-1 min-w-[200px]">
-          <Input value={domain} onChange={setDomain} label={l.domainLabel} placeholder={l.domainPh} />
+          <Input value={domain} onChange={setDomain} label={l.domainLabel} placeholder={l.domainPh} toolInput />
         </div>
         <div className="w-32">
           <Select value={type} onChange={(v) => setType(v as DnsRecordType)} label={l.typeLabel}
@@ -84,9 +84,13 @@ export function DnsLookupTool() {
             options={DOH_ENDPOINTS.map((e) => ({ value: e.id, label: e.id }))} />
         </div>
       </div>
-      <div className="flex gap-2 flex-wrap">
-        <Btn variant="primary" onClick={() => void query()} disabled={busy}>{l.query}</Btn>
-        <Btn variant="ghost" onClick={() => { setDomain(''); setResult(null); setErr(null) }}>{l.clear}</Btn>
+      <div className="flex gap-2 flex-wrap items-center">
+        <Btn variant="primary" onClick={() => void run()} disabled={busy} aria-busy={busy}>
+          {/* 查询中换文案：光有 disabled 变透明，用户不知道是卡住了还是没点上 */}
+          {busy ? l.querying : l.query}
+        </Btn>
+        {/* 清空会丢掉域名与结果，走二次确认 */}
+        <ConfirmButton label={l.clear} onConfirm={reset} />
       </div>
       <ErrorNote msg={err} />
 

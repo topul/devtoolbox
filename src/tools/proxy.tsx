@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react'
-import { Panel, Btn, TA, Input, ErrorNote, CopyBtn } from '../components/ui'
+import { Panel, Btn, TA, Input, ErrorNote, CopyBtn, ConfirmButton, useAsyncAction } from '../components/ui'
 import { useLocalized } from '../lib/i18n'
 import { proxyL } from '../lib/locales/proxy'
 import type {
@@ -220,9 +220,8 @@ export function TrafficProxyTool() {
 
   const removeRule = useCallback(async (id: string) => {
     if (!api) return
-    if (!window.confirm(l.rules.removeConfirm)) return
     setRules(await api.rulesRemove(id))
-  }, [api, l])
+  }, [api])
 
   const filtered = useMemo(() => {
     const q = filter.trim().toLowerCase()
@@ -587,6 +586,24 @@ function CaPanel({ ca, l, api, onError, onNotice, onUpdate }: {
   onUpdate: (info: CaInfo) => void
 }) {
   const [open, setOpen] = useState(false)
+  // CA 操作全部涉及磁盘：caReset 要写密钥+生成证书，caExport 要读证书写文件。
+  // 原来 4 个按钮只 disabled={!api}，连点两下就并发跑 caReset + caExport，
+  // 竞态结果是拿到哪个文件根本不确定。用 useAsyncAction 统一防重入。
+  const { busy, run } = useAsyncAction(async (op: 'pem' | 'crt' | 'open' | 'reset') => {
+    if (op === 'open') {
+      await api?.caOpen()
+      return
+    }
+    if (op === 'reset') {
+      const info = await api?.caReset()
+      if (info) { onUpdate(info); onNotice(l.ca.ready) }
+      return
+    }
+    const r = await api?.caExport(op)
+    if (r?.ok) onNotice(l.ca.exported(r.path))
+    else if (r && !r.canceled) onError(l.errors.exportFailed(r.error ?? ''))
+  })
+
   return (
     <Panel
       title={l.ca.title}
@@ -601,22 +618,19 @@ function CaPanel({ ca, l, api, onError, onNotice, onUpdate }: {
           <span className={`text-[12px] ${ca ? 'text-phosphor' : 'text-amber'}`}>
             {ca ? `✓ ${l.ca.ready}` : `! ${l.ca.notReady}`}
           </span>
-          <Btn variant="ghost" onClick={async () => {
-            const r = await api?.caExport('pem')
-            if (r?.ok) onNotice(l.ca.exported(r.path))
-            else if (r && !r.canceled) onError(l.errors.exportFailed(r.error ?? ''))
-          }} disabled={!api}>{l.ca.exportPem}</Btn>
-          <Btn variant="ghost" onClick={async () => {
-            const r = await api?.caExport('crt')
-            if (r?.ok) onNotice(l.ca.exported(r.path))
-            else if (r && !r.canceled) onError(l.errors.exportFailed(r.error ?? ''))
-          }} disabled={!api}>{l.ca.exportCrt}</Btn>
-          <Btn variant="ghost" onClick={() => void api?.caOpen()} disabled={!api}>{l.ca.openFolder}</Btn>
-          <Btn variant="ghost" onClick={async () => {
-            if (!window.confirm(l.ca.resetConfirm)) return
-            const info = await api?.caReset()
-            if (info) { onUpdate(info); onNotice(l.ca.ready) }
-          }} disabled={!api}>{l.ca.reset}</Btn>
+          {/* 4 个按钮共用一个 busy：任何一个在跑，其余全部禁用 */}
+          <Btn variant="ghost" onClick={() => void run('pem')} disabled={!api || busy} aria-busy={busy}>
+            {busy ? l.misc.working : l.ca.exportPem}
+          </Btn>
+          <Btn variant="ghost" onClick={() => void run('crt')} disabled={!api || busy}>{l.ca.exportCrt}</Btn>
+          <Btn variant="ghost" onClick={() => void run('open')} disabled={!api || busy}>{l.ca.openFolder}</Btn>
+          {/* 重置会销毁现有 CA（已签发的证书全部失效），走行内二次确认而不是原生弹窗 */}
+          <ConfirmButton
+            label={l.ca.reset}
+            confirmLabel={l.ca.resetConfirm}
+            onConfirm={() => void run('reset')}
+            disabled={!api || busy}
+          />
         </div>
 
         {open && (
@@ -711,7 +725,14 @@ function RulesPanel({ rules, editing, l, api, onNew, onEdit, onCancel, onSave, o
                 </div>
               </div>
               <button onClick={() => onEdit(r)} className="text-[11px] text-muted hover:text-phosphor px-1">{l.rules.edit}</button>
-              <button onClick={() => onRemove(r.id)} className="text-muted hover:text-danger px-1">×</button>
+              {/* 删规则是不可撤销的走行内二次确认：第一次点变成「确认删除 / 取消」。
+                  原来是 window.confirm，与整套自绘风格割裂；且那个「×」没有可读名称。 */}
+              <ConfirmButton
+                label="×"
+                confirmLabel={l.rules.removeConfirm}
+                onConfirm={() => onRemove(r.id)}
+                className="px-1 text-muted hover:text-danger"
+              />
             </div>
           ))}
         </div>

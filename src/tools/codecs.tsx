@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Btn, TA, ErrorNote, Input, KV, Select } from '../components/ui'
+import { Btn, TA, ErrorNote, Input, KV, Select, usePersistedState } from '../components/ui'
 import { useLocalized } from '../lib/i18n'
 import { codecsL } from '../lib/locales/codecs'
 import {
@@ -22,8 +22,8 @@ type B32Mode = 'b32' | 'b32hex'
 export function Base58Tool() {
   const l = useLocalized(codecsL).base58
   const [mode, setMode] = useState<'b58' | B32Mode>('b58')
-  const [text, setText] = useState('DevOps Toolbox')
-  const [code, setCode] = useState('')
+  const [text, setText] = usePersistedState('base58-32', 'text', 'DevOps Toolbox')
+  const [code, setCode] = usePersistedState('base58-32', 'code', '')
   const [err, setErr] = useState<string | null>(null)
   const [padding, setPadding] = useState(true)
 
@@ -85,7 +85,7 @@ export function Base58Tool() {
 export function PunycodeTool() {
   const l = useLocalized(codecsL).punycode
   // 初始示例按当前语言给：中文界面看中文域名，英文界面看 münchen.de
-  const [domain, setDomain] = useState(() => l.sampleDomain)
+  const [domain, setDomain] = usePersistedState('punycode', 'domain', l.sampleDomain)
   const [err, setErr] = useState<string | null>(null)
   const [ascii, setAscii] = useState('')
   const [unicode, setUnicode] = useState('')

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import { Btn, ErrorNote, Input, KV, Panel, Select, Stat } from '../components/ui'
+import { Btn, ErrorNote, Input, KV, Panel, Select, Stat, usePersistedState } from '../components/ui'
 import { useLocalized } from '../lib/i18n'
 import { timezoneL } from '../lib/locales/timezone'
 import {
@@ -25,7 +25,7 @@ function tzOptions(extra: string): { value: string; label: string }[] {
 export function TimezoneTool() {
   const l = useLocalized(timezoneL)
   const local = localTimezoneId()
-  const [instant, setInstant] = useState('')
+  const [instant, setInstant] = usePersistedState('timezone', 'instant', '')
   // 本机时区可能正好是 Asia/Shanghai，去重避免 React 重复 key 警告
   const [zones, setZones] = useState(() => [...new Set(['UTC', local, 'Asia/Shanghai', 'America/New_York'])])
 

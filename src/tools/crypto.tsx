@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import { Panel, Btn, TA, Input, Select, ErrorNote, KV, CopyBtn } from '../components/ui'
+import { Panel, Btn, TA, Input, Select, ErrorNote, KV, CopyBtn, ResultPanel, ConfirmButton, usePersistedState } from '../components/ui'
 import { useLocalized, useI18n } from '../lib/i18n'
 import { cryptoL } from '../lib/locales/crypto'
 import {
@@ -19,11 +19,23 @@ import {
 
 export function HashTool() {
   const l = useLocalized(cryptoL).hash
-  const [input, setInput] = useState('')
+  // 持久化：切到别的工具再切回来，输入还在。原来裸 useState，切走就没了 ——
+  // 用户第一次遇到会以为工具坏了
+  const [input, setInput, { clear }] = usePersistedState('hash', 'input', '')
   const out = useMemo(() => (input ? digestAll(input) : null), [input])
   return (
     <div className="space-y-3">
-      <TA value={input} onChange={setInput} label={l.input} placeholder={l.inputPh} rows={4} />
+      {/* 清空会丢掉所有输入，走二次确认。放在 label 行右侧而不是输入框右边：
+          靠 items-end 对齐时 TA 有 label，按钮会浮在文本框中部像个孤岛。 */}
+      <TA
+        value={input}
+        onChange={setInput}
+        label={l.input}
+        placeholder={l.inputPh}
+        rows={4}
+        toolInput
+        labelRight={<ConfirmButton label={l.clear} onConfirm={clear} />}
+      />
       {out && (
         <div className="space-y-1.5">
           {out.map(({ label, value }) => (
@@ -45,17 +57,20 @@ export function HashTool() {
 
 export function HmacTool() {
   const l = useLocalized(cryptoL).hmac
-  const [input, setInput] = useState('')
-  const [key, setKey] = useState('')
-  const [algo, setAlgo] = useState<HmacAlgo>('SHA256')
+  const [input, setInput] = usePersistedState('hmac', 'input', '')
+  const [key, setKey] = usePersistedState('hmac', 'key', '')
+  const [algo, setAlgo] = usePersistedState<HmacAlgo>('hmac', 'algo', 'SHA256')
+  // 原来 catch { return '' }：算不出就静默变空串，用户以为工具没生效。
+  // 现在区分「没输入」与「输入了但算不出来」，后者给ErrorNote。
   const out = useMemo(() => {
-    if (!input || !key) return ''
+    if (!input || !key) return { text: '', err: null as string | null }
     try {
-      return hmacDigest(algo, input, key)
-    } catch {
-      return ''
+      return { text: hmacDigest(algo, input, key), err: null }
+    } catch (e) {
+      return { text: '', err: (e as Error).message }
     }
   }, [input, key, algo])
+  const missing = !input || !key
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -65,8 +80,11 @@ export function HmacTool() {
           { value: 'SHA256', label: 'HMAC-SHA256' }, { value: 'SHA512', label: 'HMAC-SHA512' },
         ]} />
       </div>
-      <TA value={input} onChange={setInput} label={l.msg} rows={4} />
-      {out && <TA value={out} readOnly label={l.out} rows={3} />}
+      <TA value={input} onChange={setInput} label={l.msg} rows={4} toolInput />
+      {/* 缺输入时给引导，而不是留一块空白让用户猜 */}
+      {missing && <ErrorNote msg={l.needBoth} />}
+      {out.err && <ErrorNote msg={out.err} />}
+      {!missing && !out.err && <ResultPanel title={l.out} text={out.text} />}
     </div>
   )
 }
@@ -75,9 +93,9 @@ export function HmacTool() {
 
 export function AesTool() {
   const l = useLocalized(cryptoL).aes
-  const [input, setInput] = useState('')
-  const [key, setKey] = useState('')
-  const [mode, setMode] = useState<AesMode>('ECB')
+  const [input, setInput] = usePersistedState('aes', 'input', '')
+  const [key, setKey] = usePersistedState('aes', 'key', '')
+  const [mode, setMode] = usePersistedState<AesMode>('aes', 'mode', 'ECB')
   const [output, setOutput] = useState('')
   const [err, setErr] = useState<string | null>(null)
 
@@ -99,13 +117,14 @@ export function AesTool() {
           { value: 'ECB', label: 'ECB' }, { value: 'CBC', label: l.cbc },
         ]} />
       </div>
-      <TA value={input} onChange={setInput} label={l.io} rows={5} />
+      <TA value={input} onChange={setInput} label={l.io} rows={5} toolInput />
       <div className="flex gap-2">
         <Btn variant="primary" onClick={() => run('enc')}>{l.enc}</Btn>
         <Btn onClick={() => run('dec')}>{l.dec}</Btn>
       </div>
       <ErrorNote msg={err} />
-      <TA value={output} readOnly label={l.out} rows={5} />
+      {/* 结果区给了限高与复制：长密文不再把页面撑开 */}
+      <ResultPanel title={l.out} text={output} emptyHint={l.nothingYet} />
       <p className="text-[11px] text-muted">{l.note}</p>
     </div>
   )
@@ -116,7 +135,7 @@ export function AesTool() {
 export function JwtTool() {
   const { locale } = useI18n()
   const l = useLocalized(cryptoL).jwt
-  const [token, setToken] = useState('')
+  const [token, setToken] = usePersistedState('jwt', 'token', '')
   const decoded = useMemo(() => {
     if (!token.trim()) return null
     try {
@@ -148,16 +167,13 @@ export function JwtTool() {
               {decoded.extra!.map(([k, v]) => <KV key={k} k={k} v={v} />)}
             </Panel>
           )}
+          {/* Header / Payload 原来是无高度上限的 <pre>：payload 几百行会把页面
+              撑到几千像素，用户要滚到底才看得到 Signature。ResultPanel 限高 + 给复制 */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-            <Panel title="Header"><pre className="codeblock text-[12px] text-amber">{decoded.header}</pre></Panel>
-            <Panel title="Payload"><pre className="codeblock text-[12px] text-phosphor">{decoded.payload}</pre></Panel>
+            <ResultPanel title="Header" text={decoded.header} maxHeight={240} />
+            <ResultPanel title="Payload" text={decoded.payload} maxHeight={240} />
           </div>
-          <Panel title="Signature">
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-[12px] text-danger break-all">{decoded.signature}</span>
-              <CopyBtn text={decoded.signature!} className="shrink-0" />
-            </div>
-          </Panel>
+          <ResultPanel title="Signature" text={decoded.signature!} maxHeight={120} />
           <p className="text-[11px] text-muted">{l.note}</p>
         </div>
       )}
@@ -169,7 +185,7 @@ export function JwtTool() {
 
 export function HashIdentifyTool() {
   const l = useLocalized(cryptoL).hashId
-  const [input, setInput] = useState('')
+  const [input, setInput] = usePersistedState('hash-id', 'input', '')
   const results = useMemo(() => {
     const h = input.trim()
     if (!h) return null

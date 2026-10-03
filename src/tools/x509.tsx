@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Btn, CopyBtn, ErrorNote, KV, Panel, Stat, TA } from '../components/ui'
+import { Btn, CopyBtn, ErrorNote, KV, Panel, Stat, TA, usePersistedState } from '../components/ui'
 import { useLocalized } from '../lib/i18n'
 import { x509L } from '../lib/locales/x509'
 import { certDnString, parseCertificatePem, type CertInfo } from '../lib/toolkit'
@@ -35,7 +35,7 @@ function statusKey(info: CertInfo['validity']): 'statusValid' | 'statusExpired' 
 
 export function X509Tool() {
   const l = useLocalized(x509L)
-  const [pem, setPem] = useState('')
+  const [pem, setPem] = usePersistedState('x509', 'data', '')
   const [info, setInfo] = useState<CertInfo | null>(null)
   const [err, setErr] = useState<string | null>(null)
 

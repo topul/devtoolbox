@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Btn, CopyBtn, ErrorNote, Input, KV, Panel, Stat, TA } from '../components/ui'
+import { Btn, CopyBtn, ErrorNote, Input, KV, Panel, Stat, TA, usePersistedState } from '../components/ui'
 import { useLocalized } from '../lib/i18n'
 import { jwtcrackL } from '../lib/locales/jwtcrack'
 import { jwtAnalyze, jwtForge, jwtSummary, type JwtCrackResult } from '../lib/toolkit'
@@ -23,7 +23,7 @@ const RESULT_CLS = {
 
 export function JwtCrackTool() {
   const l = useLocalized(jwtcrackL)
-  const [token, setToken] = useState('')
+  const [token, setToken] = usePersistedState('jwt-crack', 'token', '')
   const [extraKeys, setExtraKeys] = useState('')
   const [result, setResult] = useState<JwtCrackResult | null>(null)
   const [summary, setSummary] = useState<ReturnType<typeof jwtSummary> | null>(null)
@@ -140,7 +140,7 @@ export function JwtCrackTool() {
 /** 命中弱密钥后的伪造演示：密钥已泄露，签名能力就没了 */
 function ForgeDemo({ crackedKey, alg }: { crackedKey: string; alg: 'HS256' | 'HS384' | 'HS512' }) {
   const l = useLocalized(jwtcrackL)
-  const [payload, setPayload] = useState('{\n  "sub": "admin",\n  "role": "admin"\n}')
+  const [payload, setPayload] = usePersistedState('jwt-crack', 'payload', '{\n  "sub": "admin",\n  "role": "admin"\n}')
   const [forged, setForged] = useState<string | null>(null)
   const [err, setErr] = useState<string | null>(null)
 

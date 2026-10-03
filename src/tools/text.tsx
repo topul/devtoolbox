@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import { Btn, TA, Input, ErrorNote, Stat, Select, CopyBtn } from '../components/ui'
+import { Btn, TA, Input, ErrorNote, Stat, Select, CopyBtn, ResultPanel, usePersistedState } from '../components/ui'
 import { useLocalized } from '../lib/i18n'
 import { textL } from '../lib/locales/text'
 import {
@@ -18,10 +18,9 @@ import {
 
 export function DiffTool() {
   const l = useLocalized(textL).diff
-  const [a, setA] = useState('')
-  const [b, setB] = useState('')
+  const [a, setA] = usePersistedState('diff', 'a', '')
+  const [b, setB] = usePersistedState('diff', 'b', '')
   const [result, setResult] = useState<DiffLine[] | null>(null)
-
   const compare = () => setResult(lineDiff(a, b))
   const stats = useMemo(() => {
     if (!result) return null
@@ -31,11 +30,15 @@ export function DiffTool() {
       same: result.filter(r => r.type === 'same').length,
     }
   }, [result])
+  // 带符号前缀的纯文本副本：原来 diff 结果只能手动框选复制
+  const copyText = result
+    ? result.map(r => `${r.type === 'add' ? '+' : r.type === 'del' ? '-' : ' '} ${r.text}`).join('\n')
+    : ''
 
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        <TA value={a} onChange={setA} label={l.inputA} rows={8} />
+        <TA value={a} onChange={setA} label={l.inputA} rows={8} toolInput />
         <TA value={b} onChange={setB} label={l.inputB} rows={8} />
       </div>
       <Btn variant="primary" onClick={compare}>{l.compare}</Btn>
@@ -57,6 +60,8 @@ export function DiffTool() {
               </div>
             ))}
           </div>
+          {/* 结果的纯文本副本，带 +/− 前缀，可直接粘进工单或提交信息 */}
+          <ResultPanel title={l.copyTitle} text={copyText} maxHeight={240} />
         </div>
       )}
     </div>
@@ -67,21 +72,26 @@ export function DiffTool() {
 
 export function RegexTool() {
   const l = useLocalized(textL).regex
-  const [pattern, setPattern] = useState('')
-  const [flags, setFlags] = useState('g')
-  const [text, setText] = useState('')
-  const [err, setErr] = useState<string | null>(null)
+  const [pattern, setPattern] = usePersistedState('regex', 'pattern', '')
+  const [flags, setFlags] = usePersistedState('regex', 'flags', 'g')
+  const [text, setText] = usePersistedState('regex', 'text', '')
 
-  const matches = useMemo(() => {
-    setErr(null)
-    if (!pattern) return null
+  // 原来在 useMemo 里调 setErr —— render 阶段更新 state 是 React 明确禁止的：
+  // StrictMode 双渲染下会多渲染一轮，错误提示还会闪一帧。
+  // 改成用Memo 只算「成功或失败」，渲染期不碰 setState。
+  const probe = useMemo((): { list: ReturnType<typeof regexTest> | null; err: string | null } => {
+    if (!pattern) return { list: null, err: null }
     try {
-      return regexTest(pattern, flags, text)
+      return { list: regexTest(pattern, flags, text), err: null }
     } catch (e) {
-      setErr(l.errorPrefix + (e as Error).message)
-      return null
+      return { list: null, err: l.errorPrefix + (e as Error).message }
     }
   }, [pattern, flags, text, l])
+
+  // 命中列表拼成纯文本，给一个复制入口（原来只能手动框选）
+  const copyText = probe.list
+    ? probe.list.map((m, i) => `#${i + 1} @${m.index} ${m.match}`).join('\n')
+    : ''
 
   return (
     <div className="space-y-3">
@@ -99,13 +109,13 @@ export function RegexTool() {
           </button>
         ))}
       </div>
-      <TA value={text} onChange={setText} label={l.testText} rows={6} />
-      <ErrorNote msg={err} />
-      {matches && (
+      <TA value={text} onChange={setText} label={l.testText} rows={6} toolInput />
+      <ErrorNote msg={probe.err} />
+      {probe.list && (
         <div className="space-y-2">
-          <div className="text-[12px] text-muted">{l.matchesPre}<span className="text-phosphor">{matches.length}</span>{l.matchesSuf}</div>
+          <div className="text-[12px] text-muted">{l.matchesPre}<span className="text-phosphor">{probe.list.length}</span>{l.matchesSuf}</div>
           <div className="border border-line-soft bg-panel-2 max-h-[320px] overflow-auto">
-            {matches.map((m, i) => (
+            {probe.list.map((m, i) => (
               <div key={i} className="flex gap-3 px-3 py-1.5 border-b border-line-soft last:border-0 text-[12px]">
                 <span className="text-muted/60 w-8 shrink-0">#{i + 1}</span>
                 <span className="text-phosphor break-all">{m.match}</span>
@@ -115,10 +125,12 @@ export function RegexTool() {
                 )}
               </div>
             ))}
-            {matches.length === 0 && <div className="px-3 py-2 text-muted text-[12px]">{l.noMatch}</div>}
+            {probe.list.length === 0 && <div className="px-3 py-2 text-muted text-[12px]">{l.noMatch}</div>}
           </div>
         </div>
       )}
+      {/* 命中列表的纯文本副本：原来要手动框选复制 */}
+      {copyText && <ResultPanel title={l.copyTitle} text={copyText} maxHeight={200} />}
     </div>
   )
 }

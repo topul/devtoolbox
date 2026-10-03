@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react'
-import { Panel, Btn, TA, ErrorNote, CopyBtn, ToolGuide } from '../components/ui'
+import { Panel, Btn, TA, ErrorNote, CopyBtn, ToolGuide, usePersistedState } from '../components/ui'
 import { useLocalized } from '../lib/i18n'
 import { schemaL } from '../lib/locales/schema'
 import {
@@ -64,7 +64,7 @@ function issueTool(path: string): string | null {
 
 export function ToolSchemaTool(): React.ReactElement {
   const l = useLocalized(schemaL)
-  const [input, setInput] = useState(() => buildExample(l.sample))
+  const [input, setInput] = usePersistedState('tool-schema', 'input', buildExample(l.sample))
   const [target, setTarget] = useState<SchemaTarget>('typescript')
   const [pick, setPick] = useState<number | 'all'>('all')
 

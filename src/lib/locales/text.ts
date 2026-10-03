@@ -7,6 +7,7 @@ export const textL = {
       added: '新增',
       deleted: '删除',
       unchanged: '未变',
+      copyTitle: '差异文本（可复制）',
     },
     regex: {
       presets: [
@@ -32,6 +33,7 @@ export const textL = {
       matchesSuf: ' 处',
       groups: '组: ',
       noMatch: '无匹配结果',
+      copyTitle: '命中列表（可复制）',
       errorPrefix: '正则表达式错误：',
     },
     wordCount: {
@@ -66,6 +68,7 @@ export const textL = {
       added: 'added',
       deleted: 'deleted',
       unchanged: 'unchanged',
+      copyTitle: 'Diff as text (copyable)',
     },
     regex: {
       presets: [
@@ -91,6 +94,7 @@ export const textL = {
       matchesSuf: ' matches',
       groups: 'Groups: ',
       noMatch: 'No matches found',
+      copyTitle: 'Matches (copyable)',
       errorPrefix: 'Invalid regex: ',
     },
     wordCount: {

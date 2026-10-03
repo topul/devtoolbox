@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react'
-import { Btn, TA, Select, ErrorNote, Panel } from '../components/ui'
+import React, { useState, useMemo, useDeferredValue } from 'react'
+import { Btn, TA, Select, ErrorNote, Panel, ResultPanel, ConfirmButton, usePersistedState } from '../components/ui'
 import { useLocalized } from '../lib/i18n'
 import { formatL } from '../lib/locales/format'
 
@@ -7,10 +7,10 @@ import { formatL } from '../lib/locales/format'
 
 export function JsonTool() {
   const l = useLocalized(formatL).json
-  const [input, setInput] = useState('')
+  const [input, setInput, { clear }] = usePersistedState('json', 'input', '')
   const [output, setOutput] = useState('')
   const [err, setErr] = useState<string | null>(null)
-  const [indent, setIndent] = useState('2')
+  const [indent, setIndent] = usePersistedState('json', 'indent', '2')
 
   const run = (mode: 'format' | 'minify' | 'escape' | 'unescape') => {
     setErr(null)
@@ -30,7 +30,16 @@ export function JsonTool() {
 
   return (
     <div className="space-y-3">
-      <TA value={input} onChange={setInput} label={l.input} placeholder='{"key": "value", "arr": [1,2,3]}' rows={8} />
+      {/* 清空走二次确认；按钮放label 行右侧（与 label 同行），不靠 items-end 硬对齐 */}
+      <TA
+        value={input}
+        onChange={setInput}
+        label={l.input}
+        placeholder='{"key": "value", "arr": [1,2,3]}'
+        rows={8}
+        toolInput
+        labelRight={<ConfirmButton label={l.clear} onConfirm={clear} />}
+      />
       <div className="flex items-end gap-2 flex-wrap">
         <Select value={indent} onChange={setIndent} label={l.indentLabel} options={l.indentOptions} />
         <Btn variant="primary" onClick={() => run('format')}>{l.format}</Btn>
@@ -39,7 +48,14 @@ export function JsonTool() {
         <Btn onClick={() => run('unescape')}>{l.unescape}</Btn>
       </div>
       <ErrorNote msg={err} />
-      {!err && <TA value={output} readOnly label={l.output} rows={10} />}
+      {/* 原来 `{!err && <TA/>}`：一出错输出区整个消失，页面少一块、布局跳动。
+          改成常驻的 ResultPanel，出错时保留上一次的输出并显示空状态提示 */}
+      <ResultPanel
+        title={l.output}
+        text={err ? '' : output}
+        emptyHint={l.nothingYet}
+        maxHeight={360}
+      />
     </div>
   )
 }
@@ -55,10 +71,14 @@ const SQL_KEYWORDS = [
 
 export function SqlTool() {
   const l = useLocalized(formatL).sql
-  const [input, setInput] = useState('')
+  const [input, setInput] = usePersistedState('sql-format', 'input', '')
+  // 每按一个键都要跑 53 次全文正则（34 个关键词大写 + 19 个换行）。
+  // 直接同步算会卡住主线程 —— 项目是 React 18 却等于退化成同步渲染。
+  // useDeferredValue 让 React 先把输入框响应做完，再在后台算格式化结果。
+  const deferred = useDeferredValue(input)
   const output = useMemo(() => {
-    if (!input.trim()) return ''
-    let sql = input.trim().replace(/\s+/g, ' ')
+    if (!deferred.trim()) return ''
+    let sql = deferred.trim().replace(/\s+/g, ' ')
     // uppercase keywords
     SQL_KEYWORDS.forEach(kw => {
       const re = new RegExp('\\b' + kw.replace(/\s+/g, '\\s+') + '\\b', 'gi')
@@ -73,12 +93,15 @@ export function SqlTool() {
     sql = sql.replace(/\s+(AND|OR)\s+/g, '\n  $1 ')
     sql = sql.replace(/,\s*/g, ',\n  ')
     return sql.trim()
-  }, [input])
+  }, [deferred])
+  // 输入已经变了但结果还没算出来 —— 不标一下用户会以为没生效
+  const stale = deferred !== input
 
   return (
     <div className="space-y-3">
-      <TA value={input} onChange={setInput} label={l.input} placeholder="select id,name from users where age>18 and city='BJ' order by id desc limit 10" rows={6} />
-      <TA value={output} readOnly label={l.output} rows={12} />
+      <TA value={input} onChange={setInput} label={l.input} placeholder="select id,name from users where age>18 and city='BJ' order by id desc limit 10" rows={6} toolInput />
+      {stale && <p className="text-[11px] text-muted" role="status">{l.calculating}</p>}
+      <ResultPanel title={l.output} text={output} emptyHint={l.nothingYet} maxHeight={360} />
     </div>
   )
 }
