@@ -63,7 +63,7 @@
     "smoke:ux": "esbuild scripts/smoke-ux.tsx --bundle --platform=node --format=esm --outfile=node_modules/.cache/smoke-ux.mjs --log-level=error --loader:.tsx=tsx --jsx=automatic --external:qrcode --external:react --external:react-dom --external:react/jsx-runtime && node node_modules/.cache/smoke-ux.mjs"
   },
   "dependencies": {
-    "@ai-sdk/react": "^2.0.264",
+    "@ai-sdk/react": "^4.0.126",
     "@fontsource/jetbrains-mono": "^5.3.0",
     "ai": "^5.0.261",
     "clsx": "^2.1.1",
