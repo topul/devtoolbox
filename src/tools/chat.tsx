@@ -15,6 +15,7 @@ import { useChat } from '@ai-sdk/react'
 import { Btn, ErrorNote, Input, Panel } from '../components/ui'
 import { MessageView } from '../components/chat/MessageView'
 import { Composer } from '../components/chat/Composer'
+import { Greeter } from '../components/chat/Greeter'
 import { SettingsDrawer } from '../components/chat/SettingsDrawer'
 import { TraceDrawer } from '../components/chat/TraceView'
 import { useLocalized } from '../lib/i18n'
@@ -493,6 +494,26 @@ export function ChatTool(): React.ReactElement {
   )
 
   // 高度见 index.css 的 .chat-viewport：宽屏下要抵消 <main> 的 zoom
+  const composer = (
+    <Composer
+      input={input}
+      onInput={setInput}
+      onSend={() => void send()}
+      onStop={stopStream}
+      streaming={busy}
+      profiles={profiles}
+      activeId={active?.id ?? ''}
+      onPickProfile={activate}
+      onManageModels={() => setShowSettings(true)}
+      onAddProfile={addProfile}
+      estimate={preflight.total}
+      cost={lastCost}
+      roundInfo={roundInfo}
+      toolCount={toolNames.length}
+      disabled={!desktop || !cfgReady}
+    />
+  )
+
   return (
     <div className="flex chat-viewport">
       {rail}
@@ -575,38 +596,36 @@ export function ChatTool(): React.ReactElement {
           </div>
         )}
 
-        <MessageList
-          messages={messages}
-          busy={busy}
-          prices={prices}
-          model={active?.model ?? ''}
-          emptyText={`${l.empty}　${l.emptyHint}`}
-          sendError={sendError}
-          onRetry={retry}
-          onTrace={setTraceId}
-        />
-
-        <div className="border-t border-line px-4 py-3 shrink-0 pb-safe">
-          <div className="max-w-[860px] mx-auto">
-            <Composer
-              input={input}
-              onInput={setInput}
-              onSend={() => void send()}
-              onStop={stopStream}
-              streaming={busy}
-              profiles={profiles}
-              activeId={active?.id ?? ''}
-              onPickProfile={activate}
-              onManageModels={() => setShowSettings(true)}
-              onAddProfile={addProfile}
-              estimate={preflight.total}
-              cost={lastCost}
-              roundInfo={roundInfo}
-              toolCount={toolNames.length}
-              disabled={!desktop || !cfgReady}
-            />
+        {messages.length === 0 ? (
+          /* 空会话：Kimi 式首屏 —— 输入框在视口中央，上方坐着 SVG 小人；
+             发出第一条消息后切换回「消息流 + 底部输入框」的对话布局 */
+          <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-safe">
+            <div className="min-h-full flex flex-col items-center justify-center py-8">
+              <div className="w-full max-w-[860px] -mt-14 fade-in">
+                <Greeter />
+                <p className="text-center text-[13.5px] text-dim mb-5">{l.heroTitle}</p>
+                {composer}
+              </div>
+            </div>
           </div>
-        </div>
+        ) : (
+          <>
+            <MessageList
+              messages={messages}
+              busy={busy}
+              prices={prices}
+              model={active?.model ?? ''}
+              emptyText={`${l.empty}　${l.emptyHint}`}
+              sendError={sendError}
+              onRetry={retry}
+              onTrace={setTraceId}
+            />
+
+            <div className="border-t border-line px-4 py-3 shrink-0 pb-safe">
+              <div className="max-w-[860px] mx-auto">{composer}</div>
+            </div>
+          </>
+        )}
       </div>
 
       <SettingsDrawer

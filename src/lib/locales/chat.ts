@@ -188,6 +188,7 @@ export const chatL = {
     traceTools: '工具调用',
     preflight: '本次将发送约 {n} token',
     empty: '还没有消息。配好接口地址与模型后，发一句话试试。',
+    heroTitle: '想做点什么？',
     noDesktop: '流式对话需要主进程能力（走代理、读原始流），请在桌面端应用里使用。',
     hint: '提示',
     hintItems: [
@@ -387,6 +388,7 @@ export const chatL = {
     traceTools: 'Tool calls',
     preflight: 'About {n} tokens will be sent',
     empty: 'No messages yet. Set the base URL and model, then send something.',
+    heroTitle: 'What are we making today?',
     noDesktop: 'Streaming chat needs main-process capabilities (proxies, raw stream access); use the desktop app.',
     hint: 'Notes',
     hintItems: [

@@ -1,8 +1,8 @@
 /**
- * 输入区：工具栏（模型切换 / 工具开关状态）+ 输入框 + 动作行。
+ * 输入区：输入框 + 动作行（模型切换 / 发送）。
  *
- * 模型切换器从顶栏搬到这里，是因为「换模型」和「发消息」是同一个动作的两半 ——
- * 放在光标旁边，改完立刻能发；顶栏留给会话标题与状态提示。
+ * 模型切换器与发送按钮都放在输入框正下方的右侧 —— 「换模型」和「发消息」
+ * 是同一个动作的两半，放在光标旁边，改完立刻能发（Kimi 式布局）。
  *
  * 键盘：Enter 发送、Shift+Enter 换行。**必须避开输入法组词中的 Enter**
  * （中文输入法里按 Enter 是选中候选词，此时发送会把人逼疯）。
@@ -51,25 +51,6 @@ export function Composer({
 
   return (
     <div className="border border-line-soft bg-panel-2/40 focus-within:border-phosphor/40 transition-colors">
-      {/* 工具栏 */}
-      <div className="flex items-center gap-2 flex-wrap border-b border-line-soft px-2 py-1">
-        <ModelMenu
-          profiles={profiles}
-          activeId={activeId}
-          onPick={onPickProfile}
-          onManage={onManageModels}
-          onAdd={onAddProfile}
-          l={l}
-        />
-        <span className="flex-1" />
-        {toolCount > 0 && <span className="text-[10.5px] text-muted">{l.toolsGranted.replace('{n}', String(toolCount))}</span>}
-        {streaming && roundInfo && roundInfo.round > 1 && (
-          <span className="text-[10.5px] text-amber">
-            {l.roundLabel.replace('{a}', String(roundInfo.round)).replace('{b}', String(roundInfo.max))}
-          </span>
-        )}
-      </div>
-
       <textarea
         value={input}
         onChange={(e) => onInput(e.target.value)}
@@ -80,13 +61,27 @@ export function Composer({
         className="w-full resize-y bg-transparent px-2.5 py-2 text-[12.5px] leading-relaxed text-bright placeholder:text-muted/50 focus:outline-none"
       />
 
-      {/* 动作行：主按钮右下（打完字光标就在这一带，Fitts 最近路径），
-          token 估算与费用降级成左侧说明文字，不再和按钮抢同一行视觉权重 */}
-      <div className="flex items-center gap-3 border-t border-line-soft px-2 py-1.5">
+      {/* 动作行：换模型与主按钮都在右下（打完字光标就在这一带，Fitts 最近路径），
+          token 估算、工具数与费用降级成左侧说明文字，不和按钮抢视觉权重 */}
+      <div className="flex items-center gap-2 border-t border-line-soft px-2 py-1.5">
         <span className="flex-1 min-w-0 truncate text-[11px] text-muted/70">
           {l.preflight.replace('{n}', estimate.toLocaleString())}
           {cost !== null && ` · ${l.lastCost} ${formatMoney(cost)}`}
+          {toolCount > 0 && ` · ${l.toolsGranted.replace('{n}', String(toolCount))}`}
         </span>
+        {streaming && roundInfo && roundInfo.round > 1 && (
+          <span className="shrink-0 text-[10.5px] text-amber">
+            {l.roundLabel.replace('{a}', String(roundInfo.round)).replace('{b}', String(roundInfo.max))}
+          </span>
+        )}
+        <ModelMenu
+          profiles={profiles}
+          activeId={activeId}
+          onPick={onPickProfile}
+          onManage={onManageModels}
+          onAdd={onAddProfile}
+          l={l}
+        />
         {streaming
           ? <Btn onClick={onStop}>{l.stop}</Btn>
           : <Btn variant="primary" onClick={onSend} disabled={disabled || !input.trim()}>{l.send}</Btn>}
@@ -128,7 +123,7 @@ function ModelMenu({ profiles, activeId, onPick, onManage, onAdd, l }: {
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute left-0 bottom-full mb-1 z-50 w-[320px] border border-line bg-panel shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
+          <div className="absolute right-0 bottom-full mb-1 z-50 w-[320px] border border-line bg-panel shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
             <div className="px-3 py-1.5 text-[9.5px] uppercase tracking-[0.2em] text-muted/60 border-b border-line-soft">
               {l.modelsTitle}
             </div>
