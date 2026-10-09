@@ -561,7 +561,7 @@ export const HANDLERS: Record<string, ToolHandler> = {
     }
     const head = `共 ${r.tables.length} 个访问节点：`
     const body = r.tables
-      .map(t => `[${t.risk === 'high' ? '高风险' : t.risk === 'mid' ? '中等' : '低风险'}] ${t.name}  ${t.type || '—'}  扫描 ${t.rows} 行  索引 ${t.key || '未走'}${t.extra ? `  ${t.extra}` : ''}`)
+      .map(t => `[${t.risk === 'high' ? '高风险' : t.risk === 'mid' ? '中等' : '低风险'}] ${t.name}  ${t.type || '—'}  扫描 ${t.rows} 行  索引 ${t.key || '未走'}${!t.key && t.possibleKeys ? `（可用：${t.possibleKeys}）` : ''}${t.filtered > 0 ? `  过滤率 ${t.filtered}%` : ''}${t.extra ? `  ${t.extra}` : ''}`)
       .join('\n')
     const total = r.tables.reduce((n, t) => n + t.rows, 0)
     const high = r.tables.filter(t => t.risk === 'high')

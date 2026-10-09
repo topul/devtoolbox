@@ -45,6 +45,10 @@ export interface ExplainTable {
   rows: number
   /** 命中的索引 */
   key: string
+  /** 优化器考虑过但没用的索引（possible_keys） */
+  possibleKeys: string
+  /** 过滤后剩余行占比（%），0 表示未知 */
+  filtered: number
   /** Extra 信息 */
   extra: string
   /** 风险判定 */
@@ -368,6 +372,8 @@ function walkPgPlan(node: unknown, out: ExplainTable[]): void {
       type,
       rows,
       key: String(o['Index Name'] ?? ''),
+      possibleKeys: '',
+      filtered: 0,
       extra: String(o['Filter'] ?? o['Hash Cond'] ?? o['Join Filter'] ?? ''),
       risk: j.risk,
       note: j.note,
@@ -397,7 +403,9 @@ function walkMysqlJson(node: unknown, out: ExplainTable[], depth = 0): void {
       type,
       rows,
       key: String(o.key ?? ''),
-      extra: String(o.Extra ?? o.filtered ?? ''),
+      possibleKeys: Array.isArray(o.possible_keys) ? o.possible_keys.map(String).join(', ') : '',
+      filtered: Number(o.filtered ?? 0) || 0,
+      extra: String(o.Extra ?? ''),
       risk: j.risk,
       note: j.note,
     })
@@ -417,34 +425,78 @@ function walkMysqlJson(node: unknown, out: ExplainTable[], depth = 0): void {
   }
 }
 
-/** 解析传统文本表（MySQL CLI 的 EXPLAIN 输出） */
+/** 解析传统文本表（MySQL CLI / markdown 表格的 EXPLAIN 输出） */
 function parseTextTable(text: string, dialect: 'mysql' | 'postgres'): ExplainTable[] {
   const out: ExplainTable[] = []
+  // 有表头时按列名定位，MySQL 8 的 12 列与 5.7 的 10 列都能对上
+  let colMap: Record<string, number> | null = null
   for (const raw of text.split('\n')) {
     const line = raw.trim()
     if (!line.startsWith('|')) continue
     const cells = line.split('|').slice(1, -1).map(c => c.trim())
     if (cells.length < 5) continue
-    // 表头行跳过
-    if (/^table$/i.test(cells[2]) || /^select_type$/i.test(cells[1])) continue
-    // 分隔行全是 --- 跳过
-    if (cells.every(c => /^-+$/.test(c))) continue
-    // MySQL 列序 [id, select_type, table, type, rows, key, Extra]；
-    // PG 的文本输出少一列 select_type，按 dialect 偏一列
-    const off = dialect === 'postgres' ? 1 : 0
-    const name = cells[2 + off]
-    const type = cells[3 + off]
-    const rows = Number(cells[4 + off]?.replace(/[^\d.]/g, '')) || 0
+    // 分隔行（CLI 无此行，markdown 是 | --- | :---: |）
+    if (cells.every(c => /^:?-+:?$/.test(c))) continue
+    // 表头行：记录列名 → 下标
+    if (cells.some(c => /^table$/i.test(c)) && cells.some(c => /^type$/i.test(c))) {
+      colMap = {}
+      cells.forEach((c, i) => { colMap![c.toLowerCase()] = i })
+      continue
+    }
+    let name: string, type: string, rows: number, key: string, possibleKeys: string, filtered: number, extra: string
+    if (colMap) {
+      const g = (k: string) => (colMap![k] != null ? cells[colMap![k]] ?? '' : '')
+      name = g('table')
+      type = g('type')
+      rows = Number(g('rows').replace(/[^\d.]/g, '')) || 0
+      key = g('key')
+      possibleKeys = g('possible_keys')
+      filtered = Number(g('filtered').replace(/[^\d.]/g, '')) || 0
+      extra = g('extra')
+    } else {
+      // 无表头：退回旧的固定列序假设（PG 少一列 select_type）
+      const off = dialect === 'postgres' ? 1 : 0
+      name = cells[2 + off]
+      type = cells[3 + off]
+      rows = Number(cells[4 + off]?.replace(/[^\d.]/g, '')) || 0
+      key = cells[5 + off] ?? ''
+      possibleKeys = ''
+      filtered = 0
+      extra = cells.slice(6).join(' ')
+    }
+    if (!name) continue
     const j = judgeRisk(type, rows)
-    out.push({
-      name, type, rows,
-      key: cells[5 + off] ?? '',
-      extra: cells.slice(6).join(' '),
-      risk: j.risk,
-      note: j.note,
-    })
+    out.push({ name, type, rows, key, possibleKeys, filtered, extra, risk: j.risk, note: j.note })
   }
   return out
+}
+
+/**
+ * 解析 MySQL 结果集导出的行对象数组（Navicat / DBeaver 复制为 JSON）。
+ * 列名大小写不敏感，取 table / type / rows / key / Extra。
+ */
+function fromMysqlRows(rows: unknown[], out: ExplainTable[]): void {
+  for (const r of rows) {
+    if (!r || typeof r !== 'object') continue
+    const o: Record<string, unknown> = {}
+    for (const k of Object.keys(r as Record<string, unknown>)) {
+      o[k.toLowerCase()] = (r as Record<string, unknown>)[k]
+    }
+    const str = (v: unknown) => (v == null ? '' : String(v))
+    const name = str(o.table)
+    if (!name) continue
+    const type = str(o.type)
+    const rowNum = Number(str(o.rows).replace(/[^\d.]/g, '')) || 0
+    const j = judgeRisk(type, rowNum)
+    out.push({
+      name, type, rows: rowNum,
+      key: str(o.key),
+      possibleKeys: str(o.possible_keys),
+      filtered: Number(str(o.filtered).replace(/[^\d.]/g, '')) || 0,
+      extra: str(o.extra),
+      risk: j.risk, note: j.note,
+    })
+  }
 }
 
 /**
@@ -470,10 +522,13 @@ export function parseExplain(input: string, dialect: 'mysql' | 'postgres' = 'mys
     if (Array.isArray(parsed)) {
       // PG: [ { Plan: {...} } ]
       for (const item of parsed) walkPgPlan((item as Record<string, unknown>)?.Plan, tables)
+      // MySQL 结果集导出的行对象数组（Navicat / DBeaver）
+      if (!tables.length) fromMysqlRows(parsed, tables)
     } else if (parsed && typeof parsed === 'object') {
       const o = parsed as Record<string, unknown>
       if ('Plan' in o) walkPgPlan(o.Plan, tables)
       if ('query_block' in o) walkMysqlJson(o.query_block, tables)
+      if (!tables.length) fromMysqlRows([o], tables)
     }
     if (tables.length) return { tables, summary: buildSummary(tables), unparsed: false }
   } catch {

@@ -271,6 +271,69 @@ LIMIT 1000000`
 }
 
 {
+  // MySQL 8 的 12 列文本表格：按表头对齐，不错位
+  const text = `+----+-------------+-------+------------+------+---------------+------+---------+------+--------+----------+-------------+
+| id | select_type | table | partitions | type | possible_keys | key  | key_len | ref  | rows   | filtered | Extra       |
++----+-------------+-------+------------+------+---------------+------+---------+------+--------+----------+-------------+
+|  1 | SIMPLE      | vmi   | NULL       | ALL  | NULL          | NULL | NULL    | NULL | 100564 |   100.00 | Using where |
++----+-------------+-------+------------+------+---------------+------+---------+------+--------+----------+-------------+`
+  const r = parseExplain(text, 'mysql')
+  eq(r.tables.length, 1, '12 列文本表格解析出 1 行')
+  eq(r.tables[0].name, 'vmi', '12 列表格表名不错位')
+  eq(r.tables[0].type, 'ALL', '12 列表格 type 不错位（不是 partitions）')
+  eq(r.tables[0].rows, 100564, '12 列表格 rows 不错位（不是 type）')
+  eq(r.tables[0].risk, 'high', '12 列表格 ALL + 10万行判高风险')
+}
+
+{
+  // markdown 表格（含 :--- 分隔行）
+  const md = `| id | select_type | table | type | possible_keys | key | rows | filtered | Extra |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | SIMPLE | warehouse | ref | idx_wh_org_id | idx_wh_org_id | 15 | 100.00 | Using where |
+| 1 | SIMPLE | vmi | ALL |  |  | 100564 | 100.00 | Using where |`
+  const r = parseExplain(md, 'mysql')
+  eq(r.tables.length, 2, 'markdown 表格解析出 2 行')
+  const vmi = r.tables.find(t => t.name === 'vmi')
+  ok(!!vmi && vmi.type === 'ALL' && vmi.rows === 100564, 'markdown 表格列对齐正确')
+  const wh = r.tables.find(t => t.name === 'warehouse')
+  ok(!!wh && wh.key === 'idx_wh_org_id', 'markdown 表格 key 列正确')
+  ok(!!wh && wh.possibleKeys === 'idx_wh_org_id' && wh.filtered === 100, 'markdown 表格 possible_keys / filtered 正确')
+}
+
+{
+  // MySQL 结果集导出的行对象数组（Navicat / DBeaver 复制为 JSON）
+  const rows = [
+    { id: '1', select_type: 'PRIMARY', table: '<derived3>', partitions: null, type: 'ALL', possible_keys: null, key: null, key_len: null, ref: null, rows: '139', filtered: '100.00', Extra: 'Using where' },
+    { id: '1', select_type: 'PRIMARY', table: 'warehouse', partitions: null, type: 'ref', possible_keys: 'idx_wh_org_id', key: 'idx_wh_org_id', key_len: '9', ref: 'supplier_factory.org_id', rows: '15', filtered: '100.00', Extra: 'Using where' },
+    { id: '1', select_type: 'PRIMARY', table: 'vmi', partitions: null, type: 'ALL', possible_keys: null, key: null, key_len: null, ref: null, rows: '100564', filtered: '100.00', Extra: 'Using where; Using join buffer (Block Nested Loop)' },
+  ]
+  const r = parseExplain(JSON.stringify(rows), 'mysql')
+  eq(r.tables.length, 3, '行对象数组解析出 3 行')
+  const vmi = r.tables.find(t => t.name === 'vmi')
+  ok(!!vmi && vmi.type === 'ALL' && vmi.rows === 100564 && vmi.risk === 'high', '行对象数组 vmi 全表扫描判高风险')
+  const wh = r.tables.find(t => t.name === 'warehouse')
+  ok(!!wh && wh.key === 'idx_wh_org_id' && wh.extra === 'Using where', '行对象数组 key / Extra 正确（null 不变 "null"）')
+  ok(!!wh && wh.possibleKeys === 'idx_wh_org_id' && wh.filtered === 100, '行对象数组 possible_keys / filtered 正确')
+  ok(!!vmi && vmi.possibleKeys === '' && vmi.filtered === 100, '行对象数组 null 的 possible_keys 解析为空串')
+}
+
+{
+  // MySQL 8 FORMAT=JSON 的 possible_keys 是数组
+  const j = {
+    query_block: {
+      table: {
+        table_name: 'relation', access_type: 'ref', rows_examined_per_scan: 27941,
+        possible_keys: ['uk_factory_item_sku_supplier', 'idx_factory_code'], key: 'idx_tenant_id', filtered: '0.50',
+      },
+    },
+  }
+  const r = parseExplain(JSON.stringify(j), 'mysql')
+  eq(r.tables.length, 1, 'FORMAT=JSON 解析出 1 行')
+  eq(r.tables[0].possibleKeys, 'uk_factory_item_sku_supplier, idx_factory_code', 'FORMAT=JSON possible_keys 数组展开')
+  eq(r.tables[0].filtered, 0.5, 'FORMAT=JSON filtered 解析为数值')
+}
+
+{
   // 无法识别
   const r = parseExplain('完全不是 explain 输出', 'mysql')
   eq(r.tables.length, 0, '无法识别时返回空表列表而不是崩')

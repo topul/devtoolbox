@@ -219,6 +219,8 @@ function ExplainTab() {
               <div className="text-[11.5px] text-muted mt-0.5">
                 {l.rows}: {t.rows.toLocaleString('en-US')}
                 {' · '}{l.key}: {t.key || l.noKey}
+                {!t.key && t.possibleKeys && ` · ${l.possibleKeys}: ${t.possibleKeys}`}
+                {t.filtered > 0 && ` · ${l.filtered}: ${t.filtered}%`}
                 {t.extra && ` · ${t.extra}`}
               </div>
             </div>
