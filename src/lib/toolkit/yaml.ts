@@ -24,7 +24,10 @@ function parseScalar(v: string): unknown {
 }
 
 export function parseYaml(src: string): unknown {
-  const lines = src.replace(/\t/g, '  ').split('\n').filter((l) => l.trim() && !l.trim().startsWith('#'))
+  const lines = src
+    .replace(/\t/g, '  ')
+    .split('\n')
+    .filter((l) => l.trim() && !l.trim().startsWith('#'))
 
   function block(startIdx: number, indent: number): [unknown, number] {
     let i = startIdx
@@ -78,12 +81,18 @@ export function parseYaml(src: string): unknown {
         }
       } else {
         const idx = content.indexOf(':')
-        if (idx < 0) { i++; continue }
-        const key = content.slice(0, idx).trim().replace(/^["']|["']$/g, '')
+        if (idx < 0) {
+          i++
+          continue
+        }
+        const key = content
+          .slice(0, idx)
+          .trim()
+          .replace(/^["']|["']$/g, '')
         const val = content.slice(idx + 1).trim()
         if (val === '') {
           const next = lines[i + 1]
-          if (next && (next.length - next.trimStart().length) > curIndent) {
+          if (next && next.length - next.trimStart().length > curIndent) {
             const [child, nextIdx] = block(i + 1, curIndent + 1)
             result[key] = child
             i = nextIdx
@@ -94,7 +103,7 @@ export function parseYaml(src: string): unknown {
         } else if (val === '|' || val === '>') {
           const buf: string[] = []
           i++
-          while (i < lines.length && (lines[i].length - lines[i].trimStart().length) > curIndent) {
+          while (i < lines.length && lines[i].length - lines[i].trimStart().length > curIndent) {
             buf.push(lines[i].trim())
             i++
           }
@@ -115,7 +124,11 @@ export function parseYaml(src: string): unknown {
 function fmtScalar(v: unknown): string {
   if (v === null || v === undefined) return 'null'
   if (typeof v === 'string') {
-    if (v === '' || /[:#\[\]{}\n]|^\s|\s$|^[-?]/.test(v) || ['true', 'false', 'null', '~'].includes(v))
+    if (
+      v === '' ||
+      /[:#\[\]{}\n]|^\s|\s$|^[-?]/.test(v) ||
+      ['true', 'false', 'null', '~'].includes(v)
+    )
       return JSON.stringify(v)
     return v
   }

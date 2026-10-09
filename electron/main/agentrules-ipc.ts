@@ -54,7 +54,8 @@ export function createAgentRulesController(host: AgentRulesHost): AgentRulesCont
     save: async (root, target, content) => {
       if (!isTarget(target)) return { ok: false, code: 'TARGET_INVALID' }
       if (typeof root !== 'string' || !root.trim()) return { ok: false, code: 'ROOT_EMPTY' }
-      if (typeof content !== 'string' || !content.trim()) return { ok: false, code: 'CONTENT_EMPTY' }
+      if (typeof content !== 'string' || !content.trim())
+        return { ok: false, code: 'CONTENT_EMPTY' }
       // 文件名来自白名单常量，杜绝从这里拼出任意路径
       const full = path.join(root, RULES_FILENAMES[target])
       const res = await host.writeFile(full, content)

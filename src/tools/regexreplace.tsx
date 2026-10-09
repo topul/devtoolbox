@@ -1,15 +1,19 @@
 import React, { useState, useMemo } from 'react'
 import {
-  Btn, TA, Input, Select, ErrorNote, Panel, Collapse,
-  ResultPanel, usePersistedState, ToolGuide,
+  Btn,
+  TA,
+  Input,
+  Select,
+  ErrorNote,
+  Panel,
+  Collapse,
+  ResultPanel,
+  usePersistedState,
+  ToolGuide,
 } from '../components/ui'
 import { useLocalized } from '../lib/i18n'
 import { regexReplaceL } from '../lib/locales/regexreplace'
-import {
-  collectReplacements,
-  buildReplacementPreview,
-  type Replacement,
-} from '../lib/toolkit'
+import { collectReplacements, buildReplacementPreview, type Replacement } from '../lib/toolkit'
 
 /** 明细列表最多展示多少条 —— 超过就只给前N 条并说明总数 */
 const DETAIL_LIMIT = 200
@@ -86,11 +90,7 @@ export function RegexReplaceTool() {
 
   return (
     <div className="space-y-3">
-      <ToolGuide
-        title={l.title}
-        steps={[l.sub, l.helpTitle, l.preview]}
-        note={l.replacePh}
-      />
+      <ToolGuide title={l.title} steps={[l.sub, l.helpTitle, l.preview]} note={l.replacePh} />
 
       <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr_auto] gap-3 items-end">
         <Input
@@ -119,7 +119,11 @@ export function RegexReplaceTool() {
       {preview && preview.total > 0 && (
         <Panel
           title={l.preview}
-          right={<span className="text-[11px] text-muted">{l.matchCount.replace('{n}', String(preview.total))}</span>}
+          right={
+            <span className="text-[11px] text-muted">
+              {l.matchCount.replace('{n}', String(preview.total))}
+            </span>
+          }
         >
           <div className="space-y-2">
             <div className="text-[12px] text-muted">
@@ -131,7 +135,9 @@ export function RegexReplaceTool() {
                   key={`${d.index}-${i}`}
                   className="flex items-baseline gap-2 px-2 py-1 border-b border-line-soft last:border-0 text-[12px]"
                 >
-                  <span className="text-muted/60 w-14 shrink-0 shrink-0 tabular-nums">{d.index}</span>
+                  <span className="text-muted/60 w-14 shrink-0 shrink-0 tabular-nums">
+                    {d.index}
+                  </span>
                   <span className="text-danger break-all line-through decoration-danger/40 shrink-0">
                     {d.match || '␀'}
                   </span>
@@ -154,27 +160,34 @@ export function RegexReplaceTool() {
       )}
 
       <div className="flex gap-2">
-        <Btn variant="primary" onClick={run} disabled={!pattern || !!compiled.err || (preview?.total ?? 0) === 0}>
+        <Btn
+          variant="primary"
+          onClick={run}
+          disabled={!pattern || !!compiled.err || (preview?.total ?? 0) === 0}
+        >
           {l.apply}
         </Btn>
       </div>
 
-      {applied !== null && (
-        <ResultPanel title={l.copyResult} text={applied} maxHeight={360} />
-      )}
+      {applied !== null && <ResultPanel title={l.copyResult} text={applied} maxHeight={360} />}
 
       <Collapse title={l.helpTitle}>
         <ul className="text-[12px] text-muted space-y-1 list-none">
-          {l.helpBody.map(x => <li key={x}>{x}</li>)}
+          {l.helpBody.map((x) => (
+            <li key={x}>{x}</li>
+          ))}
         </ul>
       </Collapse>
 
       <Collapse title={l.tipsTitle}>
         <div className="space-y-1">
-          {l.tips.map(t => (
+          {l.tips.map((t) => (
             <button
               key={t.label}
-              onClick={() => { setPattern(t.pattern); setReplacement(t.replace) }}
+              onClick={() => {
+                setPattern(t.pattern)
+                setReplacement(t.replace)
+              }}
               className="w-full text-left px-2 py-1.5 border border-line-soft text-[12px] hover:border-phosphor/40 hover:bg-phosphor-faint transition-colors"
             >
               <span className="text-phosphor">{t.label}</span>
@@ -191,7 +204,10 @@ export function RegexReplaceTool() {
 
 /** 包一层把BAD_REGEX 变成 null 输出，界面只要处理「成功/失败」两种 */
 function regexReplaceSafe(
-  text: string, pattern: string, replacement: string, flags: string,
+  text: string,
+  pattern: string,
+  replacement: string,
+  flags: string,
 ): string | null {
   try {
     return text.replace(new RegExp(pattern, flags), replacement)

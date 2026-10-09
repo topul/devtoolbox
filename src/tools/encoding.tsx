@@ -1,5 +1,14 @@
 import React, { useState, useMemo } from 'react'
-import { Btn, TA, Input, Select, ErrorNote, CopyBtn, ToolShell, usePersistedState } from '../components/ui'
+import {
+  Btn,
+  TA,
+  Input,
+  Select,
+  ErrorNote,
+  CopyBtn,
+  ToolShell,
+  usePersistedState,
+} from '../components/ui'
 import { useLocalized } from '../lib/i18n'
 import { encodingL } from '../lib/locales/encoding'
 import {
@@ -38,16 +47,29 @@ export function Base64Tool() {
     }
   }
   return (
-    <ToolShell
-      toolId="base64"
-      guide="base64"
-      onSubmit={() => run('enc')}
-    >
-      <TA toolInput value={input} onChange={setInput} label={l.input} placeholder={l.inputPh} rows={6} />
+    <ToolShell toolId="base64" guide="base64" onSubmit={() => run('enc')}>
+      <TA
+        toolInput
+        value={input}
+        onChange={setInput}
+        label={l.input}
+        placeholder={l.inputPh}
+        rows={6}
+      />
       <div className="flex gap-2">
-        <Btn variant="primary" onClick={() => run('enc')}>{l.enc}</Btn>
+        <Btn variant="primary" onClick={() => run('enc')}>
+          {l.enc}
+        </Btn>
         <Btn onClick={() => run('dec')}>{l.dec}</Btn>
-        <Btn variant="ghost" onClick={() => { setInput(output); setOutput('') }}>{l.swap}</Btn>
+        <Btn
+          variant="ghost"
+          onClick={() => {
+            setInput(output)
+            setOutput('')
+          }}
+        >
+          {l.swap}
+        </Btn>
       </div>
       <ErrorNote msg={err} />
       <TA value={output} readOnly label={l.output} rows={6} />
@@ -73,14 +95,19 @@ export function UrlTool() {
     }
   }
   return (
-    <ToolShell
-      toolId="url-codec"
-      guide="url"
-      onSubmit={() => run('enc')}
-    >
-      <TA toolInput value={input} onChange={setInput} label={l.input} placeholder={l.inputPh} rows={5} />
+    <ToolShell toolId="url-codec" guide="url" onSubmit={() => run('enc')}>
+      <TA
+        toolInput
+        value={input}
+        onChange={setInput}
+        label={l.input}
+        placeholder={l.inputPh}
+        rows={5}
+      />
       <div className="flex gap-2 flex-wrap">
-        <Btn variant="primary" onClick={() => run('enc')}>encodeURIComponent</Btn>
+        <Btn variant="primary" onClick={() => run('enc')}>
+          encodeURIComponent
+        </Btn>
         <Btn onClick={() => run('encAll')}>encodeURI</Btn>
         <Btn onClick={() => run('dec')}>{l.dec}</Btn>
       </div>
@@ -99,14 +126,19 @@ export function UnicodeTool() {
   const toUnicode = () => setOutput(escapeUnicode(input))
   const fromUnicode = () => setOutput(unescapeUnicode(input))
   return (
-    <ToolShell
-      toolId="unicode"
-      guide="unicode"
-      onSubmit={toUnicode}
-    >
-      <TA toolInput value={input} onChange={setInput} label={l.input} placeholder={l.inputPh} rows={5} />
+    <ToolShell toolId="unicode" guide="unicode" onSubmit={toUnicode}>
+      <TA
+        toolInput
+        value={input}
+        onChange={setInput}
+        label={l.input}
+        placeholder={l.inputPh}
+        rows={5}
+      />
       <div className="flex gap-2">
-        <Btn variant="primary" onClick={toUnicode}>{l.toUni}</Btn>
+        <Btn variant="primary" onClick={toUnicode}>
+          {l.toUni}
+        </Btn>
         <Btn onClick={fromUnicode}>{l.fromUni}</Btn>
       </div>
       <TA value={output} readOnly label={l.output} rows={5} />
@@ -129,22 +161,30 @@ export function RadixTool() {
     }
   }, [input, from, l])
   return (
-    <ToolShell
-      toolId="radix"
-      guide="radix"
-    >
+    <ToolShell toolId="radix" guide="radix">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <Input toolInput value={input} onChange={setInput} label={l.input} placeholder={l.inputPh} />
+        <Input
+          toolInput
+          value={input}
+          onChange={setInput}
+          label={l.input}
+          placeholder={l.inputPh}
+        />
         <Select value={from} onChange={setFrom} label={l.fromLabel} options={l.fromOptions} />
       </div>
       {result && 'error' in result && <ErrorNote msg={result.error!} />}
       {result && !('error' in result) && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
           {l.bases.map(([k, key]) => (
-            <div key={k} className="border border-line-soft bg-panel-2 px-3 py-2 flex items-center justify-between gap-2">
+            <div
+              key={k}
+              className="border border-line-soft bg-panel-2 px-3 py-2 flex items-center justify-between gap-2"
+            >
               <div>
                 <div className="text-[10px] uppercase tracking-widest text-muted">{k}</div>
-                <div className="text-phosphor break-all text-[13px]">{(result as unknown as Record<string, string>)[key]}</div>
+                <div className="text-phosphor break-all text-[13px]">
+                  {(result as unknown as Record<string, string>)[key]}
+                </div>
               </div>
               <CopyBtn text={(result as unknown as Record<string, string>)[key]} />
             </div>
@@ -164,14 +204,19 @@ export function HtmlEntityTool() {
   const encode = () => setOutput(htmlEntityEncode(input))
   const decode = () => setOutput(htmlEntityDecode(input))
   return (
-    <ToolShell
-      toolId="html-entity"
-      guide="htmlEntity"
-      onSubmit={encode}
-    >
-      <TA toolInput value={input} onChange={setInput} label={l.input} placeholder={'<script>alert(1)</script> → &lt;script&gt;...'} rows={5} />
+    <ToolShell toolId="html-entity" guide="htmlEntity" onSubmit={encode}>
+      <TA
+        toolInput
+        value={input}
+        onChange={setInput}
+        label={l.input}
+        placeholder={'<script>alert(1)</script> → &lt;script&gt;...'}
+        rows={5}
+      />
       <div className="flex gap-2">
-        <Btn variant="primary" onClick={encode}>{l.enc}</Btn>
+        <Btn variant="primary" onClick={encode}>
+          {l.enc}
+        </Btn>
         <Btn onClick={decode}>{l.dec}</Btn>
       </div>
       <TA value={output} readOnly label={l.output} rows={5} />
@@ -188,14 +233,12 @@ export function MorseTool() {
   const encode = () => setOutput(encodeMorse(input))
   const decode = () => setOutput(decodeMorse(input))
   return (
-    <ToolShell
-      toolId="morse"
-      guide="morse"
-      onSubmit={encode}
-    >
+    <ToolShell toolId="morse" guide="morse" onSubmit={encode}>
       <TA toolInput value={input} onChange={setInput} label={l.input} placeholder={l.ph} rows={4} />
       <div className="flex gap-2">
-        <Btn variant="primary" onClick={encode}>{l.toMorse}</Btn>
+        <Btn variant="primary" onClick={encode}>
+          {l.toMorse}
+        </Btn>
         <Btn onClick={decode}>{l.fromMorse}</Btn>
       </div>
       <TA value={output} readOnly label={l.output} rows={4} />

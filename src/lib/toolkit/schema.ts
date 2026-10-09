@@ -40,7 +40,10 @@ export interface ParseResult {
 
 /** 只带稳定错误码的异常；文案归界面 */
 export class ToolSchemaError extends Error {
-  constructor(public readonly code: string, public readonly detail?: string) {
+  constructor(
+    public readonly code: string,
+    public readonly detail?: string,
+  ) {
     super(code)
     this.name = 'ToolSchemaError'
   }
@@ -124,7 +127,11 @@ function collectTools(data: unknown, issues: SchemaIssue[], path: string): Norma
   throw new ToolSchemaError('NO_TOOL', path)
 }
 
-function normalizeTool(src: Record<string, unknown>, issues: SchemaIssue[], path: string): NormalizedTool {
+function normalizeTool(
+  src: Record<string, unknown>,
+  issues: SchemaIssue[],
+  path: string,
+): NormalizedTool {
   const name = typeof src.name === 'string' ? src.name : ''
   if (!name) issues.push({ path, level: 'error', code: 'NAME_MISSING' })
 
@@ -189,7 +196,12 @@ function lintNode(
   } else if (Array.isArray(type)) {
     for (const t of type) {
       if (typeof t !== 'string' || !(JSON_TYPES as readonly string[]).includes(t)) {
-        issues.push({ path: `${path}.type`, level: 'error', code: 'TYPE_INVALID', detail: String(t) })
+        issues.push({
+          path: `${path}.type`,
+          level: 'error',
+          code: 'TYPE_INVALID',
+          detail: String(t),
+        })
       }
     }
   }
@@ -238,7 +250,7 @@ function lintNode(
     }
   }
 
-  if (type === 'array' || Array.isArray(type) && type.includes('array')) {
+  if (type === 'array' || (Array.isArray(type) && type.includes('array'))) {
     if (node.items === undefined) {
       issues.push({ path: `${path}.items`, level: 'warn', code: 'ARRAY_WITHOUT_ITEMS' })
     } else if (isObj(node.items)) {
@@ -256,7 +268,14 @@ function lintNode(
   }
 
   if (isObj(node.additionalProperties)) {
-    lintNode(node.additionalProperties, `${path}.additionalProperties`, issues, defined, depth + 1, true)
+    lintNode(
+      node.additionalProperties,
+      `${path}.additionalProperties`,
+      issues,
+      defined,
+      depth + 1,
+      true,
+    )
   }
 
   if (typeof node.default !== 'undefined' && Array.isArray(node.enum) && node.enum.length) {
@@ -291,7 +310,11 @@ function deepEqual(a: unknown, b: unknown): boolean {
 
 export function toJsonSchema(tools: NormalizedTool[]): string {
   if (tools.length === 1) return JSON.stringify(tools[0].parameters, null, 2)
-  return JSON.stringify(tools.map((t) => t.parameters), null, 2)
+  return JSON.stringify(
+    tools.map((t) => t.parameters),
+    null,
+    2,
+  )
 }
 
 export function toOpenAiSpec(tools: NormalizedTool[], opts: { strict?: boolean } = {}): string {
@@ -351,10 +374,7 @@ function tsKey(k: string): string {
 function tsLiteral(v: unknown): string {
   if (typeof v === 'string') {
     // 借 JSON 的转义做基础，再把单引号转义、把多余的 \" 还原
-    const inner = JSON.stringify(v)
-      .slice(1, -1)
-      .replace(/'/g, "\\'")
-      .replace(/\\"/g, '"')
+    const inner = JSON.stringify(v).slice(1, -1).replace(/'/g, "\\'").replace(/\\"/g, '"')
     return `'${inner}'`
   }
   if (v === null) return 'null'
@@ -431,16 +451,24 @@ function tsInline(
   for (const comb of ['oneOf', 'anyOf'] as const) {
     const branches = node[comb]
     if (Array.isArray(branches) && branches.length) {
-      const parts = branches.map((b) => tsInline(isObj(b) ? b : {}, out, jsdoc, depth + 1, nestedName))
+      const parts = branches.map((b) =>
+        tsInline(isObj(b) ? b : {}, out, jsdoc, depth + 1, nestedName),
+      )
       return [...new Set(parts)].join(' | ')
     }
   }
   if (Array.isArray(node.allOf) && node.allOf.length) {
-    const parts = node.allOf.map((b) => tsInline(isObj(b) ? b : {}, out, jsdoc, depth + 1, nestedName))
+    const parts = node.allOf.map((b) =>
+      tsInline(isObj(b) ? b : {}, out, jsdoc, depth + 1, nestedName),
+    )
     return [...new Set(parts)].join(' & ')
   }
 
-  const types = Array.isArray(node.type) ? node.type.map(String) : typeof node.type === 'string' ? [node.type] : []
+  const types = Array.isArray(node.type)
+    ? node.type.map(String)
+    : typeof node.type === 'string'
+      ? [node.type]
+      : []
   if (!types.length) {
     if (isObj(node.properties) || isObj(node.additionalProperties)) {
       return tsInlineObject(node, out, jsdoc, depth, nestedName)
@@ -454,7 +482,9 @@ function tsInline(
 
   let core: string
   if (nonNull.length > 1) {
-    core = nonNull.map((t) => tsInline({ ...node, type: t }, out, jsdoc, depth + 1, nestedName)).join(' | ')
+    core = nonNull
+      .map((t) => tsInline({ ...node, type: t }, out, jsdoc, depth + 1, nestedName))
+      .join(' | ')
   } else {
     const t = nonNull[0]
     if (t === 'string') core = 'string'
@@ -589,12 +619,7 @@ function pyModel(
   out.push(block)
 }
 
-function pyType(
-  node: JsonSchema,
-  nestedName: string,
-  out: string[],
-  opts: PyOptions,
-): string {
+function pyType(node: JsonSchema, nestedName: string, out: string[], opts: PyOptions): string {
   if (!isObj(node)) return 'Any'
 
   if (Array.isArray(node.enum) && node.enum.length) {
@@ -605,12 +630,18 @@ function pyType(
   for (const comb of ['oneOf', 'anyOf'] as const) {
     const branches = node[comb]
     if (Array.isArray(branches) && branches.length) {
-      const parts = [...new Set(branches.map((b) => pyType(isObj(b) ? b : {}, nestedName, out, opts)))]
+      const parts = [
+        ...new Set(branches.map((b) => pyType(isObj(b) ? b : {}, nestedName, out, opts))),
+      ]
       return parts.length === 1 ? parts[0] : `Union[${parts.join(', ')}]`
     }
   }
 
-  const types = Array.isArray(node.type) ? node.type.map(String) : typeof node.type === 'string' ? [node.type] : []
+  const types = Array.isArray(node.type)
+    ? node.type.map(String)
+    : typeof node.type === 'string'
+      ? [node.type]
+      : []
   const nonNull = types.filter((t) => t !== 'null')
 
   let core = 'Any'
@@ -621,7 +652,9 @@ function pyType(
       core = nm
     }
   } else if (nonNull.length > 1) {
-    const parts = [...new Set(nonNull.map((t) => pyType({ ...node, type: t }, nestedName, out, opts)))]
+    const parts = [
+      ...new Set(nonNull.map((t) => pyType({ ...node, type: t }, nestedName, out, opts))),
+    ]
     core = parts.length === 1 ? parts[0] : `Union[${parts.join(', ')}]`
   } else {
     const t = nonNull[0] ?? 'null'
@@ -631,7 +664,9 @@ function pyType(
     else if (t === 'boolean') core = 'bool'
     else if (t === 'null') core = 'None'
     else if (t === 'array') {
-      core = isObj(node.items) ? `list[${pyType(node.items, `${nestedName}Item`, out, opts)}]` : 'list[Any]'
+      core = isObj(node.items)
+        ? `list[${pyType(node.items, `${nestedName}Item`, out, opts)}]`
+        : 'list[Any]'
     } else if (t === 'object') {
       const props = isObj(node.properties) ? node.properties : null
       if (props && Object.keys(props).length) {
@@ -692,7 +727,11 @@ export type SchemaTarget = 'json' | 'openai' | 'mcp' | 'typescript' | 'pydantic'
 
 export const SCHEMA_TARGETS: SchemaTarget[] = ['json', 'openai', 'mcp', 'typescript', 'pydantic']
 
-export function renderSchema(tools: NormalizedTool[], target: SchemaTarget, opts: { strict?: boolean } = {}): string {
+export function renderSchema(
+  tools: NormalizedTool[],
+  target: SchemaTarget,
+  opts: { strict?: boolean } = {},
+): string {
   switch (target) {
     case 'json':
       return toJsonSchema(tools)

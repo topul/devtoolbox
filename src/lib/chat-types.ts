@@ -164,9 +164,7 @@ export interface ChatTrace {
   rounds: ChatTraceRound[]
 }
 
-export type ChatTraceResult =
-  | { ok: true; trace: ChatTrace }
-  | { ok: false; error: 'NOT_FOUND' }
+export type ChatTraceResult = { ok: true; trace: ChatTrace } | { ok: false; error: 'NOT_FOUND' }
 
 /* ==================== 工具源探测（配置时的连通性测试） ==================== */
 

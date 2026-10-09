@@ -147,7 +147,10 @@ export function chunksForEvent(
       const out = closeParts(state)
       out.push({
         type: 'message-metadata',
-        messageMetadata: { meta: evt.meta, ...(evt.rounds !== undefined ? { rounds: evt.rounds } : {}) },
+        messageMetadata: {
+          meta: evt.meta,
+          ...(evt.rounds !== undefined ? { rounds: evt.rounds } : {}),
+        },
       })
       out.push({ type: 'finish', finishReason: 'stop' })
       return out
@@ -181,11 +184,17 @@ export function toolResultError(r: ChatToolResult): string | null {
 /* ==================== 消息读取 ==================== */
 
 export function messageText(msg: ChatUIMessage): string {
-  return msg.parts.filter((p) => p.type === 'text').map((p) => (p as { text: string }).text).join('')
+  return msg.parts
+    .filter((p) => p.type === 'text')
+    .map((p) => (p as { text: string }).text)
+    .join('')
 }
 
 function rawReasoning(msg: ChatUIMessage): string {
-  return msg.parts.filter((p) => p.type === 'reasoning').map((p) => (p as { text: string }).text).join('')
+  return msg.parts
+    .filter((p) => p.type === 'reasoning')
+    .map((p) => (p as { text: string }).text)
+    .join('')
 }
 
 /** 思考内容（供折叠块显示） */
@@ -195,7 +204,9 @@ export function messageReasoning(msg: ChatUIMessage): string {
 
 /** 思考是否还在流式输出（决定折叠块的默认展开状态） */
 export function reasoningStreaming(msg: ChatUIMessage): boolean {
-  return msg.parts.some((p) => p.type === 'reasoning' && (p as { state?: string }).state === 'streaming')
+  return msg.parts.some(
+    (p) => p.type === 'reasoning' && (p as { state?: string }).state === 'streaming',
+  )
 }
 
 export function messageToolParts(msg: ChatUIMessage): ToolPartView[] {
@@ -252,7 +263,13 @@ interface LegacyBlock {
   kind?: string
   text?: string
   call?: { id?: string; name?: string; args?: string }
-  result?: { text?: string; ok?: boolean; isError?: boolean; error?: string; durationMs?: number } | null
+  result?: {
+    text?: string
+    ok?: boolean
+    isError?: boolean
+    error?: string
+    durationMs?: number
+  } | null
 }
 
 interface LegacyTurn {
@@ -281,7 +298,10 @@ export function legacyTurnsToUIMessages(turns: unknown[]): ChatUIMessage[] {
     const id = typeof t.id === 'string' && t.id ? t.id : uuidV4()
 
     if (t.role === 'user') {
-      const text = t.blocks.filter((b) => b.kind === 'text').map((b) => b.text ?? '').join('')
+      const text = t.blocks
+        .filter((b) => b.kind === 'text')
+        .map((b) => b.text ?? '')
+        .join('')
       out.push({ id, role: 'user', parts: [{ type: 'text', text }] })
       continue
     }
@@ -291,17 +311,24 @@ export function legacyTurnsToUIMessages(turns: unknown[]): ChatUIMessage[] {
       if (b.kind === 'text') {
         parts.push({ type: 'text', text: b.text ?? '', state: 'done' })
       } else if (b.kind === 'reasoning') {
-        parts.push({ type: 'reasoning', id: `r-${parts.length}`, text: b.text ?? '', state: 'done' })
+        parts.push({
+          type: 'reasoning',
+          id: `r-${parts.length}`,
+          text: b.text ?? '',
+          state: 'done',
+        })
       } else if (b.kind === 'tool' && b.call) {
-        const errorText = b.result ? toolResultError({
-          id: b.call.id ?? '',
-          name: b.call.name ?? '',
-          ok: b.result.ok ?? true,
-          isError: b.result.isError ?? false,
-          text: b.result.text ?? '',
-          durationMs: b.result.durationMs ?? 0,
-          error: b.result.error,
-        }) : null
+        const errorText = b.result
+          ? toolResultError({
+              id: b.call.id ?? '',
+              name: b.call.name ?? '',
+              ok: b.result.ok ?? true,
+              isError: b.result.isError ?? false,
+              text: b.result.text ?? '',
+              durationMs: b.result.durationMs ?? 0,
+              error: b.result.error,
+            })
+          : null
         const base = {
           type: 'dynamic-tool' as const,
           toolCallId: b.call.id ?? `t-${parts.length}`,
@@ -309,7 +336,8 @@ export function legacyTurnsToUIMessages(turns: unknown[]): ChatUIMessage[] {
           input: parseToolArgs(b.call.args ?? ''),
         }
         if (!b.result) parts.push({ ...base, state: 'input-available' })
-        else if (errorText === null) parts.push({ ...base, state: 'output-available', output: b.result.text ?? '' })
+        else if (errorText === null)
+          parts.push({ ...base, state: 'output-available', output: b.result.text ?? '' })
         else parts.push({ ...base, state: 'output-error', errorText })
       }
     }
@@ -319,7 +347,12 @@ export function legacyTurnsToUIMessages(turns: unknown[]): ChatUIMessage[] {
     if (t.rounds !== undefined) metadata.rounds = t.rounds
     if (t.status === 'stopped') metadata.aborted = true
     if (t.error) metadata.error = t.error
-    out.push({ id, role: 'assistant', parts, ...(Object.keys(metadata).length ? { metadata } : {}) })
+    out.push({
+      id,
+      role: 'assistant',
+      parts,
+      ...(Object.keys(metadata).length ? { metadata } : {}),
+    })
   }
   return out
 }

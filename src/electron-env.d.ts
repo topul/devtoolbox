@@ -1,9 +1,17 @@
 // Electron bridge types, as seen from the renderer process
 import type { HttpRequestResult, HttpRequestSpec, HttpTransferAPI } from './lib/http-types'
+import type { PortLookupResult } from './lib/portlookup-types'
 import type { TlsAPI } from './lib/tls-types'
 import type { SseAPI } from './lib/sse-types'
 import type { WsAPI } from './lib/ws-types'
-import type { ChatEvent, ChatSendResult, ChatSendSpec, ChatToolServer, ChatTraceResult, McpProbeResult } from './lib/chat-types'
+import type {
+  ChatEvent,
+  ChatSendResult,
+  ChatSendSpec,
+  ChatToolServer,
+  ChatTraceResult,
+  McpProbeResult,
+} from './lib/chat-types'
 import type { McpInfo } from './lib/mcp-types'
 import type {
   ChatStoreListResult,
@@ -41,6 +49,11 @@ export interface UpdaterEvent {
 
 export interface HttpAPI extends HttpTransferAPI {
   send: (spec: HttpRequestSpec) => Promise<HttpRequestResult>
+}
+
+export interface PortLookupAPI {
+  /** 查询本机端口占用（lsof / netstat 在主进程执行） */
+  lookup: (port: number) => Promise<PortLookupResult>
 }
 
 export interface McpAPI {
@@ -100,13 +113,17 @@ export interface ProxyAPI {
   rulesRemove: (id: string) => Promise<ProxyRule[]>
   rulesClear: () => Promise<ProxyRule[]>
   caInfo: () => Promise<CaInfo | null>
-  caExport: (format: 'pem' | 'crt') => Promise<{ ok: boolean; path: string; canceled?: boolean; error?: string }>
+  caExport: (
+    format: 'pem' | 'crt',
+  ) => Promise<{ ok: boolean; path: string; canceled?: boolean; error?: string }>
   caOpen: () => Promise<string>
   caReset: () => Promise<CaInfo | null>
   systemGet: () => Promise<SystemProxyState>
   systemSet: () => Promise<SystemProxyState>
   systemRestore: () => Promise<SystemProxyState>
-  exportSessions: (format: 'json' | 'har') => Promise<{ ok: boolean; path: string; count: number; canceled?: boolean; error?: string }>
+  exportSessions: (
+    format: 'json' | 'har',
+  ) => Promise<{ ok: boolean; path: string; count: number; canceled?: boolean; error?: string }>
   onEvent: (callback: (evt: ProxyEvent) => void) => () => void
 }
 
@@ -122,6 +139,7 @@ export interface ElectronAPI {
   onUpdaterEvent: (callback: (evt: UpdaterEvent) => void) => () => void
   http: HttpAPI
   tls: TlsAPI
+  port: PortLookupAPI
   sse: SseAPI
   ws: WsAPI
   proxy: ProxyAPI
@@ -132,7 +150,15 @@ export interface ElectronAPI {
   chatStore: ChatStoreAPI
 }
 
-export type { ProxyEvent, ProxySession, ProxyRule, ProxyState, CaInfo, SystemProxyState, InterceptDecision }
+export type {
+  ProxyEvent,
+  ProxySession,
+  ProxyRule,
+  ProxyState,
+  CaInfo,
+  SystemProxyState,
+  InterceptDecision,
+}
 
 declare global {
   interface Window {

@@ -1,5 +1,14 @@
 import React, { useState, useMemo, useEffect } from 'react'
-import { Input, Select, ErrorNote, Panel, KV, Stat, CopyBtn, usePersistedState } from '../components/ui'
+import {
+  Input,
+  Select,
+  ErrorNote,
+  Panel,
+  KV,
+  Stat,
+  CopyBtn,
+  usePersistedState,
+} from '../components/ui'
 import { useLocalized } from '../lib/i18n'
 import { timeL } from '../lib/locales/time'
 import {
@@ -29,7 +38,10 @@ export function TimestampTool() {
     return () => clearInterval(t)
   }, [])
 
-  const tsResult = useMemo((): { error: string | null; parts: ReturnType<typeof timestampToDate> | null } | null => {
+  const tsResult = useMemo((): {
+    error: string | null
+    parts: ReturnType<typeof timestampToDate> | null
+  } | null => {
     if (!ts.trim()) return null
     try {
       return { error: null, parts: timestampToDate(ts, unit) }
@@ -39,7 +51,10 @@ export function TimestampTool() {
     }
   }, [ts, unit, l])
 
-  const strResult = useMemo((): { error: string | null; parts: ReturnType<typeof dateToTimestamp> | null } | null => {
+  const strResult = useMemo((): {
+    error: string | null
+    parts: ReturnType<typeof dateToTimestamp> | null
+  } | null => {
     if (!dateStr.trim()) return null
     try {
       return { error: null, parts: dateToTimestamp(dateStr) }
@@ -56,7 +71,9 @@ export function TimestampTool() {
           <Stat label={l.unixMs} value={now} />
           <div className="border border-line-soft bg-panel-2 px-3 py-2">
             <div className="text-[10px] uppercase tracking-[0.15em] text-muted">{l.localTime}</div>
-            <div className="text-lg text-phosphor glow leading-tight">{formatLocal(new Date(now))}</div>
+            <div className="text-lg text-phosphor glow leading-tight">
+              {formatLocal(new Date(now))}
+            </div>
           </div>
         </div>
       </Panel>
@@ -64,15 +81,29 @@ export function TimestampTool() {
         <Panel title={l.tsToDateTitle}>
           <div className="space-y-3">
             <div className="flex gap-2 items-end">
-              <div className="flex-1"><Input value={ts} onChange={setTs} placeholder={l.tsPlaceholder} /></div>
-              <Select value={unit} onChange={v => setUnit(v as 's' | 'ms')} options={[
-                { value: 's', label: l.unitSec }, { value: 'ms', label: l.unitMs },
-              ]} />
+              <div className="flex-1">
+                <Input value={ts} onChange={setTs} placeholder={l.tsPlaceholder} />
+              </div>
+              <Select
+                value={unit}
+                onChange={(v) => setUnit(v as 's' | 'ms')}
+                options={[
+                  { value: 's', label: l.unitSec },
+                  { value: 'ms', label: l.unitMs },
+                ]}
+              />
             </div>
             {tsResult?.error && <ErrorNote msg={tsResult.error} />}
             {tsResult?.parts && (
               <div>
-                <KV k={l.local} v={<>{tsResult.parts.local} <CopyBtn text={tsResult.parts.local} /></>} />
+                <KV
+                  k={l.local}
+                  v={
+                    <>
+                      {tsResult.parts.local} <CopyBtn text={tsResult.parts.local} />
+                    </>
+                  }
+                />
                 <KV k={l.utc} v={tsResult.parts.utc} />
                 <KV k={l.iso} v={tsResult.parts.iso} />
               </div>
@@ -85,8 +116,22 @@ export function TimestampTool() {
             {strResult?.error && <ErrorNote msg={strResult.error} />}
             {strResult?.parts && (
               <div>
-                <KV k={l.unixSec} v={<>{strResult.parts.unixSec} <CopyBtn text={String(strResult.parts.unixSec)} /></>} />
-                <KV k={l.unixMs} v={<>{strResult.parts.unixMs} <CopyBtn text={String(strResult.parts.unixMs)} /></>} />
+                <KV
+                  k={l.unixSec}
+                  v={
+                    <>
+                      {strResult.parts.unixSec} <CopyBtn text={String(strResult.parts.unixSec)} />
+                    </>
+                  }
+                />
+                <KV
+                  k={l.unixMs}
+                  v={
+                    <>
+                      {strResult.parts.unixMs} <CopyBtn text={String(strResult.parts.unixMs)} />
+                    </>
+                  }
+                />
               </div>
             )}
           </div>
@@ -106,16 +151,23 @@ export function CronTool() {
 
   const desc = useMemo(() => {
     if (!parsed.ok) return null
-    return parsed.fields.map((f, i) => {
-      const name = l.cronNames[i]
-      switch (f.kind) {
-        case 'all': return l.fieldAll(name)
-        case 'step': return l.fieldStep(f.raw.slice(2), name)
-        case 'list': return l.fieldList(name, f.raw)
-        case 'range': return l.fieldRangeFmt(name, f.raw)
-        default: return l.fieldEq(name, f.raw)
-      }
-    }).join(l.sep)
+    return parsed.fields
+      .map((f, i) => {
+        const name = l.cronNames[i]
+        switch (f.kind) {
+          case 'all':
+            return l.fieldAll(name)
+          case 'step':
+            return l.fieldStep(f.raw.slice(2), name)
+          case 'list':
+            return l.fieldList(name, f.raw)
+          case 'range':
+            return l.fieldRangeFmt(name, f.raw)
+          default:
+            return l.fieldEq(name, f.raw)
+        }
+      })
+      .join(l.sep)
   }, [parsed, l])
 
   const errText = (e: CronError): string => {
@@ -131,8 +183,11 @@ export function CronTool() {
       <Input value={expr} onChange={setExpr} label={l.label} placeholder={l.placeholder} />
       <div className="flex gap-2 flex-wrap">
         {l.presets.map(([name, e]) => (
-          <button key={name} onClick={() => setExpr(e)}
-            className="px-2 py-0.5 text-[11px] border border-line-soft text-muted hover:text-phosphor hover:border-phosphor/40 transition-colors">
+          <button
+            key={name}
+            onClick={() => setExpr(e)}
+            className="px-2 py-0.5 text-[11px] border border-line-soft text-muted hover:text-phosphor hover:border-phosphor/40 transition-colors"
+          >
             {name}
           </button>
         ))}
@@ -142,13 +197,23 @@ export function CronTool() {
           <p className="text-[13px] text-bright">{desc}</p>
         </Panel>
       )}
-      {!next.ok ? <ErrorNote msg={errText(next.error)} /> : (
+      {!next.ok ? (
+        <ErrorNote msg={errText(next.error)} />
+      ) : (
         <Panel title={l.nextTitle}>
           {next.dates.map((d, i) => (
-            <div key={i} className="flex gap-3 py-1 border-b border-line-soft last:border-0 text-[12.5px]">
+            <div
+              key={i}
+              className="flex gap-3 py-1 border-b border-line-soft last:border-0 text-[12.5px]"
+            >
               <span className="text-muted/60 w-8">#{i + 1}</span>
-              <span className="text-phosphor">{d.toLocaleString(l.localeStr, { hour12: false })}</span>
-              <span className="text-muted">{l.weekday}{l.dowNames[d.getDay()]}</span>
+              <span className="text-phosphor">
+                {d.toLocaleString(l.localeStr, { hour12: false })}
+              </span>
+              <span className="text-muted">
+                {l.weekday}
+                {l.dowNames[d.getDay()]}
+              </span>
             </div>
           ))}
         </Panel>
@@ -185,7 +250,10 @@ export function DateDiffTool() {
           <Stat label={l.weeks} value={r.weeks} />
           <Stat label={l.hours} value={r.hours.toLocaleString()} />
           <Stat label={l.minutes} value={r.minutes.toLocaleString()} />
-          <Stat label={l.direction} value={<span className="text-sm">{r.direction === 1 ? l.dirLater : l.dirEarlier}</span>} />
+          <Stat
+            label={l.direction}
+            value={<span className="text-sm">{r.direction === 1 ? l.dirLater : l.dirEarlier}</span>}
+          />
         </div>
       )}
     </div>

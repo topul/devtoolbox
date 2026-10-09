@@ -22,7 +22,15 @@ import { MCP_TOOLS } from '../lib/mcp-catalog'
  */
 
 /** 示例里的说明文字也要跟着语言走，否则英文界面会露出中文 */
-function buildExample(l: { toolDesc: string; city: string; days: string; unit: string; tags: string; options: string; alert: string }): string {
+function buildExample(l: {
+  toolDesc: string
+  city: string
+  days: string
+  unit: string
+  tags: string
+  options: string
+  alert: string
+}): string {
   return JSON.stringify(
     [
       {
@@ -68,7 +76,11 @@ export function ToolSchemaTool(): React.ReactElement {
   const [target, setTarget] = useState<SchemaTarget>('typescript')
   const [pick, setPick] = useState<number | 'all'>('all')
 
-  const parsed = useMemo((): { tools: NormalizedTool[]; issues: SchemaIssue[]; error: string | null } => {
+  const parsed = useMemo((): {
+    tools: NormalizedTool[]
+    issues: SchemaIssue[]
+    error: string | null
+  } => {
     try {
       const r = parseToolSchema(input)
       return { ...r, error: null }
@@ -79,7 +91,8 @@ export function ToolSchemaTool(): React.ReactElement {
   }, [input, l])
 
   // 输入变化后原来的下标可能越界，这里收敛回「全部」
-  const activePick: number | 'all' = typeof pick === 'number' && pick < parsed.tools.length ? pick : 'all'
+  const activePick: number | 'all' =
+    typeof pick === 'number' && pick < parsed.tools.length ? pick : 'all'
 
   const output = useMemo(() => {
     const list = activePick === 'all' ? parsed.tools : [parsed.tools[activePick]].filter(Boolean)
@@ -123,18 +136,42 @@ export function ToolSchemaTool(): React.ReactElement {
           title={l.inputLabel}
           right={
             <div className="flex gap-1.5">
-              <Btn variant="ghost" onClick={() => { setInput(buildExample(l.sample)); setPick('all') }}>{l.loadExample}</Btn>
-              <Btn variant="ghost" onClick={loadSelf} title={l.loadSelfHint}>{l.loadSelf}</Btn>
-              <Btn variant="ghost" onClick={() => { setInput(''); setPick('all') }}>{l.clear}</Btn>
+              <Btn
+                variant="ghost"
+                onClick={() => {
+                  setInput(buildExample(l.sample))
+                  setPick('all')
+                }}
+              >
+                {l.loadExample}
+              </Btn>
+              <Btn variant="ghost" onClick={loadSelf} title={l.loadSelfHint}>
+                {l.loadSelf}
+              </Btn>
+              <Btn
+                variant="ghost"
+                onClick={() => {
+                  setInput('')
+                  setPick('all')
+                }}
+              >
+                {l.clear}
+              </Btn>
             </div>
           }
         >
           <TA value={input} onChange={setInput} rows={18} placeholder={l.inputPlaceholder} />
-          {parsed.error && <div className="mt-2"><ErrorNote msg={parsed.error} /></div>}
+          {parsed.error && (
+            <div className="mt-2">
+              <ErrorNote msg={parsed.error} />
+            </div>
+          )}
 
           {parsed.tools.length > 1 && (
             <div className="mt-2">
-              <div className="text-[11px] text-muted mb-1.5">{l.filterLabel.replace('{n}', String(parsed.tools.length))}</div>
+              <div className="text-[11px] text-muted mb-1.5">
+                {l.filterLabel.replace('{n}', String(parsed.tools.length))}
+              </div>
               <div className="flex flex-wrap gap-1.5">
                 <button
                   onClick={() => setPick('all')}
@@ -177,21 +214,32 @@ export function ToolSchemaTool(): React.ReactElement {
         title={l.issuesTitle}
         right={
           parsed.issues.length > 0 ? (
-            <span className="text-[11px] text-muted">{l.issuesSummary(stats.errors, stats.warns)}</span>
+            <span className="text-[11px] text-muted">
+              {l.issuesSummary(stats.errors, stats.warns)}
+            </span>
           ) : undefined
         }
       >
-        {!parsed.error && issues.length === 0 && <p className="text-[12px] text-phosphor">{l.issuesClean}</p>}
+        {!parsed.error && issues.length === 0 && (
+          <p className="text-[12px] text-phosphor">{l.issuesClean}</p>
+        )}
         {issues.length > 0 && (
           <div className="space-y-0">
             {issues.map((i, idx) => (
-              <div key={`${i.path}-${i.code}-${idx}`} className="flex flex-wrap items-baseline gap-x-2 py-1.5 border-b border-line-soft last:border-0">
-                <span className={`text-[11px] shrink-0 ${i.level === 'error' ? 'text-danger' : 'text-amber'}`}>
+              <div
+                key={`${i.path}-${i.code}-${idx}`}
+                className="flex flex-wrap items-baseline gap-x-2 py-1.5 border-b border-line-soft last:border-0"
+              >
+                <span
+                  className={`text-[11px] shrink-0 ${i.level === 'error' ? 'text-danger' : 'text-amber'}`}
+                >
                   {i.level === 'error' ? l.levelError : l.levelWarn}
                 </span>
                 <span className="text-[12px] text-bright">{l.issueCodes[i.code] ?? i.code}</span>
                 <span className="text-[11px] text-muted font-mono break-all">{i.path}</span>
-                {i.detail !== undefined && <span className="text-[11px] text-muted/80 font-mono">{i.detail}</span>}
+                {i.detail !== undefined && (
+                  <span className="text-[11px] text-muted/80 font-mono">{i.detail}</span>
+                )}
               </div>
             ))}
           </div>

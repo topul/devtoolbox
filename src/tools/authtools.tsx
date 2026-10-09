@@ -9,8 +9,16 @@
  */
 import React, { useState, useMemo, useCallback, useEffect } from 'react'
 import {
-  Btn, ErrorNote, Input, Panel, Select, TA, ToolShell,
-  usePersistedState, PersistHint, CopyBtn,
+  Btn,
+  ErrorNote,
+  Input,
+  Panel,
+  Select,
+  TA,
+  ToolShell,
+  usePersistedState,
+  PersistHint,
+  CopyBtn,
 } from '../components/ui'
 import { useLocalized } from '../lib/i18n'
 import { authToolsL } from '../lib/locales/authtools'
@@ -43,7 +51,8 @@ export function JwtSignTool() {
   const [algo, setAlgo, algoMeta] = usePersistedState<JwtSignAlgo>('jwt-sign', 'algo', 'HS256')
   const [secret, setSecret, secretMeta] = usePersistedState('jwt-sign', 'secret', 'secret')
   const [payload, setPayload, payloadMeta] = usePersistedState(
-    'jwt-sign', 'payload',
+    'jwt-sign',
+    'payload',
     '{\n  "sub": "1234567890",\n  "name": "Ada",\n  "iat": 1700000000\n}',
   )
   const [ttl, setTtl] = useState('8h')
@@ -68,7 +77,10 @@ export function JwtSignTool() {
   const sign = useCallback(async (): Promise<void> => {
     setErr(null)
     setVerifyMsg(null)
-    if (!parsed.obj) { setErr(l.payloadErr); return }
+    if (!parsed.obj) {
+      setErr(l.payloadErr)
+      return
+    }
     const body = { ...parsed.obj }
     // exp 按相对时间重算：粘来的旧 payload 里的 exp 早就过期了
     const preset = JWT_TTL_PRESETS.find((p) => p.key === ttl)
@@ -90,21 +102,33 @@ export function JwtSignTool() {
       return
     }
     const r = await jwtVerify(token, secret, algo)
-    setVerifyMsg({ valid: r.valid, text: r.valid ? l.verifyOk : `${l.verifyFail} · ${l.reason[r.reason]}` })
+    setVerifyMsg({
+      valid: r.valid,
+      text: r.valid ? l.verifyOk : `${l.verifyFail} · ${l.reason[r.reason]}`,
+    })
   }, [token, secret, algo, l])
 
   const isNone = algo === 'none'
 
   return (
-    <ToolShell toolId="jwt-sign" onSubmit={() => { void sign() }}>
-      {(algoMeta.persisted && secretMeta.persisted && payloadMeta.persisted) ? null : (
+    <ToolShell
+      toolId="jwt-sign"
+      onSubmit={() => {
+        void sign()
+      }}
+    >
+      {algoMeta.persisted && secretMeta.persisted && payloadMeta.persisted ? null : (
         <PersistHint persisted={false} />
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <Select
           value={algo}
-          onChange={(v) => { setAlgo(v as JwtSignAlgo); setToken(''); setVerifyMsg(null) }}
+          onChange={(v) => {
+            setAlgo(v as JwtSignAlgo)
+            setToken('')
+            setVerifyMsg(null)
+          }}
           label={l.algo}
           options={JWT_SIGN_ALGOS.map((a) => ({ value: a, label: JWT_ALGO_LABELS[a] }))}
         />
@@ -116,7 +140,9 @@ export function JwtSignTool() {
           placeholder={isNone ? l.keyNoneHint : l.keyPh}
           className={isNone ? 'opacity-50' : ''}
         />
-        {isNone && <p className="md:col-span-2 text-[12px] text-amber leading-relaxed">{l.algoNoneHint}</p>}
+        {isNone && (
+          <p className="md:col-span-2 text-[12px] text-amber leading-relaxed">{l.algoNoneHint}</p>
+        )}
       </div>
 
       <Select
@@ -136,16 +162,36 @@ export function JwtSignTool() {
       />
 
       <div className="flex gap-2 flex-wrap">
-        <Btn variant="primary" onClick={() => { void sign() }}>{l.sign}</Btn>
-        {token && !isNone && <Btn onClick={() => { void verify() }}>{l.verify}</Btn>}
+        <Btn
+          variant="primary"
+          onClick={() => {
+            void sign()
+          }}
+        >
+          {l.sign}
+        </Btn>
+        {token && !isNone && (
+          <Btn
+            onClick={() => {
+              void verify()
+            }}
+          >
+            {l.verify}
+          </Btn>
+        )}
       </div>
 
       <ErrorNote msg={err} />
 
       {token && (
-        <Panel title={l.token} right={<span className="text-[11px] text-muted">{token.length} chars</span>}>
+        <Panel
+          title={l.token}
+          right={<span className="text-[11px] text-muted">{token.length} chars</span>}
+        >
           <div className="flex gap-2 items-start">
-            <div className="flex-1 min-w-0 font-mono text-[12px] text-phosphor break-all">{token}</div>
+            <div className="flex-1 min-w-0 font-mono text-[12px] text-phosphor break-all">
+              {token}
+            </div>
             <CopyBtn text={token} className="shrink-0" />
           </div>
         </Panel>
@@ -173,7 +219,11 @@ export function JwtSignTool() {
 
 export function TotpTool() {
   const l = useLocalized(authToolsL).totp
-  const [raw, setRaw, rawMeta] = usePersistedState('totp', 'secret', 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ')
+  const [raw, setRaw, rawMeta] = usePersistedState(
+    'totp',
+    'secret',
+    'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ',
+  )
   const [digits, setDigits] = usePersistedState('totp', 'digits', '6')
   const [period, setPeriod] = usePersistedState('totp', 'period', '30')
   const [algo, setAlgo] = usePersistedState('totp', 'algo', 'SHA1')
@@ -194,11 +244,14 @@ export function TotpTool() {
   }, [raw])
 
   // otpauth 里的参数优先于下拉框（用户粘的链接才是权威来源）
-  const opts: TotpOpts = useMemo(() => ({
-    digits: parsed.meta?.digits ?? (Number(digits) || 6),
-    period: parsed.meta?.period ?? (Number(period) || 30),
-    algo: (parsed.meta?.algo ?? algo) as TotpAlgo,
-  }), [parsed.meta, digits, period, algo])
+  const opts: TotpOpts = useMemo(
+    () => ({
+      digits: parsed.meta?.digits ?? (Number(digits) || 6),
+      period: parsed.meta?.period ?? (Number(period) || 30),
+      algo: (parsed.meta?.algo ?? algo) as TotpAlgo,
+    }),
+    [parsed.meta, digits, period, algo],
+  )
 
   // 密钥是否可用：不合法时立刻告诉用户，别让他盯着空白的验证码猜
   const secretErr = useMemo((): string | null => {
@@ -215,13 +268,7 @@ export function TotpTool() {
   return (
     <ToolShell toolId="totp">
       <PersistHint persisted={rawMeta.persisted} />
-      <Input
-        toolInput
-        value={raw}
-        onChange={setRaw}
-        label={l.secret}
-        placeholder={l.secretPh}
-      />
+      <Input toolInput value={raw} onChange={setRaw} label={l.secret} placeholder={l.secretPh} />
       <p className="-mt-1 text-[11.5px] text-muted">{l.secretHint}</p>
 
       {parsed.meta && (parsed.meta.issuer || parsed.meta.account) && (
@@ -266,10 +313,14 @@ export function TotpTool() {
  * 验证码显示区。
  *
  * 每 500ms 重算一次（不用 1s：验证码在整点边界切换，1s 的刷新会让人偶尔看到已经过期的码）。
- * WebCrypto 是异步的，所以这里用 state + effect 而不是 useMemo —— 
+ * WebCrypto 是异步的，所以这里用 state + effect 而不是 useMemo ——
  * 「密码学组件里不要在 render 期间发起异步计算」是硬规则，否则会打爆 React。
  */
-function LiveCode({ secret, opts, l }: {
+function LiveCode({
+  secret,
+  opts,
+  l,
+}: {
   secret: string
   opts: TotpOpts
   /** 词条由调用方从 useLocalized 取好后传进来 —— hook 不能在子组件里按需调用取值 */
@@ -284,12 +335,21 @@ function LiveCode({ secret, opts, l }: {
   }, [])
 
   useEffect(() => {
-    if (!secret) { setCode(''); return }
+    if (!secret) {
+      setCode('')
+      return
+    }
     let alive = true
     void totp(secret, now, opts)
-      .then((c) => { if (alive) setCode(c) })
-      .catch(() => { if (alive) setCode('') })
-    return () => { alive = false }
+      .then((c) => {
+        if (alive) setCode(c)
+      })
+      .catch(() => {
+        if (alive) setCode('')
+      })
+    return () => {
+      alive = false
+    }
   }, [secret, now, opts])
 
   if (!secret) return null
@@ -299,7 +359,9 @@ function LiveCode({ secret, opts, l }: {
     <div className="rounded-lg border border-line bg-panel-2 px-4 py-3">
       <div className="flex items-baseline justify-between gap-3">
         <span className="text-[11px] uppercase tracking-widest text-muted">{l.code}</span>
-        <span className="text-[11px] text-muted">{l.remaining} {remaining}s</span>
+        <span className="text-[11px] text-muted">
+          {l.remaining} {remaining}s
+        </span>
       </div>
       <div className="mt-1 flex items-center gap-3">
         <div className="font-mono text-3xl font-semibold text-phosphor tabular-nums tracking-wider">

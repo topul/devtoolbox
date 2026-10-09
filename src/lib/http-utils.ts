@@ -61,8 +61,12 @@ export function hexDump(bytes: Uint8Array, limit = 4096): string {
   const lines: string[] = []
   for (let i = 0; i < view.length; i += 16) {
     const row = view.subarray(i, i + 16)
-    const hex = Array.from(row).map((b) => b.toString(16).padStart(2, '0')).join(' ')
-    const ascii = Array.from(row).map((b) => (b >= 32 && b < 127 ? String.fromCharCode(b) : '.')).join('')
+    const hex = Array.from(row)
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join(' ')
+    const ascii = Array.from(row)
+      .map((b) => (b >= 32 && b < 127 ? String.fromCharCode(b) : '.'))
+      .join('')
     lines.push(`${i.toString(16).padStart(8, '0')}  ${hex.padEnd(47, ' ')}  ${ascii}`)
   }
   if (bytes.length > limit) lines.push(`… 共 ${bytes.length} 字节，仅展示前 ${limit} 字节`)
@@ -103,10 +107,21 @@ export function headerValueOf(headers: [string, string][], name: string): string
 
 /** 按扩展名猜 Content-Type（上传体默认值）；认不出一律 octet-stream */
 const CT_BY_EXT: Record<string, string> = {
-  json: 'application/json', txt: 'text/plain', xml: 'application/xml', html: 'text/html',
-  pdf: 'application/pdf', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg',
-  gif: 'image/gif', svg: 'image/svg+xml', zip: 'application/zip', csv: 'text/csv',
-  js: 'text/javascript', wasm: 'application/wasm', mp4: 'video/mp4',
+  json: 'application/json',
+  txt: 'text/plain',
+  xml: 'application/xml',
+  html: 'text/html',
+  pdf: 'application/pdf',
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  gif: 'image/gif',
+  svg: 'image/svg+xml',
+  zip: 'application/zip',
+  csv: 'text/csv',
+  js: 'text/javascript',
+  wasm: 'application/wasm',
+  mp4: 'video/mp4',
 }
 
 export function guessContentType(name: string): string {
@@ -125,7 +140,10 @@ export interface DecodedBody {
   cookies: CookieInfo[]
 }
 
-export function decodeResponseBody(response: { headers: [string, string][]; bodyBase64: string }): DecodedBody {
+export function decodeResponseBody(response: {
+  headers: [string, string][]
+  bodyBase64: string
+}): DecodedBody {
   const ct = headerValueOf(response.headers, 'content-type')
   const bytes = b64ToBytes(response.bodyBase64)
   const charset = detectCharset(ct)
@@ -153,11 +171,16 @@ export function statusClass(status: number | null): StatusClass {
 
 export function statusColorClass(status: number | null): string {
   switch (statusClass(status)) {
-    case 'ok': return 'text-phosphor'
-    case 'redirect': return 'text-amber'
-    case 'client': return 'text-danger'
-    case 'server': return 'text-danger'
-    default: return 'text-muted'
+    case 'ok':
+      return 'text-phosphor'
+    case 'redirect':
+      return 'text-amber'
+    case 'client':
+      return 'text-danger'
+    case 'server':
+      return 'text-danger'
+    default:
+      return 'text-muted'
   }
 }
 
@@ -171,7 +194,10 @@ export function parseSetCookies(headers: [string, string][]): CookieInfo[] {
   return headers
     .filter(([k]) => k.toLowerCase() === 'set-cookie')
     .map(([, v]) => {
-      const segs = v.split(';').map((s) => s.trim()).filter(Boolean)
+      const segs = v
+        .split(';')
+        .map((s) => s.trim())
+        .filter(Boolean)
       const first = segs[0] ?? ''
       const eq = first.indexOf('=')
       return {
@@ -201,16 +227,27 @@ export function queryRows(url: string): QueryRow[] {
   if (q < 0) return []
   const raw = url.slice(q + 1).split('#')[0]
   if (!raw) return []
-  return raw.split('&').filter(Boolean).map((pair) => {
-    const i = pair.indexOf('=')
-    const name = i >= 0 ? pair.slice(0, i) : pair
-    const value = i >= 0 ? pair.slice(i + 1) : ''
-    let decodedName = name
-    let decodedValue = value
-    try { decodedName = decodeURIComponent(name.replace(/\+/g, ' ')) } catch { /* 保留原文 */ }
-    try { decodedValue = decodeURIComponent(value.replace(/\+/g, ' ')) } catch { /* 保留原文 */ }
-    return { id: newRowId(), name: decodedName, value: decodedValue, enabled: true }
-  })
+  return raw
+    .split('&')
+    .filter(Boolean)
+    .map((pair) => {
+      const i = pair.indexOf('=')
+      const name = i >= 0 ? pair.slice(0, i) : pair
+      const value = i >= 0 ? pair.slice(i + 1) : ''
+      let decodedName = name
+      let decodedValue = value
+      try {
+        decodedName = decodeURIComponent(name.replace(/\+/g, ' '))
+      } catch {
+        /* 保留原文 */
+      }
+      try {
+        decodedValue = decodeURIComponent(value.replace(/\+/g, ' '))
+      } catch {
+        /* 保留原文 */
+      }
+      return { id: newRowId(), name: decodedName, value: decodedValue, enabled: true }
+    })
 }
 
 /** 用编辑后的行重写 URL（保留路径与锚点） */

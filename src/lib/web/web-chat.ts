@@ -47,7 +47,15 @@ export class TraceRecorder {
   private round(n: number): ChatTrace['rounds'][number] {
     let r = this.rounds.get(n)
     if (!r) {
-      r = { round: n, requestBody: '', truncated: false, frames: [], framesTruncated: false, meta: null, tools: [] }
+      r = {
+        round: n,
+        requestBody: '',
+        truncated: false,
+        frames: [],
+        framesTruncated: false,
+        meta: null,
+        tools: [],
+      }
       this.rounds.set(n, r)
       this.trace.rounds.push(r)
     }
@@ -123,7 +131,11 @@ export function buildWebChat(): ElectronChat {
       emit({ type: 'error', requestId, message: '已取消', code: 'ABORTED' })
     }
 
-    const runRound = (round: number, messages: WireMessage[], toolDefs: OpenAiToolDef[]): Promise<{ meta: ChatMeta; content: string }> =>
+    const runRound = (
+      round: number,
+      messages: WireMessage[],
+      toolDefs: OpenAiToolDef[],
+    ): Promise<{ meta: ChatMeta; content: string }> =>
       new Promise((resolve, reject) => {
         let content = ''
         const cfg: ChatStreamConfig = {
@@ -162,7 +174,8 @@ export function buildWebChat(): ElectronChat {
       let args: Record<string, unknown>
       try {
         const parsed = call.args.trim() ? JSON.parse(call.args) : {}
-        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('参数必须是 JSON 对象')
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed))
+          throw new Error('参数必须是 JSON 对象')
         args = parsed as Record<string, unknown>
       } catch (e) {
         return {
@@ -176,7 +189,14 @@ export function buildWebChat(): ElectronChat {
       }
       const hit = registry.get(call.name)
       if (!hit) {
-        return { id: call.id, name: call.name, ok: false, isError: true, text: '未知工具，或对应的工具源没有连上', durationMs: 0 }
+        return {
+          id: call.id,
+          name: call.name,
+          ok: false,
+          isError: true,
+          text: '未知工具，或对应的工具源没有连上',
+          durationMs: 0,
+        }
       }
       const out = await hit.client.callTool(hit.original, args)
       return {
@@ -196,12 +216,22 @@ export function buildWebChat(): ElectronChat {
         const toolsSpec: ChatToolsSpec | null | undefined = spec.tools
         const servers: ChatToolServer[] = toolsSpec ? [...(toolsSpec.servers ?? [])] : []
         if (toolsSpec?.server?.command) {
-          servers.push({ label: toolsSpec.server.label, command: toolsSpec.server.command, args: toolsSpec.server.args ?? [], env: toolsSpec.server.env, cwd: toolsSpec.server.cwd })
+          servers.push({
+            label: toolsSpec.server.label,
+            command: toolsSpec.server.command,
+            args: toolsSpec.server.args ?? [],
+            env: toolsSpec.server.env,
+            cwd: toolsSpec.server.cwd,
+          })
         }
 
         /* ---- 无工具：单轮流式（与桌面版纯对话路径一致） ---- */
         if (!servers.length) {
-          const { meta } = await runRound(1, spec.messages.map((m) => ({ role: m.role, content: m.content })), [])
+          const { meta } = await runRound(
+            1,
+            spec.messages.map((m) => ({ role: m.role, content: m.content })),
+            [],
+          )
           if (aborted) {
             finishAborted()
             return
@@ -262,16 +292,26 @@ export function buildWebChat(): ElectronChat {
         if (!registry.size) {
           if (skipped.length && !failed.length) {
             // 只有 stdio 源：等于没工具，退回纯对话并说明
-            const { meta } = await runRound(1, spec.messages.map((m) => ({ role: m.role, content: m.content })), [])
+            const { meta } = await runRound(
+              1,
+              spec.messages.map((m) => ({ role: m.role, content: m.content })),
+              [],
+            )
             emit({ type: 'done', requestId, meta, rounds: 1 })
             return
           }
-          throw new Error(failed.length ? `工具源全部连接失败 —— ${failed.join('；')}` : '工具源没有声明任何工具')
+          throw new Error(
+            failed.length ? `工具源全部连接失败 —— ${failed.join('；')}` : '工具源没有声明任何工具',
+          )
         }
-        if (failed.length) emit({ type: 'notice', requestId, text: `部分工具源没有连上：${failed.join('；')}` })
+        if (failed.length)
+          emit({ type: 'notice', requestId, text: `部分工具源没有连上：${failed.join('；')}` })
         emit({ type: 'toolsReady', requestId, tools: usable })
 
-        const messages: WireMessage[] = spec.messages.map((m) => ({ role: m.role, content: m.content }))
+        const messages: WireMessage[] = spec.messages.map((m) => ({
+          role: m.role,
+          content: m.content,
+        }))
         let rounds = 0
         let lastMeta: ChatMeta | null = null
 
@@ -298,7 +338,11 @@ export function buildWebChat(): ElectronChat {
           messages.push({
             role: 'assistant',
             content: content || null,
-            tool_calls: calls.map((c) => ({ id: c.id, type: 'function' as const, function: { name: c.name, arguments: c.args } })),
+            tool_calls: calls.map((c) => ({
+              id: c.id,
+              type: 'function' as const,
+              function: { name: c.name, arguments: c.args },
+            })),
           })
 
           for (const call of calls) {
@@ -312,14 +356,21 @@ export function buildWebChat(): ElectronChat {
             emit({ type: 'toolResult', requestId, round: rounds, result })
             trace.toolResult(rounds, call.id, result)
             const body = result.error ? `调用失败：${result.error}` : result.text
-            const clipped = body.length > TOOL_RESULT_MAX
-              ? `${body.slice(0, TOOL_RESULT_MAX)}\n…（结果过长已截断，原始长度 ${body.length} 字符）`
-              : body
+            const clipped =
+              body.length > TOOL_RESULT_MAX
+                ? `${body.slice(0, TOOL_RESULT_MAX)}\n…（结果过长已截断，原始长度 ${body.length} 字符）`
+                : body
             messages.push({ role: 'tool', tool_call_id: call.id, content: clipped })
           }
         }
 
-        if (lastMeta) emit({ type: 'done', requestId, meta: { ...lastMeta, finishReason: 'max_rounds' }, rounds })
+        if (lastMeta)
+          emit({
+            type: 'done',
+            requestId,
+            meta: { ...lastMeta, finishReason: 'max_rounds' },
+            rounds,
+          })
       } catch (e) {
         const code = (e as Error & { code?: string }).code
         if (aborted || code === 'ABORTED') {
@@ -378,7 +429,10 @@ export function buildWebChat(): ElectronChat {
 
     probeServer: async (src: ChatToolServer): Promise<McpProbeResult> => {
       if (!src.url?.trim()) {
-        return { ok: false, error: '浏览器版不支持 stdio 工具源（需要本机进程），请使用 Streamable HTTP 服务端' }
+        return {
+          ok: false,
+          error: '浏览器版不支持 stdio 工具源（需要本机进程），请使用 Streamable HTTP 服务端',
+        }
       }
       const client = new WebMcpHttpClient(src)
       try {
@@ -388,7 +442,9 @@ export function buildWebChat(): ElectronChat {
           ok: true,
           serverName: info.serverName,
           serverVersion: info.serverVersion,
-          tools: tools.slice(0, 50).map((t) => ({ name: t.name, description: (t.description ?? '').slice(0, 120) })),
+          tools: tools
+            .slice(0, 50)
+            .map((t) => ({ name: t.name, description: (t.description ?? '').slice(0, 120) })),
           prompts: 0,
           resources: 0,
         }

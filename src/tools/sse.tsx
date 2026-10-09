@@ -6,7 +6,7 @@ import { sseL } from '../lib/locales/sse'
 import type { SseEventFrame, SseSendSpec } from '../lib/sse-types'
 import { formatTime, newRowId } from '../lib/http-utils'
 
-type L = typeof sseL['zh']
+type L = (typeof sseL)['zh']
 
 /** 展示上限：超出后丢最旧，防止长流把渲染层撑爆 */
 const MAX_SHOWN = 500
@@ -37,7 +37,10 @@ export function SseTool() {
       else if (evt.kind === 'error') setError(evt.error)
       else if (evt.kind === 'frame') {
         seq.current += 1
-        setEvents((prev) => [...prev.slice(-(MAX_SHOWN - 1)), { ...evt, seq: seq.current, at: Date.now() }])
+        setEvents((prev) => [
+          ...prev.slice(-(MAX_SHOWN - 1)),
+          { ...evt, seq: seq.current, at: Date.now() },
+        ])
       } else if (evt.kind === 'close') {
         setRunning(false)
         setClosed(true)
@@ -73,7 +76,9 @@ export function SseTool() {
       id: connId.current,
       url: url.trim(),
       method,
-      headers: headers.filter((r) => r.enabled && r.name.trim()).map((r) => [r.name, r.value] as [string, string]),
+      headers: headers
+        .filter((r) => r.enabled && r.name.trim())
+        .map((r) => [r.name, r.value] as [string, string]),
     }
     await api.send(spec)
   }, [url, method, headers, l])
@@ -93,7 +98,13 @@ export function SseTool() {
         title={l.title}
         right={
           <span className="text-[11px] text-muted">
-            {running ? l.connecting : closed ? `${l.ended} · ${l.frameCount(frameCount)}` : status != null ? `${l.open} ${status}` : l.idle}
+            {running
+              ? l.connecting
+              : closed
+                ? `${l.ended} · ${l.frameCount(frameCount)}`
+                : status != null
+                  ? `${l.open} ${status}`
+                  : l.idle}
           </span>
         }
       >
@@ -110,19 +121,38 @@ export function SseTool() {
                 ]}
               />
             </div>
-            <Input label={l.urlLabel} value={url} onChange={setUrl} placeholder={l.urlPlaceholder} />
+            <Input
+              label={l.urlLabel}
+              value={url}
+              onChange={setUrl}
+              placeholder={l.urlPlaceholder}
+            />
           </div>
           <div className="flex items-center gap-2">
-            {running
-              ? <Btn variant="primary" onClick={() => void abort()}>{l.stop}</Btn>
-              : <Btn variant="primary" onClick={() => void connect()}>{l.connect}</Btn>}
+            {running ? (
+              <Btn variant="primary" onClick={() => void abort()}>
+                {l.stop}
+              </Btn>
+            ) : (
+              <Btn variant="primary" onClick={() => void connect()}>
+                {l.connect}
+              </Btn>
+            )}
             {running && <span className="text-[11.5px] text-amber">{l.streaming}</span>}
           </div>
           {error && <ErrorNote msg={error} />}
           <details className="text-[12px]">
             <summary className="cursor-pointer text-muted select-none">{l.headersToggle}</summary>
             <div className="pt-2">
-              <KVEditor rows={headers} onChange={setHeaders} addLabel={l.kv.add} nameLabel={l.kv.name} valueLabel={l.kv.value} removeLabel={l.kv.remove} headerSuggest />
+              <KVEditor
+                rows={headers}
+                onChange={setHeaders}
+                addLabel={l.kv.add}
+                nameLabel={l.kv.name}
+                valueLabel={l.kv.value}
+                removeLabel={l.kv.remove}
+                headerSuggest
+              />
             </div>
           </details>
         </div>
@@ -145,19 +175,31 @@ export function SseTool() {
                       {e.frame.id != null && <span>id: {e.frame.id}</span>}
                       <span className="ml-auto">{formatTime(e.at)}</span>
                     </div>
-                    <pre className="codeblock whitespace-pre-wrap break-all px-0 py-1 text-[12px] text-bright m-0">{e.frame.data || ' '}</pre>
+                    <pre className="codeblock whitespace-pre-wrap break-all px-0 py-1 text-[12px] text-bright m-0">
+                      {e.frame.data || ' '}
+                    </pre>
                   </div>
                 )
               }
               if (e.kind === 'open') {
                 return (
-                  <div key={e.seq} className="text-[11.5px] text-phosphor">{locale === 'zh' ? '已连接' : 'Connected'} · {e.status}</div>
+                  <div key={e.seq} className="text-[11.5px] text-phosphor">
+                    {locale === 'zh' ? '已连接' : 'Connected'} · {e.status}
+                  </div>
                 )
               }
               if (e.kind === 'error') {
-                return <div key={e.seq} className="text-[11.5px] text-danger break-all">{e.error}</div>
+                return (
+                  <div key={e.seq} className="text-[11.5px] text-danger break-all">
+                    {e.error}
+                  </div>
+                )
               }
-              return <div key={e.seq} className="text-[11.5px] text-muted">{locale === 'zh' ? '连接已关闭' : 'Connection closed'}（{e.reason}）</div>
+              return (
+                <div key={e.seq} className="text-[11.5px] text-muted">
+                  {locale === 'zh' ? '连接已关闭' : 'Connection closed'}（{e.reason}）
+                </div>
+              )
             })}
           </div>
         )}

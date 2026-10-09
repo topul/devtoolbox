@@ -62,16 +62,32 @@ export function Base58Tool() {
         </div>
         {mode !== 'b58' && (
           <label className="flex items-center gap-1.5 text-[12.5px] text-muted pb-1.5 cursor-pointer select-none">
-            <input type="checkbox" checked={padding} onChange={(e) => setPadding(e.target.checked)} className="accent-[var(--c-phosphor)]" />
+            <input
+              type="checkbox"
+              checked={padding}
+              onChange={(e) => setPadding(e.target.checked)}
+              className="accent-[var(--c-phosphor)]"
+            />
             {l.padding}
           </label>
         )}
       </div>
       <TA value={text} onChange={setText} label={l.textLabel} rows={6} />
       <div className="flex gap-2 flex-wrap">
-        <Btn variant="primary" onClick={encode}>{l.encode}</Btn>
+        <Btn variant="primary" onClick={encode}>
+          {l.encode}
+        </Btn>
         <Btn onClick={decode}>{l.decode}</Btn>
-        <Btn variant="ghost" onClick={() => { const t = text; setText(code); setCode(t) }}>{l.swap}</Btn>
+        <Btn
+          variant="ghost"
+          onClick={() => {
+            const t = text
+            setText(code)
+            setCode(t)
+          }}
+        >
+          {l.swap}
+        </Btn>
       </div>
       <ErrorNote msg={err} />
       <TA value={code} onChange={setCode} label={l.codeLabel} rows={6} />
@@ -114,23 +130,36 @@ export function PunycodeTool() {
 
   return (
     <div className="space-y-3">
-      <Input value={domain} onChange={setDomain} label={l.domainLabel} placeholder="münchen.de / xn--mnchen-3ya.de" />
+      <Input
+        value={domain}
+        onChange={setDomain}
+        label={l.domainLabel}
+        placeholder="münchen.de / xn--mnchen-3ya.de"
+      />
       <div className="flex gap-2 flex-wrap">
-        <Btn variant="primary" onClick={toAscii}>{l.toAscii}</Btn>
+        <Btn variant="primary" onClick={toAscii}>
+          {l.toAscii}
+        </Btn>
         <Btn onClick={toIdn}>{l.toIdn}</Btn>
-        <Btn variant="ghost" onClick={() => setDomain('münchen.de')}>{l.sampleBtn}</Btn>
+        <Btn variant="ghost" onClick={() => setDomain('münchen.de')}>
+          {l.sampleBtn}
+        </Btn>
       </div>
       <ErrorNote msg={err} />
       {ascii && <KV k={l.toAscii} v={<span className="font-mono break-all">{ascii}</span>} />}
       {unicode && <KV k={l.toIdn} v={<span className="font-mono break-all">{unicode}</span>} />}
       <div className="rounded-lg border border-line bg-panel px-3 py-2 space-y-0.5">
-        <div className="text-[10.5px] uppercase tracking-[0.12em] text-muted mb-1">{l.perLabel}</div>
+        <div className="text-[10.5px] uppercase tracking-[0.12em] text-muted mb-1">
+          {l.perLabel}
+        </div>
         {labels.map((label, i) => {
-          const converted = /^xn--/i.test(label)
-            ? asciiToIdn(label)
-            : idnToAscii(label)
+          const converted = /^xn--/i.test(label) ? asciiToIdn(label) : idnToAscii(label)
           return (
-            <KV key={`${i}-${label}`} k={`${l.labelOriginal}: ${label || '—'}`} v={converted || '—'} />
+            <KV
+              key={`${i}-${label}`}
+              k={`${l.labelOriginal}: ${label || '—'}`}
+              v={converted || '—'}
+            />
           )
         })}
       </div>

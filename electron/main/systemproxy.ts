@@ -58,7 +58,11 @@ export function shellQuote(s: string): string {
 }
 
 /** 生成接管系统代理的批处理命令（纯函数，便于单独校验引号与 bypass 合并） */
-export function buildMacSetCommands(snapshots: MacServiceSnapshot[], host: string, port: number): string[] {
+export function buildMacSetCommands(
+  snapshots: MacServiceSnapshot[],
+  host: string,
+  port: number,
+): string[] {
   const commands: string[] = []
   for (const s of snapshots) {
     commands.push(`${NETWORKSETUP} -setwebproxy ${shellQuote(s.service)} ${host} ${port}`)
@@ -66,7 +70,9 @@ export function buildMacSetCommands(snapshots: MacServiceSnapshot[], host: strin
     commands.push(`${NETWORKSETUP} -setwebproxystate ${shellQuote(s.service)} on`)
     commands.push(`${NETWORKSETUP} -setsecurewebproxystate ${shellQuote(s.service)} on`)
     const bypass = [...new Set([...s.bypass, ...REQUIRED_BYPASS])]
-    commands.push(`${NETWORKSETUP} -setproxybypassdomains ${shellQuote(s.service)} ${bypass.map(shellQuote).join(' ')}`)
+    commands.push(
+      `${NETWORKSETUP} -setproxybypassdomains ${shellQuote(s.service)} ${bypass.map(shellQuote).join(' ')}`,
+    )
   }
   return commands
 }
@@ -75,11 +81,21 @@ export function buildMacSetCommands(snapshots: MacServiceSnapshot[], host: strin
 export function buildMacRestoreCommands(snapshots: MacServiceSnapshot[]): string[] {
   const commands: string[] = []
   for (const s of snapshots) {
-    commands.push(`${NETWORKSETUP} -setwebproxy ${shellQuote(s.service)} ${shellQuote(s.web.server || '0.0.0.0')} ${s.web.port || 0}`)
-    commands.push(`${NETWORKSETUP} -setsecurewebproxy ${shellQuote(s.service)} ${shellQuote(s.secure.server || '0.0.0.0')} ${s.secure.port || 0}`)
-    commands.push(`${NETWORKSETUP} -setwebproxystate ${shellQuote(s.service)} ${s.web.enabled ? 'on' : 'off'}`)
-    commands.push(`${NETWORKSETUP} -setsecurewebproxystate ${shellQuote(s.service)} ${s.secure.enabled ? 'on' : 'off'}`)
-    commands.push(`${NETWORKSETUP} -setproxybypassdomains ${shellQuote(s.service)} ${s.bypass.length ? s.bypass.map(shellQuote).join(' ') : `''`}`)
+    commands.push(
+      `${NETWORKSETUP} -setwebproxy ${shellQuote(s.service)} ${shellQuote(s.web.server || '0.0.0.0')} ${s.web.port || 0}`,
+    )
+    commands.push(
+      `${NETWORKSETUP} -setsecurewebproxy ${shellQuote(s.service)} ${shellQuote(s.secure.server || '0.0.0.0')} ${s.secure.port || 0}`,
+    )
+    commands.push(
+      `${NETWORKSETUP} -setwebproxystate ${shellQuote(s.service)} ${s.web.enabled ? 'on' : 'off'}`,
+    )
+    commands.push(
+      `${NETWORKSETUP} -setsecurewebproxystate ${shellQuote(s.service)} ${s.secure.enabled ? 'on' : 'off'}`,
+    )
+    commands.push(
+      `${NETWORKSETUP} -setproxybypassdomains ${shellQuote(s.service)} ${s.bypass.length ? s.bypass.map(shellQuote).join(' ') : `''`}`,
+    )
   }
   return commands
 }
@@ -118,12 +134,18 @@ export class SystemProxyManager {
     try {
       fs.mkdirSync(path.dirname(this.snapshotFile), { recursive: true })
       fs.writeFileSync(this.snapshotFile, JSON.stringify(snapshot, null, 2), { mode: 0o600 })
-    } catch { /* 落盘失败不影响本次接管，只是下次启动认不出来 */ }
+    } catch {
+      /* 落盘失败不影响本次接管，只是下次启动认不出来 */
+    }
   }
 
   private clearSnapshot(): void {
     this.snapshot = null
-    try { fs.rmSync(this.snapshotFile, { force: true }) } catch { /* ignore */ }
+    try {
+      fs.rmSync(this.snapshotFile, { force: true })
+    } catch {
+      /* ignore */
+    }
   }
 
   get isManaging(): boolean {
@@ -200,7 +222,11 @@ export class SystemProxyManager {
         { timeout: 180_000 },
       )
     } finally {
-      try { fs.rmSync(file, { force: true }) } catch { /* ignore */ }
+      try {
+        fs.rmSync(file, { force: true })
+      } catch {
+        /* ignore */
+      }
     }
   }
 
@@ -219,7 +245,11 @@ export class SystemProxyManager {
         const line = stdout.split(/\r?\n/).find((l) => l.toLowerCase().startsWith(k.toLowerCase()))
         return line ? line.slice(line.indexOf(':') + 1).trim() : ''
       }
-      return { enabled: val('Enabled').toLowerCase() === 'yes', server: val('Server'), port: Number(val('Port')) || 0 }
+      return {
+        enabled: val('Enabled').toLowerCase() === 'yes',
+        server: val('Server'),
+        port: Number(val('Port')) || 0,
+      }
     } catch {
       return { enabled: false, server: '', port: 0 }
     }
@@ -229,7 +259,10 @@ export class SystemProxyManager {
     try {
       const { stdout } = await run(NETWORKSETUP, ['-getproxybypassdomains', service])
       if (/there aren't any bypass domains/i.test(stdout)) return []
-      return stdout.split(/\r?\n/).map((l) => l.trim()).filter(Boolean)
+      return stdout
+        .split(/\r?\n/)
+        .map((l) => l.trim())
+        .filter(Boolean)
     } catch {
       return []
     }
@@ -263,8 +296,17 @@ export class SystemProxyManager {
       }
     }
 
-    this.saveSnapshot({ platform: 'darwin', createdAt: new Date().toISOString(), port, mac: snapshots })
-    return { ...(await this.getState()), managed: true, detail: `${snapshots.length} 个网卡服务已指向 ${server}` }
+    this.saveSnapshot({
+      platform: 'darwin',
+      createdAt: new Date().toISOString(),
+      port,
+      mac: snapshots,
+    })
+    return {
+      ...(await this.getState()),
+      managed: true,
+      detail: `${snapshots.length} 个网卡服务已指向 ${server}`,
+    }
   }
 
   private async restoreMac(snapshots: MacServiceSnapshot[]): Promise<void> {
@@ -310,7 +352,9 @@ export class SystemProxyManager {
       server: '',
       supported: true,
       managed: false,
-      detail: snap ? '未检测到系统代理（本工具留有快照，可点「取消系统代理」清理）' : '未检测到系统代理',
+      detail: snap
+        ? '未检测到系统代理（本工具留有快照，可点「取消系统代理」清理）'
+        : '未检测到系统代理',
     }
   }
 
@@ -322,7 +366,12 @@ export class SystemProxyManager {
       try {
         const { stdout } = await run('reg', ['query', key, '/v', v])
         const line = stdout.split(/\r?\n/).find((l) => l.includes(v))
-        return line ? line.trim().split(/\s{2,}/).pop() ?? '' : ''
+        return line
+          ? (line
+              .trim()
+              .split(/\s{2,}/)
+              .pop() ?? '')
+          : ''
       } catch {
         return ''
       }
@@ -343,13 +392,27 @@ export class SystemProxyManager {
     await run('reg', ['add', key, '/v', 'ProxyEnable', '/t', 'REG_DWORD', '/d', '1', '/f'])
     await run('reg', ['add', key, '/v', 'ProxyServer', '/t', 'REG_SZ', '/d', server, '/f'])
     try {
-      await run('reg', ['add', key, '/v', 'ProxyOverride', '/t', 'REG_SZ', '/d', 'localhost;127.*;<local>', '/f'])
-    } catch { /* 可选 */ }
+      await run('reg', [
+        'add',
+        key,
+        '/v',
+        'ProxyOverride',
+        '/t',
+        'REG_SZ',
+        '/d',
+        'localhost;127.*;<local>',
+        '/f',
+      ])
+    } catch {
+      /* 可选 */
+    }
 
     const detail = ['已写入 WinINET 代理设置']
     try {
-      await run('powershell', ['-NoProfile', '-Command',
-        "Add-Type -Namespace Win32 -Name Native -MemberDefinition '[System.Runtime.InteropServices.DllImport(\"wininet.dll\", SetLastError=true)] public static extern bool InternetSetOption(System.IntPtr h, int o, System.IntPtr b, int l);'; [Win32.Native]::InternetSetOption([IntPtr]::Zero,39,[IntPtr]::Zero,0) | Out-Null; [Win32.Native]::InternetSetOption([IntPtr]::Zero,37,[IntPtr]::Zero,0) | Out-Null",
+      await run('powershell', [
+        '-NoProfile',
+        '-Command',
+        'Add-Type -Namespace Win32 -Name Native -MemberDefinition \'[System.Runtime.InteropServices.DllImport("wininet.dll", SetLastError=true)] public static extern bool InternetSetOption(System.IntPtr h, int o, System.IntPtr b, int l);\'; [Win32.Native]::InternetSetOption([IntPtr]::Zero,39,[IntPtr]::Zero,0) | Out-Null; [Win32.Native]::InternetSetOption([IntPtr]::Zero,37,[IntPtr]::Zero,0) | Out-Null',
       ])
       detail.push('已广播设置变更')
     } catch {
@@ -361,9 +424,29 @@ export class SystemProxyManager {
   private async restoreWin(win: NonNullable<Snapshot['win']>): Promise<void> {
     const key = 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings'
     await run('reg', ['add', key, '/v', 'ProxyServer', '/t', 'REG_SZ', '/d', win.proxyServer, '/f'])
-    await run('reg', ['add', key, '/v', 'ProxyEnable', '/t', 'REG_DWORD', '/d', win.proxyEnable === '0x1' ? '1' : '0', '/f'])
+    await run('reg', [
+      'add',
+      key,
+      '/v',
+      'ProxyEnable',
+      '/t',
+      'REG_DWORD',
+      '/d',
+      win.proxyEnable === '0x1' ? '1' : '0',
+      '/f',
+    ])
     if (win.proxyOverride) {
-      await run('reg', ['add', key, '/v', 'ProxyOverride', '/t', 'REG_SZ', '/d', win.proxyOverride, '/f'])
+      await run('reg', [
+        'add',
+        key,
+        '/v',
+        'ProxyOverride',
+        '/t',
+        'REG_SZ',
+        '/d',
+        win.proxyOverride,
+        '/f',
+      ])
     }
   }
 
@@ -373,7 +456,12 @@ export class SystemProxyManager {
       const { stdout } = await run('reg', ['query', key])
       const find = (v: string): string => {
         const line = stdout.split(/\r?\n/).find((l) => l.includes(v))
-        return line ? line.trim().split(/\s{2,}/).pop() ?? '' : ''
+        return line
+          ? (line
+              .trim()
+              .split(/\s{2,}/)
+              .pop() ?? '')
+          : ''
       }
       const on = find('ProxyEnable') === '0x1'
       const server = find('ProxyServer')
@@ -384,7 +472,11 @@ export class SystemProxyManager {
         server: on ? server : '',
         supported: true,
         managed,
-        detail: on ? (managed ? 'WinINET 代理已指向本工具' : 'WinINET 代理已启用（非本工具设置）') : '未检测到系统代理',
+        detail: on
+          ? managed
+            ? 'WinINET 代理已指向本工具'
+            : 'WinINET 代理已启用（非本工具设置）'
+          : '未检测到系统代理',
       }
     } catch {
       return emptyState('无法读取注册表代理设置')
@@ -428,7 +520,12 @@ export class SystemProxyManager {
     if (linux.mode === 'manual') {
       await run('gsettings', ['set', 'org.gnome.system.proxy.http', 'host', `'${linux.httpHost}'`])
       await run('gsettings', ['set', 'org.gnome.system.proxy.http', 'port', linux.httpPort])
-      await run('gsettings', ['set', 'org.gnome.system.proxy.https', 'host', `'${linux.httpsHost}'`])
+      await run('gsettings', [
+        'set',
+        'org.gnome.system.proxy.https',
+        'host',
+        `'${linux.httpsHost}'`,
+      ])
       await run('gsettings', ['set', 'org.gnome.system.proxy.https', 'port', linux.httpsPort])
       await run('gsettings', ['set', 'org.gnome.system.proxy', 'mode', 'manual'])
     } else {
@@ -441,13 +538,29 @@ export class SystemProxyManager {
       const { stdout } = await run('gsettings', ['get', 'org.gnome.system.proxy', 'mode'])
       const mode = stdout.trim().replace(/'/g, '')
       if (mode !== 'manual') {
-        return { enabled: false, server: '', supported: true, managed: false, detail: `GNOME 代理模式：${mode}` }
+        return {
+          enabled: false,
+          server: '',
+          supported: true,
+          managed: false,
+          detail: `GNOME 代理模式：${mode}`,
+        }
       }
-      const host = (await run('gsettings', ['get', 'org.gnome.system.proxy.http', 'host'])).stdout.trim().replace(/'/g, '')
-      const port = (await run('gsettings', ['get', 'org.gnome.system.proxy.http', 'port'])).stdout.trim()
+      const host = (await run('gsettings', ['get', 'org.gnome.system.proxy.http', 'host'])).stdout
+        .trim()
+        .replace(/'/g, '')
+      const port = (
+        await run('gsettings', ['get', 'org.gnome.system.proxy.http', 'port'])
+      ).stdout.trim()
       const snap = this.snapshot ?? this.loadSnapshot()
       const managed = !!snap && host === '127.0.0.1' && port === String(snap.port)
-      return { enabled: true, server: `${host}:${port}`, supported: true, managed, detail: 'GNOME 代理已设 manual' }
+      return {
+        enabled: true,
+        server: `${host}:${port}`,
+        supported: true,
+        managed,
+        detail: 'GNOME 代理已设 manual',
+      }
     } catch {
       return emptyState('当前桌面环境不支持 gsettings', false)
     }

@@ -45,27 +45,33 @@ export function ServerProbe({ sv }: { sv: CustomServer }): React.ReactElement {
           {state === 'testing' ? l.probeTesting : l.probeBtn}
         </button>
         {!desktop && <span className="text-[10.5px] text-muted/60">{l.probeIncomplete}</span>}
-        {!src && desktop && <span className="text-[10.5px] text-muted/60">{l.probeIncomplete}</span>}
+        {!src && desktop && (
+          <span className="text-[10.5px] text-muted/60">{l.probeIncomplete}</span>
+        )}
       </div>
       {result && state === 'done' && (
-        <p className={`text-[10.5px] leading-snug break-all ${result.ok ? 'text-phosphor' : 'text-amber'}`}>
-          {result.ok
-            ? (
-              <>
-                {l.probeOkCount(result.tools?.length ?? 0)}
-                {(result.serverName || result.serverVersion) && (
-                  <span className="text-muted/70"> · {result.serverName ?? ''}{result.serverVersion ? ` ${result.serverVersion}` : ''}</span>
-                )}
-                {(result.resources ?? 0) > 0 || (result.prompts ?? 0) > 0
-                  ? l.probeExtra(result.resources ?? 0, result.prompts ?? 0)
-                  : null}
-              </>
-              )
-            : (
-              <>
-                {l.probeFail}：{result.error ?? '—'}
-              </>
+        <p
+          className={`text-[10.5px] leading-snug break-all ${result.ok ? 'text-phosphor' : 'text-amber'}`}
+        >
+          {result.ok ? (
+            <>
+              {l.probeOkCount(result.tools?.length ?? 0)}
+              {(result.serverName || result.serverVersion) && (
+                <span className="text-muted/70">
+                  {' '}
+                  · {result.serverName ?? ''}
+                  {result.serverVersion ? ` ${result.serverVersion}` : ''}
+                </span>
               )}
+              {(result.resources ?? 0) > 0 || (result.prompts ?? 0) > 0
+                ? l.probeExtra(result.resources ?? 0, result.prompts ?? 0)
+                : null}
+            </>
+          ) : (
+            <>
+              {l.probeFail}：{result.error ?? '—'}
+            </>
+          )}
         </p>
       )}
     </div>

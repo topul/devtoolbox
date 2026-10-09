@@ -72,13 +72,26 @@ export class CertAuthority {
         const certPem = fs.readFileSync(certPath, 'utf8')
         this.caCert = forge.pki.certificateFromPem(certPem)
         this.caKey = forge.pki.privateKeyFromPem(fs.readFileSync(keyPath, 'utf8'))
-        this.info = this.describe(certPem, certPath, keyPath, fs.statSync(certPath).mtime.toISOString())
+        this.info = this.describe(
+          certPem,
+          certPath,
+          keyPath,
+          fs.statSync(certPath).mtime.toISOString(),
+        )
         return this.info
       } catch {
         // 文件损坏：备份后重新生成
         const stamp = Date.now()
-        try { fs.renameSync(certPath, `${certPath}.broken-${stamp}`) } catch { /* ignore */ }
-        try { fs.renameSync(keyPath, `${keyPath}.broken-${stamp}`) } catch { /* ignore */ }
+        try {
+          fs.renameSync(certPath, `${certPath}.broken-${stamp}`)
+        } catch {
+          /* ignore */
+        }
+        try {
+          fs.renameSync(keyPath, `${keyPath}.broken-${stamp}`)
+        } catch {
+          /* ignore */
+        }
       }
     }
 
@@ -98,7 +111,13 @@ export class CertAuthority {
     cert.setIssuer(attrs)
     cert.setExtensions([
       { name: 'basicConstraints', cA: true, critical: true },
-      { name: 'keyUsage', keyCertSign: true, cRLSign: true, digitalSignature: true, critical: true },
+      {
+        name: 'keyUsage',
+        keyCertSign: true,
+        cRLSign: true,
+        digitalSignature: true,
+        critical: true,
+      },
       { name: 'subjectKeyIdentifier' },
     ])
     cert.sign(keys.privateKey, forge.md.sha256.create())
@@ -222,7 +241,11 @@ export class CertAuthority {
     this.leafKeys = null
     this.info = null
     for (const f of ['ca.pem', 'ca-key.pem']) {
-      try { fs.rmSync(path.join(this.dir, f), { force: true }) } catch { /* ignore */ }
+      try {
+        fs.rmSync(path.join(this.dir, f), { force: true })
+      } catch {
+        /* ignore */
+      }
     }
   }
 }

@@ -1,5 +1,17 @@
 import React, { useState } from 'react'
-import { Btn, CopyBtn, ErrorNote, Input, KV, Panel, Select, Stat, ConfirmButton, usePersistedState, useAsyncAction } from '../components/ui'
+import {
+  Btn,
+  CopyBtn,
+  ErrorNote,
+  Input,
+  KV,
+  Panel,
+  Select,
+  Stat,
+  ConfirmButton,
+  usePersistedState,
+  useAsyncAction,
+} from '../components/ui'
 import { useLocalized } from '../lib/i18n'
 import { dnsL } from '../lib/locales/dns'
 import { base64ToUtf8 } from '../lib/toolkit'
@@ -64,24 +76,48 @@ export function DnsLookupTool() {
     }
   })
 
-  const reset = () => { setDomain(''); setResult(null); setErr(null) }
+  const reset = () => {
+    setDomain('')
+    setResult(null)
+    setErr(null)
+  }
 
-  const statusCls = result ? (result.status === 0 ? STATUS_CLS.ok : result.status === 3 ? STATUS_CLS.warn : STATUS_CLS.bad) : STATUS_CLS.ok
+  const statusCls = result
+    ? result.status === 0
+      ? STATUS_CLS.ok
+      : result.status === 3
+        ? STATUS_CLS.warn
+        : STATUS_CLS.bad
+    : STATUS_CLS.ok
 
   return (
     <div className="space-y-3">
       <SecNote scene="dns" />
       <div className="flex gap-2 items-end flex-wrap">
         <div className="flex-1 min-w-[200px]">
-          <Input value={domain} onChange={setDomain} label={l.domainLabel} placeholder={l.domainPh} toolInput />
+          <Input
+            value={domain}
+            onChange={setDomain}
+            label={l.domainLabel}
+            placeholder={l.domainPh}
+            toolInput
+          />
         </div>
         <div className="w-32">
-          <Select value={type} onChange={(v) => setType(v as DnsRecordType)} label={l.typeLabel}
-            options={DNS_RECORD_TYPES.map((t) => ({ value: t, label: t }))} />
+          <Select
+            value={type}
+            onChange={(v) => setType(v as DnsRecordType)}
+            label={l.typeLabel}
+            options={DNS_RECORD_TYPES.map((t) => ({ value: t, label: t }))}
+          />
         </div>
         <div className="w-40">
-          <Select value={endpoint} onChange={setEndpoint} label={l.endpointLabel}
-            options={DOH_ENDPOINTS.map((e) => ({ value: e.id, label: e.id }))} />
+          <Select
+            value={endpoint}
+            onChange={setEndpoint}
+            label={l.endpointLabel}
+            options={DOH_ENDPOINTS.map((e) => ({ value: e.id, label: e.id }))}
+          />
         </div>
       </div>
       <div className="flex gap-2 flex-wrap items-center">
@@ -97,14 +133,32 @@ export function DnsLookupTool() {
       {result && (
         <>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-            <Stat label={l.statusTitle} value={<span className={`text-sm ${statusCls}`}>{result.statusText}</span>} />
-            <Stat label={l.recordsTitle} value={<span className="text-sm">{result.records.length}</span>} />
-            {result.question && <Stat label={l.colName} value={<span className="text-sm break-all">{result.question.name}</span>} />}
-            {result.question && <Stat label={l.colType} value={<span className="text-sm">{result.question.type}</span>} />}
+            <Stat
+              label={l.statusTitle}
+              value={<span className={`text-sm ${statusCls}`}>{result.statusText}</span>}
+            />
+            <Stat
+              label={l.recordsTitle}
+              value={<span className="text-sm">{result.records.length}</span>}
+            />
+            {result.question && (
+              <Stat
+                label={l.colName}
+                value={<span className="text-sm break-all">{result.question.name}</span>}
+              />
+            )}
+            {result.question && (
+              <Stat
+                label={l.colType}
+                value={<span className="text-sm">{result.question.type}</span>}
+              />
+            )}
           </div>
 
           {result.truncated && (
-            <div className="rounded-lg border border-amber/35 bg-amber/10 px-3 py-2 text-[12.5px] text-amber">{l.truncated}</div>
+            <div className="rounded-lg border border-amber/35 bg-amber/10 px-3 py-2 text-[12.5px] text-amber">
+              {l.truncated}
+            </div>
           )}
 
           <Panel title={l.recordsTitle}>
@@ -113,13 +167,19 @@ export function DnsLookupTool() {
             ) : (
               <div className="space-y-1">
                 {result.records.map((r, i) => (
-                  <div key={`${i}-${r.name}-${r.type}`} className="flex items-center justify-between gap-2 py-1 border-b border-line-soft last:border-0">
+                  <div
+                    key={`${i}-${r.name}-${r.type}`}
+                    className="flex items-center justify-between gap-2 py-1 border-b border-line-soft last:border-0"
+                  >
                     <div className="min-w-0 text-[12.5px]">
                       <span className="text-muted mr-2">{r.type}</span>
                       <span className="text-phosphor break-all">{r.data}</span>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-[11px] text-muted">{r.ttl}{l.seconds}</span>
+                      <span className="text-[11px] text-muted">
+                        {r.ttl}
+                        {l.seconds}
+                      </span>
                       <CopyBtn text={r.data} />
                     </div>
                   </div>
@@ -132,12 +192,18 @@ export function DnsLookupTool() {
             <Panel title={l.authorityTitle}>
               <div className="space-y-1">
                 {result.authority.map((r, i) => (
-                  <div key={`${i}-${r.name}-${r.type}`} className="flex items-center justify-between gap-2 py-1 border-b border-line-soft last:border-0">
+                  <div
+                    key={`${i}-${r.name}-${r.type}`}
+                    className="flex items-center justify-between gap-2 py-1 border-b border-line-soft last:border-0"
+                  >
                     <div className="min-w-0 text-[12.5px]">
                       <span className="text-muted mr-2">{r.type}</span>
                       <span className="text-bright break-all">{r.data}</span>
                     </div>
-                    <span className="text-[11px] text-muted shrink-0">{r.ttl}{l.seconds}</span>
+                    <span className="text-[11px] text-muted shrink-0">
+                      {r.ttl}
+                      {l.seconds}
+                    </span>
                   </div>
                 ))}
               </div>

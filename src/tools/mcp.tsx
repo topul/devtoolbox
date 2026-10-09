@@ -29,10 +29,17 @@ export function McpTool() {
     // 渲染冒烟会在没有 electronAPI 的环境里 SSR 这一页，必须可选链 + 兜底
     const api = typeof window !== 'undefined' ? window.electronAPI?.mcp : undefined
     if (!api) return
-    api.info().then((v) => {
-      if (alive) setInfo(v)
-    }).catch(() => { /* 取不到就只显示能力清单 */ })
-    return () => { alive = false }
+    api
+      .info()
+      .then((v) => {
+        if (alive) setInfo(v)
+      })
+      .catch(() => {
+        /* 取不到就只显示能力清单 */
+      })
+    return () => {
+      alive = false
+    }
   }, [])
 
   const launch = info?.launch
@@ -60,20 +67,35 @@ export function McpTool() {
       {launch ? (
         <Panel title={l.configTitle} right={<CopyBtn text={launch.configJson} />}>
           <p className="text-[12px] text-muted mb-2">{l.configHint}</p>
-          <pre className="codeblock text-[12px] text-phosphor overflow-auto max-h-[320px]">{launch.configJson}</pre>
+          <pre className="codeblock text-[12px] text-phosphor overflow-auto max-h-[320px]">
+            {launch.configJson}
+          </pre>
           <div className="mt-3 border-t border-line-soft pt-2.5 space-y-1 text-[11px]">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-muted/70 w-16 shrink-0 select-none">{l.serverFile}</span>
-              <span className={`break-all ${launch.serverPathExists ? 'text-phosphor' : 'text-danger'}`}>{launch.serverPath}</span>
-              <span className={`px-1.5 py-0.5 border shrink-0 ${launch.serverPathExists ? 'border-phosphor/40 text-phosphor' : 'border-danger/40 text-danger'}`}>
+              <span
+                className={`break-all ${launch.serverPathExists ? 'text-phosphor' : 'text-danger'}`}
+              >
+                {launch.serverPath}
+              </span>
+              <span
+                className={`px-1.5 py-0.5 border shrink-0 ${launch.serverPathExists ? 'border-phosphor/40 text-phosphor' : 'border-danger/40 text-danger'}`}
+              >
                 {launch.serverPathExists ? l.ready : l.notBuilt}
               </span>
             </div>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
               <span className="text-muted/70 w-16 shrink-0 select-none">{l.commandLabel}</span>
-              <span className="text-muted break-all">{launch.command} {launch.args.join(' ')}</span>
-              <span className="text-muted shrink-0">{l.runModeLabel}: <span className="text-bright">{launch.packaged ? l.packagedMode : l.devMode}</span></span>
-              <span className="text-muted shrink-0">{l.versionLabel}: <span className="text-bright">{launch.version}</span></span>
+              <span className="text-muted break-all">
+                {launch.command} {launch.args.join(' ')}
+              </span>
+              <span className="text-muted shrink-0">
+                {l.runModeLabel}:{' '}
+                <span className="text-bright">{launch.packaged ? l.packagedMode : l.devMode}</span>
+              </span>
+              <span className="text-muted shrink-0">
+                {l.versionLabel}: <span className="text-bright">{launch.version}</span>
+              </span>
             </div>
           </div>
           {!launch.serverPathExists && (
@@ -89,9 +111,14 @@ export function McpTool() {
       {info && info.hints.length > 0 && (
         <Panel title={l.hintTitle}>
           {info.hints.map((h) => (
-            <div key={h.client} className="py-1.5 border-b border-line-soft last:border-0 text-[12.5px]">
+            <div
+              key={h.client}
+              className="py-1.5 border-b border-line-soft last:border-0 text-[12.5px]"
+            >
               <span className="text-phosphor">{h.client}</span>
-              {l.hintNotes[h.client] && <span className="text-muted"> · {l.hintNotes[h.client]}</span>}
+              {l.hintNotes[h.client] && (
+                <span className="text-muted"> · {l.hintNotes[h.client]}</span>
+              )}
               <div className="text-muted/80 text-[11px] break-all">{h.path}</div>
             </div>
           ))}
@@ -110,21 +137,31 @@ export function McpTool() {
             if (!items.length) return null
             return (
               <div key={g}>
-                <div className="text-[11px] uppercase tracking-wider text-muted mb-1.5">{l.groups[g as McpGroup]}</div>
+                <div className="text-[11px] uppercase tracking-wider text-muted mb-1.5">
+                  {l.groups[g as McpGroup]}
+                </div>
                 <div className="space-y-1">
                   {items.map((t) => {
                     const req = t.inputSchema.required ?? []
                     const params = Object.keys(t.inputSchema.properties)
                     return (
-                      <div key={t.name} className="border border-line-soft bg-panel-2 px-2.5 py-1.5">
+                      <div
+                        key={t.name}
+                        className="border border-line-soft bg-panel-2 px-2.5 py-1.5"
+                      >
                         <div className="flex flex-wrap items-baseline gap-x-2">
                           <span className="text-phosphor text-[12.5px]">{t.name}</span>
-                          <span className="text-bright text-[11.5px]">{locale === 'en' ? t.titleEn : t.title}</span>
+                          <span className="text-bright text-[11.5px]">
+                            {locale === 'en' ? t.titleEn : t.title}
+                          </span>
                           <span className="text-muted text-[11px]">
-                            {params.length > 0 && `${req.length ? l.requiredLabel : l.optionalLabel}: ${params.join(', ')}`}
+                            {params.length > 0 &&
+                              `${req.length ? l.requiredLabel : l.optionalLabel}: ${params.join(', ')}`}
                           </span>
                         </div>
-                        <div className="text-muted text-[11.5px] leading-snug mt-0.5">{toolDesc(t, locale)}</div>
+                        <div className="text-muted text-[11.5px] leading-snug mt-0.5">
+                          {toolDesc(t, locale)}
+                        </div>
                       </div>
                     )
                   })}
@@ -139,14 +176,19 @@ export function McpTool() {
       {launch && (
         <Collapse title={l.cliTitle} right={<CopyBtn text={cliScript} />}>
           <p className="text-[12px] text-muted mb-2">{l.cliHint}</p>
-          <pre className="codeblock text-[12px] text-amber overflow-x-auto whitespace-pre">{cliScript}</pre>
+          <pre className="codeblock text-[12px] text-amber overflow-x-auto whitespace-pre">
+            {cliScript}
+          </pre>
         </Collapse>
       )}
 
       <Collapse title={l.usageTitle}>
         <ol className="text-[12.5px] text-bright space-y-1 list-none">
           {l.usage.map((s, i) => (
-            <li key={i}><span className="text-phosphor mr-1.5">{i + 1}.</span>{s}</li>
+            <li key={i}>
+              <span className="text-phosphor mr-1.5">{i + 1}.</span>
+              {s}
+            </li>
           ))}
         </ol>
       </Collapse>

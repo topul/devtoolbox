@@ -73,14 +73,22 @@ export function collectReplacements(
   if (!isGlobal(re)) {
     const m = re.exec(text)
     if (!m) return out
-    out.push({ index: m.index, match: m[0], replacement: expand(re.source, re.flags, m, replacement) })
+    out.push({
+      index: m.index,
+      match: m[0],
+      replacement: expand(re.source, re.flags, m, replacement),
+    })
     return out
   }
   // 克隆：避免污染调用方传入的正则对象的 lastIndex
   const rx = new RegExp(re.source, re.flags)
   let m: RegExpExecArray | null
   while (out.length < limit && (m = rx.exec(text)) !== null) {
-    out.push({ index: m.index, match: m[0], replacement: expand(rx.source, rx.flags, m, replacement) })
+    out.push({
+      index: m.index,
+      match: m[0],
+      replacement: expand(rx.source, rx.flags, m, replacement),
+    })
     // **零宽匹配必须手动推进 lastIndex**，否则 exec 会一直命中同一位置：
     // a* 这类模式能直接把界面挂死（浏览器主线程卡住，窗口无响应）
     if (m[0] === '') rx.lastIndex++

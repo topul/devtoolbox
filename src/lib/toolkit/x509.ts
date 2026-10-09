@@ -299,8 +299,15 @@ export interface CertExtension {
 }
 
 const KEY_USAGE_BITS = [
-  'digitalSignature', 'nonRepudiation', 'keyEncipherment', 'dataEncipherment',
-  'keyAgreement', 'keyCertSign', 'cRLSign', 'encipherOnly', 'decipherOnly',
+  'digitalSignature',
+  'nonRepudiation',
+  'keyEncipherment',
+  'dataEncipherment',
+  'keyAgreement',
+  'keyCertSign',
+  'cRLSign',
+  'encipherOnly',
+  'decipherOnly',
 ]
 
 function parseSan(octetValue: Uint8Array): SanEntry[] {
@@ -311,18 +318,28 @@ function parseSan(octetValue: Uint8Array): SanEntry[] {
     const gn = r.readNode()
     if (gn.cls !== 2) continue // context-specific
     switch (gn.tag) {
-      case 1: out.push({ kind: 'email', value: new TextDecoder().decode(gn.value) }); break
-      case 2: out.push({ kind: 'dns', value: new TextDecoder().decode(gn.value) }); break
-      case 6: out.push({ kind: 'uri', value: new TextDecoder().decode(gn.value) }); break
+      case 1:
+        out.push({ kind: 'email', value: new TextDecoder().decode(gn.value) })
+        break
+      case 2:
+        out.push({ kind: 'dns', value: new TextDecoder().decode(gn.value) })
+        break
+      case 6:
+        out.push({ kind: 'uri', value: new TextDecoder().decode(gn.value) })
+        break
       case 7:
         out.push({
           kind: 'ip',
-          value: gn.value.length === 4 || gn.value.length === 16
-            ? Array.from(gn.value).join('.')
-            : Array.from(gn.value).map((b) => b.toString(16).padStart(2, '0')).join(':'),
+          value:
+            gn.value.length === 4 || gn.value.length === 16
+              ? Array.from(gn.value).join('.')
+              : Array.from(gn.value)
+                  .map((b) => b.toString(16).padStart(2, '0'))
+                  .join(':'),
         })
         break
-      default: break
+      default:
+        break
     }
   }
   return out
@@ -501,7 +518,12 @@ export function parseCertificateDer(der: Uint8Array, now = new Date()): CertInfo
 
   return {
     version,
-    serialNumber: '0x' + decodeInt(serial).toString(16).toUpperCase().replace(/^0+(?=.)/, ''),
+    serialNumber:
+      '0x' +
+      decodeInt(serial)
+        .toString(16)
+        .toUpperCase()
+        .replace(/^0+(?=.)/, ''),
     signatureAlgorithm: OID_SIG[sigAlgOid] ?? sigAlgOid,
     issuer,
     subject,
@@ -527,9 +549,11 @@ export function parseCertificatePem(pem: string, now = new Date()): CertInfo {
 
 /** 常见名称（subject CN，缺失时回退 issuer CN，再回退空串） */
 export function certCommonName(cert: CertInfo): string {
-  return cert.subject.find((a) => a.type === 'CN')?.value
-    ?? cert.issuer.find((a) => a.type === 'CN')?.value
-    ?? ''
+  return (
+    cert.subject.find((a) => a.type === 'CN')?.value ??
+    cert.issuer.find((a) => a.type === 'CN')?.value ??
+    ''
+  )
 }
 
 /** 主题 DN 的可读形式：CN=xxx, O=yyy（保属性顺序） */

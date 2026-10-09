@@ -211,7 +211,9 @@ class HttpTransport implements Transport {
               const parts: Buffer[] = []
               res.on('data', (c: Buffer) => parts.push(c))
               res.on('end', () => {
-                this.onDown(`HTTP ${status}：${Buffer.concat(parts).toString('utf8').slice(0, 300)}`)
+                this.onDown(
+                  `HTTP ${status}：${Buffer.concat(parts).toString('utf8').slice(0, 300)}`,
+                )
                 done()
               })
               return
@@ -248,7 +250,8 @@ class HttpTransport implements Transport {
                 // 可能是一条消息，也可能是批量数组
                 if (text.startsWith('[')) {
                   try {
-                    for (const one of JSON.parse(text) as unknown[]) this.onMessage(JSON.stringify(one))
+                    for (const one of JSON.parse(text) as unknown[])
+                      this.onMessage(JSON.stringify(one))
                   } catch {
                     this.onLog(`响应不是合法 JSON：${text.slice(0, 200)}\n`, 'stderr')
                   }
@@ -290,7 +293,10 @@ function contentToText(content: unknown): string {
   for (const block of content as Record<string, unknown>[]) {
     const type = String(block?.type ?? '')
     if (type === 'text') parts.push(String(block.text ?? ''))
-    else if (type === 'image') parts.push(`[图片 ${String(block.mimeType ?? '未知类型')}，约 ${Math.round(String(block.data ?? '').length * 0.75)} 字节]`)
+    else if (type === 'image')
+      parts.push(
+        `[图片 ${String(block.mimeType ?? '未知类型')}，约 ${Math.round(String(block.data ?? '').length * 0.75)} 字节]`,
+      )
     else if (type === 'audio') parts.push(`[音频 ${String(block.mimeType ?? '未知类型')}]`)
     else if (type === 'resource') {
       const r = block.resource as Record<string, unknown> | undefined
@@ -307,7 +313,10 @@ export class McpClient {
   private info: McpServerInfo | null = null
   private closed = false
 
-  constructor(private spec: McpConnectSpec, private hooks: McpClientHooks) {}
+  constructor(
+    private spec: McpConnectSpec,
+    private hooks: McpClientHooks,
+  ) {}
 
   private emit(evt: McpClientEvent): void {
     this.hooks.emit(evt)
@@ -332,7 +341,11 @@ export class McpClient {
     }
     this.emit({ type: 'frame', id: this.id, dir: 'recv', payload: JSON.stringify(msg), ok: true })
 
-    if (msg.id !== undefined && msg.id !== null && (msg.result !== undefined || msg.error !== undefined)) {
+    if (
+      msg.id !== undefined &&
+      msg.id !== null &&
+      (msg.result !== undefined || msg.error !== undefined)
+    ) {
       const slot = this.pending.get(msg.id)
       if (slot) {
         clearTimeout(slot.timer)
@@ -352,7 +365,11 @@ export class McpClient {
     this.transport.send(msg)
   }
 
-  private request(method: string, params?: unknown, timeoutOverride?: number): Promise<JsonRpcMessage> {
+  private request(
+    method: string,
+    params?: unknown,
+    timeoutOverride?: number,
+  ): Promise<JsonRpcMessage> {
     const timeoutMs = timeoutOverride ?? this.spec.timeoutMs ?? DEFAULT_TIMEOUT_MS
     const id = ++this.seq
     return new Promise<JsonRpcMessage>((resolve, reject) => {
@@ -416,12 +433,22 @@ export class McpClient {
           this.closed = true
           this.failAllPending('子进程已退出')
           this.emit({ type: 'exit', id: this.id, code, signal })
-          this.emit({ type: 'status', id: this.id, status: 'disconnected', detail: `子进程退出（code=${code ?? '-'}）` })
+          this.emit({
+            type: 'status',
+            id: this.id,
+            status: 'disconnected',
+            detail: `子进程退出（code=${code ?? '-'}）`,
+          })
         },
         (err) => {
           this.closed = true
           this.failAllPending(err.message)
-          this.emit({ type: 'status', id: this.id, status: 'error', detail: `启动失败：${err.message}` })
+          this.emit({
+            type: 'status',
+            id: this.id,
+            status: 'error',
+            detail: `启动失败：${err.message}`,
+          })
         },
       )
     } else {
@@ -492,13 +519,17 @@ export class McpClient {
       try {
         const res = await this.request('resources/list')
         if (!res.error) catalog.resources = (res.result?.resources ?? []) as McpResourceInfo[]
-      } catch { /* 忽略 */ }
+      } catch {
+        /* 忽略 */
+      }
     }
     if (declared.prompts) {
       try {
         const res = await this.request('prompts/list')
         if (!res.error) catalog.prompts = (res.result?.prompts ?? []) as McpPromptInfo[]
-      } catch { /* 忽略 */ }
+      } catch {
+        /* 忽略 */
+      }
     }
     this.emit({ type: 'catalog', id: this.id, catalog })
     return catalog
@@ -528,7 +559,14 @@ export class McpClient {
         durationMs,
       }
     } catch (e) {
-      return { ok: false, isError: false, text: '', raw: null, durationMs: Date.now() - started, error: (e as Error).message }
+      return {
+        ok: false,
+        isError: false,
+        text: '',
+        raw: null,
+        durationMs: Date.now() - started,
+        error: (e as Error).message,
+      }
     }
   }
 
@@ -538,14 +576,33 @@ export class McpClient {
     try {
       const res = await this.request('resources/read', { uri })
       const durationMs = Date.now() - started
-      if (res.error) return { ok: false, isError: true, text: '', raw: res.error, durationMs, error: `${res.error.message}` }
+      if (res.error)
+        return {
+          ok: false,
+          isError: true,
+          text: '',
+          raw: res.error,
+          durationMs,
+          error: `${res.error.message}`,
+        }
       const contents = (res.result?.contents ?? []) as Record<string, unknown>[]
       const text = contents
-        .map((c) => (typeof c.text === 'string' ? c.text : `[${String(c.mimeType ?? '二进制')} ${String(c.uri ?? '')}]`))
+        .map((c) =>
+          typeof c.text === 'string'
+            ? c.text
+            : `[${String(c.mimeType ?? '二进制')} ${String(c.uri ?? '')}]`,
+        )
         .join('\n')
       return { ok: true, isError: false, text, raw: res.result, durationMs }
     } catch (e) {
-      return { ok: false, isError: false, text: '', raw: null, durationMs: Date.now() - started, error: (e as Error).message }
+      return {
+        ok: false,
+        isError: false,
+        text: '',
+        raw: null,
+        durationMs: Date.now() - started,
+        error: (e as Error).message,
+      }
     }
   }
 
@@ -555,11 +612,26 @@ export class McpClient {
     try {
       const res = await this.request('prompts/get', { name, arguments: args })
       const durationMs = Date.now() - started
-      if (res.error) return { ok: false, isError: true, text: '', raw: res.error, durationMs, error: `${res.error.message}` }
+      if (res.error)
+        return {
+          ok: false,
+          isError: true,
+          text: '',
+          raw: res.error,
+          durationMs,
+          error: `${res.error.message}`,
+        }
       const text = contentToText(res.result?.messages)
       return { ok: true, isError: false, text, raw: res.result, durationMs }
     } catch (e) {
-      return { ok: false, isError: false, text: '', raw: null, durationMs: Date.now() - started, error: (e as Error).message }
+      return {
+        ok: false,
+        isError: false,
+        text: '',
+        raw: null,
+        durationMs: Date.now() - started,
+        error: (e as Error).message,
+      }
     }
   }
 

@@ -62,7 +62,10 @@ function headerLookup(headers: [string, string][], name: string): string | null 
   return hit ? hit[1] : null
 }
 
-function readBody(req: http.IncomingMessage, limit: number): Promise<{ buf: Buffer; truncated: boolean }> {
+function readBody(
+  req: http.IncomingMessage,
+  limit: number,
+): Promise<{ buf: Buffer; truncated: boolean }> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = []
     let size = 0
@@ -144,11 +147,17 @@ export class CaptureProxy {
     if (this.mitmEnabled) await this.ca.init()
     if (this.running) return this.currentPort
 
-    this.mitmServer = http.createServer((req, res) => { void this.onDecryptedRequest(req, res) })
-    this.mitmServer.on('clientError', () => { /* 客户端主动断连，忽略 */ })
+    this.mitmServer = http.createServer((req, res) => {
+      void this.onDecryptedRequest(req, res)
+    })
+    this.mitmServer.on('clientError', () => {
+      /* 客户端主动断连，忽略 */
+    })
     this.mitmServer.keepAliveTimeout = 8000
 
-    const server = http.createServer((req, res) => { void this.onProxyRequest(req, res) })
+    const server = http.createServer((req, res) => {
+      void this.onProxyRequest(req, res)
+    })
     // node 把 connect/upgrade 的 socket 声明为 Duplex，运行期实际是 net.Socket
     server.on('connect', (req, socket, head) => this.onConnect(req, socket as net.Socket, head))
     server.on('upgrade', (req, socket, head) => this.onUpgrade(req, socket as net.Socket, head))
@@ -268,13 +277,26 @@ export class CaptureProxy {
     }
     if (!url || !/^https?:$/.test(url.protocol)) {
       // 客户端把代理当普通服务器访问（如直接 GET /health）
-      const host = headerLookup(toHeaderPairs(Object.entries(req.headers).flatMap(([k, v]) =>
-        Array.isArray(v) ? v.map((x) => [k, x] as [string, string]) : [[k, String(v ?? '')] as [string, string]])), 'host')
+      const host = headerLookup(
+        toHeaderPairs(
+          Object.entries(req.headers).flatMap(([k, v]) =>
+            Array.isArray(v)
+              ? v.map((x) => [k, x] as [string, string])
+              : [[k, String(v ?? '')] as [string, string]],
+          ),
+        ),
+        'host',
+      )
       if (raw === '/__devtoolbox__' || raw.startsWith('/__devtoolbox__?')) {
         this.writePlain(res, 200, 'DevOps Toolbox 抓包代理运行中\n', 'text/plain; charset=utf-8')
         return
       }
-      this.writePlain(res, 400, `该端口是 HTTP 代理，请把 http/https 代理指向 127.0.0.1:${this.currentPort}\n`, 'text/plain; charset=utf-8')
+      this.writePlain(
+        res,
+        400,
+        `该端口是 HTTP 代理，请把 http/https 代理指向 127.0.0.1:${this.currentPort}\n`,
+        'text/plain; charset=utf-8',
+      )
       this.opts.onError?.(`收到非代理格式请求：${host ?? ''} ${raw}`)
       return
     }
@@ -287,7 +309,10 @@ export class CaptureProxy {
 
   /* ================= 入口：MITM 解密后的请求 ================= */
 
-  private async onDecryptedRequest(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
+  private async onDecryptedRequest(
+    req: http.IncomingMessage,
+    res: http.ServerResponse,
+  ): Promise<void> {
     const socket = req.socket as tls.TLSSocket & { __mitmHost?: string; __mitmAuthority?: string }
     // CONNECT 的 authority 才是真实目标（含端口），Host 头仅作兜底
     const authority = socket.__mitmAuthority ?? req.headers.host ?? ''
@@ -308,19 +333,31 @@ export class CaptureProxy {
 
   /* ================= 核心处理 ================= */
 
-  private async serve(req: http.IncomingMessage, res: http.ServerResponse, ctx: RequestContext): Promise<void> {
+  private async serve(
+    req: http.IncomingMessage,
+    res: http.ServerResponse,
+    ctx: RequestContext,
+  ): Promise<void> {
     const startedAt = Date.now()
     let reqBody: Buffer
     try {
       reqBody = (await readBody(req, this.maxBody)).buf
     } catch (err) {
-      this.writePlain(res, 400, `读取请求体失败: ${(err as Error).message}\n`, 'text/plain; charset=utf-8')
+      this.writePlain(
+        res,
+        400,
+        `读取请求体失败: ${(err as Error).message}\n`,
+        'text/plain; charset=utf-8',
+      )
       return
     }
 
     const headerPairs = toHeaderPairs(
       Object.entries(req.headers).flatMap(([k, v]) =>
-        Array.isArray(v) ? v.map((x) => [k, x] as [string, string]) : [[k, String(v ?? '')] as [string, string]]),
+        Array.isArray(v)
+          ? v.map((x) => [k, x] as [string, string])
+          : [[k, String(v ?? '')] as [string, string]],
+      ),
     )
 
     const session = this.newSession({
@@ -339,7 +376,12 @@ export class CaptureProxy {
     let url = ctx.url
     let headers = headerPairs
     let body = reqBody
-    const matched = this.rules.match({ method, host: ctx.host, path: session.path, scheme: ctx.scheme })
+    const matched = this.rules.match({
+      method,
+      host: ctx.host,
+      path: session.path,
+      scheme: ctx.scheme,
+    })
     session.matchedRules = matched.map((r) => r.name || r.id)
 
     // ---- 请求阶段规则 ----
@@ -372,7 +414,10 @@ export class CaptureProxy {
         session.reqBodyBase64 = body.length ? body.toString('base64') : ''
         session.reqBodyBytes = body.length
         session.modified = true
-        const payload = JSON.stringify({ error: 'blocked by DevOps Toolbox', rule: blocked.name || blocked.id })
+        const payload = JSON.stringify({
+          error: 'blocked by DevOps Toolbox',
+          rule: blocked.name || blocked.id,
+        })
         this.writePlain(res, 403, payload, 'application/json; charset=utf-8')
         this.record(session, 'complete')
         return
@@ -384,9 +429,10 @@ export class CaptureProxy {
         session.status = m.status
         session.statusText = 'Mocked'
         session.resHeaders = m.headers
-        const mBody = m.bodyBase64 != null && m.bodyBase64 !== ''
-          ? Buffer.from(m.bodyBase64, 'base64')
-          : Buffer.from(m.bodyText ?? '', 'utf8')
+        const mBody =
+          m.bodyBase64 != null && m.bodyBase64 !== ''
+            ? Buffer.from(m.bodyBase64, 'base64')
+            : Buffer.from(m.bodyText ?? '', 'utf8')
         session.resBodyBase64 = mBody.toString('base64')
         session.resBodyBytes = mBody.length
         session.durationMs = Date.now() - startedAt
@@ -394,7 +440,13 @@ export class CaptureProxy {
         session.reqBodyBase64 = body.length ? body.toString('base64') : ''
         session.reqBodyBytes = body.length
         session.modified = true
-        this.writePlain(res, m.status, mBody, headerLookup(m.headers, 'content-type') ?? 'application/json; charset=utf-8', m.headers)
+        this.writePlain(
+          res,
+          m.status,
+          mBody,
+          headerLookup(m.headers, 'content-type') ?? 'application/json; charset=utf-8',
+          m.headers,
+        )
         this.record(session, 'complete')
         return
       }
@@ -404,17 +456,20 @@ export class CaptureProxy {
         this.record(session, 'request')
         let decision: InterceptDecision = { action: 'forward' }
         try {
-          decision = await this.opts.onIntercept({
-            id: session.id,
-            method,
-            url: url.href,
-            host: ctx.host,
-            headers,
-            bodyBase64: body.toString('base64'),
-            ruleName: breakRule.name || breakRule.id,
-            clientIp: session.clientIp,
-            receivedAt: Date.now(),
-          }, 120_000)
+          decision = await this.opts.onIntercept(
+            {
+              id: session.id,
+              method,
+              url: url.href,
+              host: ctx.host,
+              headers,
+              bodyBase64: body.toString('base64'),
+              ruleName: breakRule.name || breakRule.id,
+              clientIp: session.clientIp,
+              receivedAt: Date.now(),
+            },
+            120_000,
+          )
         } catch (err) {
           this.opts.onError?.(`断点等待失败: ${(err as Error).message}`)
         }
@@ -428,24 +483,40 @@ export class CaptureProxy {
         if (decision.mock) {
           session.mocked = true
           session.status = decision.mock.status
-          const mBody = decision.mock.bodyBase64 != null && decision.mock.bodyBase64 !== ''
-            ? Buffer.from(decision.mock.bodyBase64, 'base64')
-            : Buffer.from(decision.mock.bodyText ?? '', 'utf8')
+          const mBody =
+            decision.mock.bodyBase64 != null && decision.mock.bodyBase64 !== ''
+              ? Buffer.from(decision.mock.bodyBase64, 'base64')
+              : Buffer.from(decision.mock.bodyText ?? '', 'utf8')
           session.resHeaders = decision.mock.headers
           session.resBodyBase64 = mBody.toString('base64')
           session.resBodyBytes = mBody.length
           session.durationMs = Date.now() - startedAt
-          this.writePlain(res, decision.mock.status, mBody, headerLookup(decision.mock.headers, 'content-type') ?? 'text/plain; charset=utf-8', decision.mock.headers)
+          this.writePlain(
+            res,
+            decision.mock.status,
+            mBody,
+            headerLookup(decision.mock.headers, 'content-type') ?? 'text/plain; charset=utf-8',
+            decision.mock.headers,
+          )
           this.record(session, 'complete')
           return
         }
         if (decision.method) method = decision.method.toUpperCase()
         if (decision.url) {
-          try { url = new URL(decision.url) } catch { /* 保留原 URL */ }
+          try {
+            url = new URL(decision.url)
+          } catch {
+            /* 保留原 URL */
+          }
         }
         if (decision.headers) headers = decision.headers
         if (decision.bodyBase64 != null) body = Buffer.from(decision.bodyBase64, 'base64')
-        if (method !== session.method || url.href !== session.url || decision.headers || decision.bodyBase64 != null) {
+        if (
+          method !== session.method ||
+          url.href !== session.url ||
+          decision.headers ||
+          decision.bodyBase64 != null
+        ) {
           session.modified = true
         }
       }
@@ -465,24 +536,29 @@ export class CaptureProxy {
     // ---- 转发上游 ----
     const upstreamHeaders = stripHopByHop(headers)
     if (!headerLookup(upstreamHeaders, 'host')) upstreamHeaders.push(['Host', url.host])
-    if (!headerLookup(upstreamHeaders, 'user-agent')) upstreamHeaders.push(['User-Agent', 'DevOpsToolbox/1.0'])
+    if (!headerLookup(upstreamHeaders, 'user-agent'))
+      upstreamHeaders.push(['User-Agent', 'DevOpsToolbox/1.0'])
     // 正文已在本地缓冲，长度可确定，避免上游收到 chunked
     if (body.length > 0) upstreamHeaders.push(['Content-Length', String(body.length)])
 
-    const sendUpstream = (rejectUnauthorized: boolean) => performRequest({
-      method,
-      url: url.href,
-      headers: upstreamHeaders,
-      bodyBase64: body.length ? body.toString('base64') : undefined,
-      followRedirects: false,
-      rejectUnauthorized,
-      timeoutMs: this.opts.upstreamTimeoutMs ?? 60_000,
-      passthrough: true,
-    })
+    const sendUpstream = (rejectUnauthorized: boolean) =>
+      performRequest({
+        method,
+        url: url.href,
+        headers: upstreamHeaders,
+        bodyBase64: body.length ? body.toString('base64') : undefined,
+        followRedirects: false,
+        rejectUnauthorized,
+        timeoutMs: this.opts.upstreamTimeoutMs ?? 60_000,
+        passthrough: true,
+      })
 
     let upstream = await sendUpstream(true)
     let downgraded = false
-    if (!upstream.ok && (upstream.tls?.authorized === false || isCertError(upstream.errorCode, upstream.error))) {
+    if (
+      !upstream.ok &&
+      (upstream.tls?.authorized === false || isCertError(upstream.errorCode, upstream.error))
+    ) {
       // 上游证书不被信任（自签 / 过期 / 域名不符）：降级放行并如实标注
       upstream = await sendUpstream(false)
       downgraded = upstream.ok
@@ -494,7 +570,9 @@ export class CaptureProxy {
     if (!upstream.ok) {
       session.error = upstream.error || upstream.errorCode || '上游请求失败'
       session.durationMs = Date.now() - startedAt
-      this.opts.onError?.(`上游失败 ${method} ${url.href} → ${upstream.errorCode ?? ''} ${upstream.error ?? ''}`)
+      this.opts.onError?.(
+        `上游失败 ${method} ${url.href} → ${upstream.errorCode ?? ''} ${upstream.error ?? ''}`,
+      )
       this.record(session, 'complete')
       this.writePlain(res, 502, `上游请求失败: ${session.error}\n`, 'text/plain; charset=utf-8')
       return
@@ -572,11 +650,15 @@ export class CaptureProxy {
         const raw = (err as Error).message
         // 客户端不信任我们的叶证书时会拒绝握手（unknown ca / handshake failure）。
         // 这类失败本身不是 bug，但要给出可执行的处置建议，否则用户只看到一串 TLS 报错。
-        const rejectedByClient = /unknown ca|certificate unknown|handshake failure|bad certificate|dh key too small|tlsv1 alert/i.test(raw)
-          || ['ECONNRESET', 'EPIPE'].includes((err as NodeJS.ErrnoException).code ?? '')
-        this.opts.onError?.(rejectedByClient
-          ? `客户端拒绝了本地证书（${host}）：请先把根证书加入系统信任，或关闭「解密 HTTPS」只做隧道转发`
-          : `解密连接出错 (${host}): ${raw}`)
+        const rejectedByClient =
+          /unknown ca|certificate unknown|handshake failure|bad certificate|dh key too small|tlsv1 alert/i.test(
+            raw,
+          ) || ['ECONNRESET', 'EPIPE'].includes((err as NodeJS.ErrnoException).code ?? '')
+        this.opts.onError?.(
+          rejectedByClient
+            ? `客户端拒绝了本地证书（${host}）：请先把根证书加入系统信任，或关闭「解密 HTTPS」只做隧道转发`
+            : `解密连接出错 (${host}): ${raw}`,
+        )
         socket.destroy()
       })
       this.mitmServer?.emit('connection', socket)
@@ -607,7 +689,13 @@ export class CaptureProxy {
   }
 
   /** 未开启解密时的盲隧道：只记录连接事实，正文不可见 */
-  private tunnelBlind(clientSocket: net.Socket, head: Buffer, host: string, port: number, req: http.IncomingMessage): void {
+  private tunnelBlind(
+    clientSocket: net.Socket,
+    head: Buffer,
+    host: string,
+    port: number,
+    req: http.IncomingMessage,
+  ): void {
     const session = this.newSession({
       scheme: 'tunnel',
       method: 'CONNECT',
@@ -623,12 +711,17 @@ export class CaptureProxy {
     this.record(session, 'complete')
 
     const upstream = net.connect(port, host, () => {
-      clientSocket.write(`HTTP/1.1 200 Connection Established\r\nProxy-Agent: ${PROXY_NAME}\r\n\r\n`)
+      clientSocket.write(
+        `HTTP/1.1 200 Connection Established\r\nProxy-Agent: ${PROXY_NAME}\r\n\r\n`,
+      )
       if (head && head.length) upstream.write(head)
       upstream.pipe(clientSocket)
       clientSocket.pipe(upstream)
     })
-    const cleanup = () => { clientSocket.destroy(); upstream.destroy() }
+    const cleanup = () => {
+      clientSocket.destroy()
+      upstream.destroy()
+    }
     upstream.on('error', (err) => {
       this.opts.onError?.(`隧道上游失败 (${host}:${port}): ${(err as Error).message}`)
       cleanup()
@@ -664,13 +757,17 @@ export class CaptureProxy {
 
     const upstream = net.connect(port, target.hostname, () => {
       const lines = [`${req.method} ${target.pathname}${target.search} HTTP/1.1`]
-      for (const [k, v] of Object.entries(req.headers)) lines.push(`${k}: ${Array.isArray(v) ? v.join(', ') : String(v ?? '')}`)
+      for (const [k, v] of Object.entries(req.headers))
+        lines.push(`${k}: ${Array.isArray(v) ? v.join(', ') : String(v ?? '')}`)
       upstream.write(lines.join('\r\n') + '\r\n\r\n')
       if (head && head.length) upstream.write(head)
       upstream.pipe(clientSocket)
       clientSocket.pipe(upstream)
     })
-    const cleanup = () => { clientSocket.destroy(); upstream.destroy() }
+    const cleanup = () => {
+      clientSocket.destroy()
+      upstream.destroy()
+    }
     upstream.on('error', cleanup)
     clientSocket.on('error', cleanup)
     clientSocket.on('close', () => upstream.destroy())
@@ -694,6 +791,8 @@ export class CaptureProxy {
     try {
       res.writeHead(status, headers)
       res.end(buf)
-    } catch { /* 客户端已断开 */ }
+    } catch {
+      /* 客户端已断开 */
+    }
   }
 }

@@ -64,27 +64,26 @@ function renderTypeRef(t: unknown): string {
 function argsOf(f: Record<string, unknown>): GqlArg[] {
   const args = f.args
   if (!Array.isArray(args)) return []
-  return (args as Array<Record<string, unknown>>).map(a => ({
+  return (args as Array<Record<string, unknown>>).map((a) => ({
     name: String(a.name ?? ''),
     type: renderTypeRef(a.type),
     desc: String(a.description ?? ''),
-    defaultValue: a.defaultValue === null || a.defaultValue === undefined
-      ? ''
-      : String(a.defaultValue),
+    defaultValue:
+      a.defaultValue === null || a.defaultValue === undefined ? '' : String(a.defaultValue),
   }))
 }
 
 function fieldsOf(t: Record<string, unknown>): GqlField[] {
   const fields = t.fields
   if (!Array.isArray(fields)) return []
-  return (fields as Array<Record<string, unknown>>).map(f => {
+  return (fields as Array<Record<string, unknown>>).map((f) => {
     const ev = f.enumValues
     return {
       name: String(f.name ?? ''),
       type: renderTypeRef(f.type),
       desc: String(f.description ?? ''),
       enumValues: Array.isArray(ev)
-        ? (ev as Array<Record<string, unknown>>).map(x => String(x.name ?? '')).filter(Boolean)
+        ? (ev as Array<Record<string, unknown>>).map((x) => String(x.name ?? '')).filter(Boolean)
         : [],
       args: argsOf(f),
     }
@@ -132,7 +131,7 @@ export function parseIntrospection(payload: unknown): GqlSchema {
     const ev = t.enumValues
     const fields = fieldsOf(t)
     const enumValues = Array.isArray(ev)
-      ? (ev as Array<Record<string, unknown>>).map(x => String(x.name ?? '')).filter(Boolean)
+      ? (ev as Array<Record<string, unknown>>).map((x) => String(x.name ?? '')).filter(Boolean)
       : []
     // 既没有字段又不是枚举的类型（内置标量）不必展示
     if (fields.length === 0 && enumValues.length === 0) continue
@@ -145,8 +144,8 @@ export function parseIntrospection(payload: unknown): GqlSchema {
     })
   }
 
-  const query = types.find(t => t.name === 'Query')
-  const mutation = types.find(t => t.name === 'Mutation')
+  const query = types.find((t) => t.name === 'Query')
+  const mutation = types.find((t) => t.name === 'Mutation')
 
   return {
     types,
@@ -231,15 +230,14 @@ export function parseGqlResponse(bodyText: string, status: number, elapsedMs: nu
         code: String((e.extensions as Record<string, unknown> | undefined)?.code ?? ''),
         locations: Array.isArray(e.locations)
           ? (e.locations as Array<Record<string, unknown>>)
-              .map(l => `${l.line}:${l.column}`).join(', ')
+              .map((l) => `${l.line}:${l.column}`)
+              .join(', ')
           : '',
       })
     }
   }
 
-  const data = o.data === undefined || o.data === null
-    ? ''
-    : JSON.stringify(o.data, null, 2)
+  const data = o.data === undefined || o.data === null ? '' : JSON.stringify(o.data, null, 2)
 
   return { data, errors, status, raw, elapsedMs }
 }

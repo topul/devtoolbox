@@ -34,7 +34,13 @@ function extractText(node: React.ReactNode): string {
   return extractText(el.props?.children)
 }
 
-function CodeRenderer({ className, children }: { className?: string; children?: React.ReactNode }): React.ReactElement {
+function CodeRenderer({
+  className,
+  children,
+}: {
+  className?: string
+  children?: React.ReactNode
+}): React.ReactElement {
   const cls = className ?? ''
   const lang = LANGUAGE_RE.exec(cls)?.[1] ?? ''
   const text = extractText(children)
@@ -55,7 +61,13 @@ function CodeRenderer({ className, children }: { className?: string; children?: 
   )
 }
 
-function LinkRenderer({ href, children }: { href?: string; children?: React.ReactNode }): React.ReactElement {
+function LinkRenderer({
+  href,
+  children,
+}: {
+  href?: string
+  children?: React.ReactNode
+}): React.ReactElement {
   const { locale } = useI18n()
   const c = COMMON[locale]
   const url = href ?? ''
@@ -121,7 +133,11 @@ const COMPONENTS: Components = {
 export const Markdown = memo(function Markdown({ text }: { text: string }): React.ReactElement {
   return (
     <div className="md">
-      <ReactMarkdown remarkPlugins={REMARK_PLUGINS} rehypePlugins={REHYPE_PLUGINS} components={COMPONENTS}>
+      <ReactMarkdown
+        remarkPlugins={REMARK_PLUGINS}
+        rehypePlugins={REHYPE_PLUGINS}
+        components={COMPONENTS}
+      >
         {text}
       </ReactMarkdown>
     </div>

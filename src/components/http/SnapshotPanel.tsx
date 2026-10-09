@@ -1,11 +1,17 @@
 import React, { useState } from 'react'
 import { Btn } from '../ui'
 import { lineDiff, type DiffLine } from '../../lib/toolkit'
-import { formatTime, formatDuration, statusColorClass, newRowId, type DecodedBody } from '../../lib/http-utils'
+import {
+  formatTime,
+  formatDuration,
+  statusColorClass,
+  newRowId,
+  type DecodedBody,
+} from '../../lib/http-utils'
 import type { HttpRequestResult } from '../../lib/http-types'
 import { httpClientL } from '../../lib/locales/httpclient'
 
-type L = typeof httpClientL['zh']
+type L = (typeof httpClientL)['zh']
 
 /* ================= 数据与纯函数（可测） ================= */
 
@@ -29,7 +35,10 @@ export const MAX_BODY_CHARS = 300_000
 export const MAX_DIFF_LINES = 1200
 
 /** 从响应构造快照；二进制响应返回 null（快照只对比文本） */
-export function snapshotFromResponse(resp: HttpRequestResult, decoded: DecodedBody): ResponseSnapshot | null {
+export function snapshotFromResponse(
+  resp: HttpRequestResult,
+  decoded: DecodedBody,
+): ResponseSnapshot | null {
   if (decoded.binary) return null
   return {
     id: newRowId(),
@@ -37,14 +46,18 @@ export function snapshotFromResponse(resp: HttpRequestResult, decoded: DecodedBo
     method: resp.method,
     url: resp.url,
     status: resp.status,
-    bodyText: decoded.text.length > MAX_BODY_CHARS ? decoded.text.slice(0, MAX_BODY_CHARS) : decoded.text,
+    bodyText:
+      decoded.text.length > MAX_BODY_CHARS ? decoded.text.slice(0, MAX_BODY_CHARS) : decoded.text,
     truncated: decoded.text.length > MAX_BODY_CHARS,
     durationMs: resp.timings.totalMs,
   }
 }
 
 /** 追加快照并保持数量上限（新在前，超出丢最旧）；二进制返回原列表 */
-export function addSnapshot(list: ResponseSnapshot[], snap: ResponseSnapshot | null): ResponseSnapshot[] {
+export function addSnapshot(
+  list: ResponseSnapshot[],
+  snap: ResponseSnapshot | null,
+): ResponseSnapshot[] {
   if (!snap) return list
   return [snap, ...list].slice(0, MAX_SNAPSHOTS)
 }
@@ -64,7 +77,12 @@ export function boundedDiff(a: string, b: string): { lines: DiffLine[]; truncate
 /* ================= 面板 ================= */
 
 /** 快照抽屉：列表 + 「与当前响应对比」。对比在抽屉内完成，结果着色展示。 */
-export function SnapshotPanel({ snapshots, current, onRemove, l }: {
+export function SnapshotPanel({
+  snapshots,
+  current,
+  onRemove,
+  l,
+}: {
   snapshots: ResponseSnapshot[]
   /** 当前响应的解码文本；null 表示还没有响应可对比 */
   current: string | null
@@ -103,9 +121,17 @@ export function SnapshotPanel({ snapshots, current, onRemove, l }: {
                 <div className="text-[11.5px] text-dim truncate">{s.url}</div>
               </div>
               {canCompare && (
-                <Btn variant="ghost" onClick={() => setDiffOf(s.id)}>{l.snaps.compare}</Btn>
+                <Btn variant="ghost" onClick={() => setDiffOf(s.id)}>
+                  {l.snaps.compare}
+                </Btn>
               )}
-              <button onClick={() => onRemove(s.id)} className="shrink-0 text-muted hover:text-danger px-1" title={l.snaps.remove}>×</button>
+              <button
+                onClick={() => onRemove(s.id)}
+                className="shrink-0 text-muted hover:text-danger px-1"
+                title={l.snaps.remove}
+              >
+                ×
+              </button>
             </div>
           )
         })}
@@ -119,20 +145,29 @@ export function SnapshotPanel({ snapshots, current, onRemove, l }: {
             </span>
             <span className="text-[11.5px] text-phosphor">+{stats.add}</span>
             <span className="text-[11.5px] text-danger">-{stats.del}</span>
-            <Btn variant="ghost" onClick={() => setDiffOf(null)}>{l.snaps.close}</Btn>
+            <Btn variant="ghost" onClick={() => setDiffOf(null)}>
+              {l.snaps.close}
+            </Btn>
           </div>
-          {diff.truncated && <div className="px-2 text-[11px] text-amber">{l.snaps.truncatedNote(MAX_DIFF_LINES)}</div>}
+          {diff.truncated && (
+            <div className="px-2 text-[11px] text-amber">
+              {l.snaps.truncatedNote(MAX_DIFF_LINES)}
+            </div>
+          )}
           <pre className="max-h-[45vh] overflow-auto px-2 py-1.5 text-[11.5px] leading-[1.5] font-mono m-0">
             {diff.lines.map((ln, i) => (
               <div
                 key={i}
                 className={
-                  ln.type === 'add' ? 'text-phosphor bg-phosphor/5'
-                    : ln.type === 'del' ? 'text-danger bg-danger/5'
+                  ln.type === 'add'
+                    ? 'text-phosphor bg-phosphor/5'
+                    : ln.type === 'del'
+                      ? 'text-danger bg-danger/5'
                       : 'text-dim'
                 }
               >
-                {ln.type === 'add' ? '+ ' : ln.type === 'del' ? '- ' : '  '}{ln.text || ' '}
+                {ln.type === 'add' ? '+ ' : ln.type === 'del' ? '- ' : '  '}
+                {ln.text || ' '}
               </div>
             ))}
           </pre>

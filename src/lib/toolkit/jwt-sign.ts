@@ -39,7 +39,11 @@ function base64UrlEncode(bytes: Uint8Array): string {
 }
 
 /** WebCrypto 的 HMAC-SHA-*，密钥先按 alg 对应的摘要名导入 */
-async function hmacSign(data: string, key: string, algo: 'SHA-256' | 'SHA-384' | 'SHA-512'): Promise<Uint8Array> {
+async function hmacSign(
+  data: string,
+  key: string,
+  algo: 'SHA-256' | 'SHA-384' | 'SHA-512',
+): Promise<Uint8Array> {
   const enc = new TextEncoder()
   const cryptoKey = await crypto.subtle.importKey(
     'raw',
@@ -52,7 +56,11 @@ async function hmacSign(data: string, key: string, algo: 'SHA-256' | 'SHA-384' |
 }
 
 /** HMAC-SHA-* 的结果（定长 hex），签名与验签共用 */
-export async function hmacHex(data: string, key: string, algo: 'SHA-256' | 'SHA-384' | 'SHA-512'): Promise<string> {
+export async function hmacHex(
+  data: string,
+  key: string,
+  algo: 'SHA-256' | 'SHA-384' | 'SHA-512',
+): Promise<string> {
   const sig = await hmacSign(data, key, algo)
   return [...sig].map((b) => b.toString(16).padStart(2, '0')).join('')
 }
@@ -83,7 +91,12 @@ export async function jwtSign(
   const signingInput = `${header}.${payload}`
   if (algo === 'none') {
     // 无签名：第三段留空。alg=none 的 token 没有签名段，服务端应当拒绝
-    return { token: `${signingInput}.`, signature: '', header: signingInput.split('.')[0], payload: signingInput.split('.')[1] }
+    return {
+      token: `${signingInput}.`,
+      signature: '',
+      header: signingInput.split('.')[0],
+      payload: signingInput.split('.')[1],
+    }
   }
   const sig = await hmacSign(signingInput, key, HMAC_NAME[algo])
   const signature = base64UrlEncode(sig)
@@ -99,7 +112,7 @@ export interface JwtVerifyResult {
 /**
  * 用同一把密钥验签 HMAC-SHA-* 的 token。
  *
- * 只覆盖本模块能签的那几种算法；传 `none` 会直接判 NO_SIG —— 
+ * 只覆盖本模块能签的那几种算法；传 `none` 会直接判 NO_SIG ——
  * 这正是评审里点名要检的行为（算法混淆）。
  */
 export async function jwtVerify(

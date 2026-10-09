@@ -270,17 +270,28 @@ export function toChatToolServers(list: CustomServer[]): ChatToolServer[] {
     .map((s): ChatToolServer | null => {
       const label = s.label.trim() || undefined
       if (s.kind === 'http') {
-        return s.url.trim() ? { label, url: s.url.trim(), headers: parseHeaderLines(s.headers) } : null
+        return s.url.trim()
+          ? { label, url: s.url.trim(), headers: parseHeaderLines(s.headers) }
+          : null
       }
       return s.command.trim()
-        ? { label, command: s.command.trim(), args: s.args.split('\n').map((x) => x.trim()).filter(Boolean), env: parseEnvText(s.env) }
+        ? {
+            label,
+            command: s.command.trim(),
+            args: s.args
+              .split('\n')
+              .map((x) => x.trim())
+              .filter(Boolean),
+            env: parseEnvText(s.env),
+          }
         : null
     })
     .filter((x): x is ChatToolServer => !!x)
 }
 
 /** `KEY=VALUE` 每行一条；解析不动的地方直接跳过，别让一个错行毁掉整个环境表 */
-export function parseEnvText(t: string): Record<string, string> {  const out: Record<string, string> = {}
+export function parseEnvText(t: string): Record<string, string> {
+  const out: Record<string, string> = {}
   for (const line of t.split('\n')) {
     const i = line.indexOf('=')
     if (i <= 0) continue
@@ -430,7 +441,16 @@ export function saveSkills(list: SkillPreset[]): void {
 
 /** 一条空预设（label 由调用方给，其余留给「存为预设」时从当前设置快照覆盖） */
 export function blankSkill(label: string): SkillPreset {
-  return { id: newId('k'), label, system: '', temperature: '', maxTokens: '', topP: '', toolAllow: '', toolsEnabled: true }
+  return {
+    id: newId('k'),
+    label,
+    system: '',
+    temperature: '',
+    maxTokens: '',
+    topP: '',
+    toolAllow: '',
+    toolsEnabled: true,
+  }
 }
 
 /** 应用 = 覆盖 settings 的固定六项；返回值直接喂 patchSettings */

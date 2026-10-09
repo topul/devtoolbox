@@ -11,7 +11,12 @@
 import { chatStream } from './chat'
 import { runChatAgent } from './chat-agent'
 import { createChatTraceRegistry, type ChatTraceRecorder } from './chat-trace'
-import type { ChatEvent, ChatSendResult, ChatSendSpec, ChatTraceResult } from '../../src/lib/chat-types'
+import type {
+  ChatEvent,
+  ChatSendResult,
+  ChatSendSpec,
+  ChatTraceResult,
+} from '../../src/lib/chat-types'
 
 export interface ChatHost {
   /** 把事件推给渲染层 */
@@ -37,7 +42,8 @@ export function createChatController(host: ChatHost): ChatController {
 
   /** 纯对话路径的 trace 转发（agent 路径由 runChatAgent 自己接） */
   const plainTrace = (recorder: ChatTraceRecorder) => ({
-    onRequest: (info: { url: string; headers: [string, string][]; body: string }): void => recorder.request(1, info),
+    onRequest: (info: { url: string; headers: [string, string][]; body: string }): void =>
+      recorder.request(1, info),
     onFrame: (line: string): void => recorder.frame(1, line),
   })
 
@@ -50,10 +56,14 @@ export function createChatController(host: ChatHost): ChatController {
       try {
         // 配了工具服务端就走 agent 循环：它会自己发 start（起点在它内部更自然），
         // 且一条 send 最终只应产生一个 start 事件 —— 由 smoke 断言
-        const useTools = !!spec.tools && (!!spec.tools.server?.command || !!spec.tools.servers?.length)
+        const useTools =
+          !!spec.tools && (!!spec.tools.server?.command || !!spec.tools.servers?.length)
         const recorder = traces.begin(requestId)
         if (useTools) {
-          const agent = runChatAgent({ ...spec, requestId, tools: spec.tools!, trace: recorder }, { emit: host.emit })
+          const agent = runChatAgent(
+            { ...spec, requestId, tools: spec.tools!, trace: recorder },
+            { emit: host.emit },
+          )
           active.set(requestId, { abort: agent.abort })
           return { ok: true, requestId }
         }
@@ -62,20 +72,24 @@ export function createChatController(host: ChatHost): ChatController {
         // 那样事件顺序就变成「错误在前、开始在后」，看着很怪
         host.emit({ type: 'start', requestId })
         const t = plainTrace(recorder)
-        const handle = chatStream({ ...spec, requestId }, {
-          onDelta: (text, kind) => host.emit({ type: 'delta', requestId, text, kind, atMs: Date.now() }),
-          onDone: (meta) => {
-            active.delete(requestId)
-            recorder.meta(1, meta)
-            host.emit({ type: 'done', requestId, meta })
+        const handle = chatStream(
+          { ...spec, requestId },
+          {
+            onDelta: (text, kind) =>
+              host.emit({ type: 'delta', requestId, text, kind, atMs: Date.now() }),
+            onDone: (meta) => {
+              active.delete(requestId)
+              recorder.meta(1, meta)
+              host.emit({ type: 'done', requestId, meta })
+            },
+            onError: (message, code) => {
+              active.delete(requestId)
+              host.emit({ type: 'error', requestId, message, code })
+            },
+            onRequest: t.onRequest,
+            onFrame: t.onFrame,
           },
-          onError: (message, code) => {
-            active.delete(requestId)
-            host.emit({ type: 'error', requestId, message, code })
-          },
-          onRequest: t.onRequest,
-          onFrame: t.onFrame,
-        })
+        )
         active.set(requestId, { abort: handle.abort })
         return { ok: true, requestId }
       } catch (err) {

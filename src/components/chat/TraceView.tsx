@@ -17,7 +17,10 @@ import type { ChatTrace, ChatTraceRound } from '../../lib/chat-types'
 
 type L = (typeof chatL)['zh']
 
-export function TraceDrawer({ requestId, onClose }: {
+export function TraceDrawer({
+  requestId,
+  onClose,
+}: {
   requestId: string
   onClose: () => void
 }): React.ReactElement {
@@ -36,19 +39,30 @@ export function TraceDrawer({ requestId, onClose }: {
       ? api.trace(requestId).then((r) => (r.ok ? { kind: 'live' as const, trace: r.trace } : null))
       : Promise.resolve(null)
     // 内存未命中（或没有 IPC）时读 IndexedDB 存档 —— 历史会话的链路在这里
-    const hit: Promise<Hit | null> = fromMemory.then((m) =>
-      m ?? loadTraceArchive(requestId).then((arc) => (arc ? { kind: 'archive' as const, trace: arc } : null)),
+    const hit: Promise<Hit | null> = fromMemory.then(
+      (m) =>
+        m ??
+        loadTraceArchive(requestId).then((arc) =>
+          arc ? { kind: 'archive' as const, trace: arc } : null,
+        ),
     )
-    void hit.then((h) => {
-      if (!alive) return
-      if (!h) { setMissing(true); return }
-      setTrace(h.trace)
-      setSource(h.kind)
-      if (h.kind === 'live') void saveTraceArchive(h.trace)
-    }).catch((e) => {
-      if (alive) setFailed((e as Error).message)
-    })
-    return () => { alive = false }
+    void hit
+      .then((h) => {
+        if (!alive) return
+        if (!h) {
+          setMissing(true)
+          return
+        }
+        setTrace(h.trace)
+        setSource(h.kind)
+        if (h.kind === 'live') void saveTraceArchive(h.trace)
+      })
+      .catch((e) => {
+        if (alive) setFailed((e as Error).message)
+      })
+    return () => {
+      alive = false
+    }
   }, [requestId])
 
   return (
@@ -60,10 +74,14 @@ export function TraceDrawer({ requestId, onClose }: {
           <div className="text-[11px] text-muted/70 flex items-center gap-2">
             {new Date(trace.startedAt).toLocaleString()} · {trace.requestId}
             {source === 'archive' && (
-              <span className="text-[10px] px-1.5 border border-line-soft text-muted">{l.traceArchive}</span>
+              <span className="text-[10px] px-1.5 border border-line-soft text-muted">
+                {l.traceArchive}
+              </span>
             )}
           </div>
-          {trace.rounds.map((r) => <RoundBlock key={r.round} round={r} l={l} />)}
+          {trace.rounds.map((r) => (
+            <RoundBlock key={r.round} round={r} l={l} />
+          ))}
         </div>
       )}
     </Drawer>
@@ -75,7 +93,9 @@ function RoundBlock({ round, l }: { round: ChatTraceRound; l: L }): React.ReactE
   return (
     <div className="border border-line rounded-lg bg-panel p-3 space-y-2">
       <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-[12px] font-medium text-bright">{l.traceRound.replace('{n}', String(round.round))}</span>
+        <span className="text-[12px] font-medium text-bright">
+          {l.traceRound.replace('{n}', String(round.round))}
+        </span>
         {round.meta && (
           <span className="text-[10.5px] text-muted">
             {round.meta.firstTokenMs ? `${l.firstToken} ${round.meta.firstTokenMs}ms · ` : ''}
@@ -85,7 +105,9 @@ function RoundBlock({ round, l }: { round: ChatTraceRound; l: L }): React.ReactE
           </span>
         )}
         {(round.truncated || round.framesTruncated) && (
-          <span className="text-[10px] px-1.5 border border-amber/40 text-amber">{l.traceTruncated}</span>
+          <span className="text-[10px] px-1.5 border border-amber/40 text-amber">
+            {l.traceTruncated}
+          </span>
         )}
       </div>
 
@@ -95,11 +117,17 @@ function RoundBlock({ round, l }: { round: ChatTraceRound; l: L }): React.ReactE
           {round.tools.map((t, i) => (
             <div key={t.call.id || i} className="text-[11.5px] pl-2 border-l-2 border-phosphor/30">
               {/* 走主题变量：硬编码色在亮色主题下几乎不可读（见 MessageView 同处说明） */}
-              <span className="break-all" style={{ color: 'var(--c-hl-fn)' }}>{t.call.name}</span>
+              <span className="break-all" style={{ color: 'var(--c-hl-fn)' }}>
+                {t.call.name}
+              </span>
               <span className="text-muted/70 break-all"> {t.call.args}</span>
               {t.result && (
                 <span className={t.result.ok && !t.result.isError ? 'text-muted' : 'text-danger'}>
-                  {' '}→ {t.result.ok && !t.result.isError ? 'ok' : (t.result.error || t.result.text || 'error').slice(0, 80)}
+                  {' '}
+                  →{' '}
+                  {t.result.ok && !t.result.isError
+                    ? 'ok'
+                    : (t.result.error || t.result.text || 'error').slice(0, 80)}
                 </span>
               )}
             </div>
@@ -108,24 +136,28 @@ function RoundBlock({ round, l }: { round: ChatTraceRound; l: L }): React.ReactE
       )}
 
       <Collapse title={l.traceRequestBody} hint={body ? `${body.length} 字符` : undefined}>
-        {body
-          ? (
-            <div className="relative">
-              <div className="absolute top-0 right-0"><CopyBtn text={body} /></div>
-              <pre className="codeblock text-[11px] text-muted whitespace-pre-wrap break-words max-h-[50vh] overflow-auto">{body}</pre>
+        {body ? (
+          <div className="relative">
+            <div className="absolute top-0 right-0">
+              <CopyBtn text={body} />
             </div>
-          )
-          : <span className="text-[11.5px] text-muted">—</span>}
+            <pre className="codeblock text-[11px] text-muted whitespace-pre-wrap break-words max-h-[50vh] overflow-auto">
+              {body}
+            </pre>
+          </div>
+        ) : (
+          <span className="text-[11.5px] text-muted">—</span>
+        )}
       </Collapse>
 
       <Collapse title={l.traceFrames} hint={`${round.frames.length}`}>
-        {round.frames.length
-          ? (
-            <pre className="codeblock text-[11px] text-muted/90 whitespace-pre-wrap break-all max-h-[40vh] overflow-auto">
-              {round.frames.join('\n')}
-            </pre>
-          )
-          : <span className="text-[11.5px] text-muted">{l.traceNoFrames}</span>}
+        {round.frames.length ? (
+          <pre className="codeblock text-[11px] text-muted/90 whitespace-pre-wrap break-all max-h-[40vh] overflow-auto">
+            {round.frames.join('\n')}
+          </pre>
+        ) : (
+          <span className="text-[11.5px] text-muted">{l.traceNoFrames}</span>
+        )}
       </Collapse>
     </div>
   )

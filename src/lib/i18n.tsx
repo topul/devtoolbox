@@ -46,19 +46,31 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
     setLocaleState(l)
   }, [])
 
-  const toolName = useCallback((tool: { id: ToolId }) =>
-    TOOLS_L[locale][tool.id]?.name ?? tool.id, [locale])
+  const toolName = useCallback(
+    (tool: { id: ToolId }) => TOOLS_L[locale][tool.id]?.name ?? tool.id,
+    [locale],
+  )
 
-  const toolDesc = useCallback((tool: { id: ToolId }) =>
-    TOOLS_L[locale][tool.id]?.desc ?? '', [locale])
+  const toolDesc = useCallback(
+    (tool: { id: ToolId }) => TOOLS_L[locale][tool.id]?.desc ?? '',
+    [locale],
+  )
 
-  const catName = useCallback((cat: CategoryId) =>
-    CATEGORY_L[locale][cat] ?? cat, [locale])
+  const catName = useCallback((cat: CategoryId) => CATEGORY_L[locale][cat] ?? cat, [locale])
 
   const sectionName = useCallback((id: SectionId) => SECTION_L[locale][id], [locale])
   const sectionDesc = useCallback((id: SectionId) => SECTION_DESC_L[locale][id], [locale])
 
-  const value: I18nCtx = { locale, setLocale, t: UI[locale], toolName, toolDesc, catName, sectionName, sectionDesc }
+  const value: I18nCtx = {
+    locale,
+    setLocale,
+    t: UI[locale],
+    toolName,
+    toolDesc,
+    catName,
+    sectionName,
+    sectionDesc,
+  }
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }
 

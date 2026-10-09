@@ -10,7 +10,11 @@ import { evalJsonPath, jsonToYaml, yamlToJson } from '../lib/toolkit'
 
 export function YamlTool() {
   const l = useLocalized(dataformatsL).yaml
-  const [input, setInput] = usePersistedState('yaml-json', 'input', 'server:\n  host: 0.0.0.0\n  port: 8080\n  tags:\n    - web\n    - prod\n  tls: true')
+  const [input, setInput] = usePersistedState(
+    'yaml-json',
+    'input',
+    'server:\n  host: 0.0.0.0\n  port: 8080\n  tags:\n    - web\n    - prod\n  tls: true',
+  )
   const [output, setOutput] = useState('')
   const [err, setErr] = useState<string | null>(null)
 
@@ -27,9 +31,19 @@ export function YamlTool() {
     <div className="space-y-3">
       <TA value={input} onChange={setInput} label={l.input} rows={9} />
       <div className="flex gap-2">
-        <Btn variant="primary" onClick={() => run('y2j')}>{l.y2j}</Btn>
+        <Btn variant="primary" onClick={() => run('y2j')}>
+          {l.y2j}
+        </Btn>
         <Btn onClick={() => run('j2y')}>{l.j2y}</Btn>
-        <Btn variant="ghost" onClick={() => { setInput(output); setOutput('') }}>{l.swap}</Btn>
+        <Btn
+          variant="ghost"
+          onClick={() => {
+            setInput(output)
+            setOutput('')
+          }}
+        >
+          {l.swap}
+        </Btn>
       </div>
       <ErrorNote msg={err} />
       <TA value={output} readOnly label={l.output} rows={9} />
@@ -64,13 +78,21 @@ export function JsonPathTool() {
     <div className="space-y-3">
       <div className="flex gap-2 items-end flex-wrap">
         <div className="flex-1 min-w-[220px]">
-          <Input value={path} onChange={setPath} label={l.exprLabel} placeholder="$.store.book[0].title" />
+          <Input
+            value={path}
+            onChange={setPath}
+            label={l.exprLabel}
+            placeholder="$.store.book[0].title"
+          />
         </div>
       </div>
       <div className="flex gap-2 flex-wrap">
         {l.examples.map(([name, p]) => (
-          <button key={name} onClick={() => setPath(p)}
-            className="px-2 py-1 text-[11px] border border-line-soft text-muted hover:text-phosphor hover:border-phosphor/40 transition-colors">
+          <button
+            key={name}
+            onClick={() => setPath(p)}
+            className="px-2 py-1 text-[11px] border border-line-soft text-muted hover:text-phosphor hover:border-phosphor/40 transition-colors"
+          >
             {name}
           </button>
         ))}
@@ -78,7 +100,16 @@ export function JsonPathTool() {
       <TA value={json} onChange={setJson} label={l.dataLabel} rows={8} />
       <ErrorNote msg={err} />
       {result && (
-        <TA value={result.length === 1 ? JSON.stringify(result[0], null, 2) : JSON.stringify(result, null, 2)} readOnly label={l.resultLabel(result.length)} rows={7} />
+        <TA
+          value={
+            result.length === 1
+              ? JSON.stringify(result[0], null, 2)
+              : JSON.stringify(result, null, 2)
+          }
+          readOnly
+          label={l.resultLabel(result.length)}
+          rows={7}
+        />
       )}
     </div>
   )
@@ -128,19 +159,27 @@ function minifyCss(css: string): string {
 
 export function CssTool() {
   const l = useLocalized(dataformatsL).css
-  const [input, setInput] = usePersistedState('css-format', 'input', 'body{color:#0f0; margin: 0}a:hover{ text-decoration : underline }')
+  const [input, setInput] = usePersistedState(
+    'css-format',
+    'input',
+    'body{color:#0f0; margin: 0}a:hover{ text-decoration : underline }',
+  )
   const [output, setOutput] = useState('')
 
   return (
     <div className="space-y-3">
       <TA value={input} onChange={setInput} label={l.input} rows={7} />
       <div className="flex gap-2">
-        <Btn variant="primary" onClick={() => setOutput(formatCss(input))}>{l.format}</Btn>
+        <Btn variant="primary" onClick={() => setOutput(formatCss(input))}>
+          {l.format}
+        </Btn>
         <Btn onClick={() => setOutput(minifyCss(input))}>{l.minify}</Btn>
       </div>
       {output && (
         <div className="text-[11px] text-muted">
-          {input.length} → {output.length} {l.chars}（{output.length < input.length ? l.less : l.more} {Math.abs(100 - Math.round(output.length / Math.max(input.length, 1) * 100))}%）
+          {input.length} → {output.length} {l.chars}（
+          {output.length < input.length ? l.less : l.more}{' '}
+          {Math.abs(100 - Math.round((output.length / Math.max(input.length, 1)) * 100))}%）
         </div>
       )}
       <TA value={output} readOnly label={l.output} rows={10} />

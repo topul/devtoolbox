@@ -47,7 +47,7 @@
   --c-phosphor-hover: #6ee7b7;
   --c-phosphor-glow: #6ee7b7;
   --c-phosphor-dim: #065f46;
-  --c-phosphor-faint: rgba(52, 211, 153, 0.10);
+  --c-phosphor-faint: rgba(52, 211, 153, 0.1);
   --c-panel: #14171c;
   --c-panel-2: #1c2128;
   --c-line: rgba(148, 163, 184, 0.16);
@@ -121,7 +121,9 @@
 
 /* ==================== Base styles ==================== */
 
-html, body, #root {
+html,
+body,
+#root {
   height: 100%;
 }
 
@@ -129,36 +131,51 @@ body {
   background: var(--c-bg);
   color: var(--c-text);
   /* UI 走系统无衬线（中文 PingFang/微软雅黑），JetBrains Mono 只留给代码场景 */
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
-    'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', 'Noto Sans SC', sans-serif;
   font-size: 13.5px;
   line-height: 1.65;
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior-y: none;
-  transition: background-color 0.2s ease, color 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
 }
 
 /* ---------- mobile optimizations ---------- */
 @media (max-width: 1023.98px) {
-  input[type='text'], input[type='number'], input[type='search'],
-  textarea, select {
+  input[type='text'],
+  input[type='number'],
+  input[type='search'],
+  textarea,
+  select {
     font-size: 16px !important;
     line-height: 1.5;
   }
   button {
     min-height: 38px;
   }
-  .overflow-auto, .overflow-x-auto {
+  .overflow-auto,
+  .overflow-x-auto {
     -webkit-overflow-scrolling: touch;
   }
 }
 
 /* safe-area helpers */
-.pb-safe { padding-bottom: env(safe-area-inset-bottom, 0px); }
-.pt-safe { padding-top: env(safe-area-inset-top, 0px); }
-.pl-safe { padding-left: env(safe-area-inset-left, 0px); }
-.pr-safe { padding-right: env(safe-area-inset-right, 0px); }
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.pl-safe {
+  padding-left: env(safe-area-inset-left, 0px);
+}
+.pr-safe {
+  padding-right: env(safe-area-inset-right, 0px);
+}
 
 /* scanline overlay 已下线（终端风装饰）：类名保留避免旧引用报错，效果置空 */
 .scanlines::after {
@@ -170,20 +187,40 @@ body {
   color: var(--c-selection-fg);
 }
 
-*::-webkit-scrollbar { width: 8px; height: 8px; }
-*::-webkit-scrollbar-track { background: transparent; }
-*::-webkit-scrollbar-thumb { background: var(--c-scrollbar); border-radius: 9999px; }
-*::-webkit-scrollbar-thumb:hover { background: var(--c-scrollbar-hover); }
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--c-scrollbar);
+  border-radius: 9999px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--c-scrollbar-hover);
+}
 
-textarea { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+textarea {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
 
 /* 代码场景显式找回落等宽字体（body 已换成无衬线） */
-pre, code, kbd, samp { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+pre,
+code,
+kbd,
+samp {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
 
 /* 焦点环：2px 实线 + 2px 外偏移。
    旧值是 1px 且 offset 为负，环紧贴边框内侧、几乎贴字，等于没有焦点指示。
    offset 取正还需要各控件留出border 余量（FIELD_CLS 的 focus:border-phosphor/50 也在标示聚焦态）。 */
-textarea:focus, input:focus, select:focus, button:focus-visible {
+textarea:focus,
+input:focus,
+select:focus,
+button:focus-visible {
   outline: 2px solid var(--c-focus);
   outline-offset: 2px;
 }
@@ -192,7 +229,9 @@ textarea:focus, input:focus, select:focus, button:focus-visible {
 
 /* 大屏上等比放大内容：字号与间距一起变大，避免「元素偏小」；
    宽度限制在 App.tsx 的容器上（max-w + mx-auto），这里只管缩放。 */
-.content-zoom { zoom: var(--ui-zoom, 1); }
+.content-zoom {
+  zoom: var(--ui-zoom, 1);
+}
 
 /*
  * 对话视图要占满可视区（内部自己滚，页面不滚）。这里**不能写 100vh**：
@@ -201,14 +240,34 @@ textarea:focus, input:focus, select:focus, button:focus-visible {
  * 发送按钮被切到屏幕外。所以按缩放把视口高度换回「局部 CSS px」。
  * 窄屏（<1024px）没有缩放，仍按视口减掉移动端顶栏（3rem）。
  */
-.chat-viewport { height: calc(100dvh - 3rem); }
-@media (min-width: 1024px) {
-  .chat-viewport { height: calc(100dvh / var(--ui-zoom, 1)); }
+.chat-viewport {
+  height: calc(100dvh - 3rem);
 }
-@media (min-width: 1440px) { :root { --ui-zoom: 1.06; } }
-@media (min-width: 1600px) { :root { --ui-zoom: 1.1; } }
-@media (min-width: 1900px) { :root { --ui-zoom: 1.16; } }
-@media (min-width: 2300px) { :root { --ui-zoom: 1.22; } }
+@media (min-width: 1024px) {
+  .chat-viewport {
+    height: calc(100dvh / var(--ui-zoom, 1));
+  }
+}
+@media (min-width: 1440px) {
+  :root {
+    --ui-zoom: 1.06;
+  }
+}
+@media (min-width: 1600px) {
+  :root {
+    --ui-zoom: 1.1;
+  }
+}
+@media (min-width: 1900px) {
+  :root {
+    --ui-zoom: 1.16;
+  }
+}
+@media (min-width: 2300px) {
+  :root {
+    --ui-zoom: 1.22;
+  }
+}
 
 /* ==================== Motion tokens ==================== */
 
@@ -225,36 +284,76 @@ textarea:focus, input:focus, select:focus, button:focus-visible {
 }
 
 @keyframes overlay-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 @keyframes overlay-out {
-  from { opacity: 1; }
-  to { opacity: 0; }
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
 }
 @keyframes drawer-in {
-  from { transform: translateX(100%); }
-  to { transform: translateX(0); }
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
 }
 @keyframes drawer-out {
-  from { transform: translateX(0); }
-  to { transform: translateX(100%); }
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(100%);
+  }
 }
 @keyframes pop-in {
-  from { opacity: 0; transform: translateY(8px) scale(0.98); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 @keyframes pop-out {
-  from { opacity: 1; transform: translateY(0) scale(1); }
-  to { opacity: 0; transform: translateY(6px) scale(0.98); }
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
 }
 
-.anim-overlay-in  { animation: overlay-in var(--dur-base) ease-out both; }
-.anim-overlay-out { animation: overlay-out var(--dur-fast) ease-in both; }
-.anim-drawer-in   { animation: drawer-in var(--dur-slow) var(--ease-out) both; }
-.anim-drawer-out  { animation: drawer-out var(--dur-fast) ease-in both; }
-.anim-pop-in      { animation: pop-in var(--dur-base) var(--ease-out) both; }
-.anim-pop-out     { animation: pop-out var(--dur-fast) ease-in both; }
+.anim-overlay-in {
+  animation: overlay-in var(--dur-base) ease-out both;
+}
+.anim-overlay-out {
+  animation: overlay-out var(--dur-fast) ease-in both;
+}
+.anim-drawer-in {
+  animation: drawer-in var(--dur-slow) var(--ease-out) both;
+}
+.anim-drawer-out {
+  animation: drawer-out var(--dur-fast) ease-in both;
+}
+.anim-pop-in {
+  animation: pop-in var(--dur-base) var(--ease-out) both;
+}
+.anim-pop-out {
+  animation: pop-out var(--dur-fast) ease-in both;
+}
 
 /*
  * 动效降级：系统开了「减少动态效果」就把所有动画与过渡压到接近 0。
@@ -282,7 +381,10 @@ textarea:focus, input:focus, select:focus, button:focus-visible {
   display: grid;
   transition: grid-template-rows var(--dur-base) var(--ease-out);
 }
-.collapse-grid > * { overflow: hidden; min-height: 0; }
+.collapse-grid > * {
+  overflow: hidden;
+  min-height: 0;
+}
 
 /* ==================== Command palette (cmdk) ==================== */
 
@@ -292,8 +394,14 @@ textarea:focus, input:focus, select:focus, button:focus-visible {
  * translateX(-50%) 居中，通用 pop-in 的 transform 会把它顶掉。
  */
 @keyframes cmdk-in {
-  from { opacity: 0; transform: translateX(-50%) translateY(8px) scale(0.98); }
-  to { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
 }
 
 [cmdk-overlay] {
@@ -329,7 +437,10 @@ textarea:focus, input:focus, select:focus, button:focus-visible {
   font-size: 14px;
   padding: 14px 16px;
 }
-[cmdk-input]::placeholder { color: var(--c-muted); opacity: 0.7; }
+[cmdk-input]::placeholder {
+  color: var(--c-muted);
+  opacity: 0.7;
+}
 
 [cmdk-list] {
   max-height: 48vh;
@@ -356,15 +467,23 @@ textarea:focus, input:focus, select:focus, button:focus-visible {
   padding: 8px 10px;
   cursor: pointer;
   color: var(--c-text);
-  transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease;
+  transition:
+    background-color var(--dur-fast) ease,
+    color var(--dur-fast) ease;
 }
 [cmdk-item][data-selected='true'] {
   background: var(--c-phosphor-faint);
   color: var(--c-phosphor);
 }
-[cmdk-item][data-disabled='true'] { display: none; }
+[cmdk-item][data-disabled='true'] {
+  display: none;
+}
 
-.cmdk-name { font-size: 13px; color: inherit; white-space: nowrap; }
+.cmdk-name {
+  font-size: 13px;
+  color: inherit;
+  white-space: nowrap;
+}
 .cmdk-desc {
   flex: 1;
   min-width: 0;
@@ -375,7 +494,10 @@ textarea:focus, input:focus, select:focus, button:focus-visible {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.cmdk-count { font-size: 10.5px; color: var(--c-muted); }
+.cmdk-count {
+  font-size: 10.5px;
+  color: var(--c-muted);
+}
 
 .cmdk-foot {
   display: flex;
@@ -398,17 +520,31 @@ textarea:focus, input:focus, select:focus, button:focus-visible {
 /* ==================== Animations ==================== */
 
 @keyframes blink {
-  0%, 49% { opacity: 1; }
-  50%, 100% { opacity: 0; }
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
 }
-.cursor-blink { animation: blink 1.1s step-end infinite; }
+.cursor-blink {
+  animation: blink 1.1s step-end infinite;
+}
 
 /* 空会话引导（对话首页 SVG 小人）动效。
    光标：亮的时间比灭的长一点（52/48），更接近真实终端光标的呼吸感，
    并带一点磷光；眨眼是偶发的快速闭合；咖啡热气两段错峰上浮。 */
 @keyframes greeter-cursor {
-  0%, 52% { opacity: 1; }
-  53%, 100% { opacity: 0; }
+  0%,
+  52% {
+    opacity: 1;
+  }
+  53%,
+  100% {
+    opacity: 0;
+  }
 }
 .greeter-cursor {
   animation: greeter-cursor 1.15s step-end infinite;
@@ -416,8 +552,16 @@ textarea:focus, input:focus, select:focus, button:focus-visible {
 }
 
 @keyframes greeter-blink {
-  0%, 92%, 98.5%, 100% { transform: scaleY(1); }
-  94.5%, 96.5% { transform: scaleY(0.12); }
+  0%,
+  92%,
+  98.5%,
+  100% {
+    transform: scaleY(1);
+  }
+  94.5%,
+  96.5% {
+    transform: scaleY(0.12);
+  }
 }
 .greeter-eyes {
   transform-box: fill-box;
@@ -426,27 +570,52 @@ textarea:focus, input:focus, select:focus, button:focus-visible {
 }
 
 @keyframes greeter-steam {
-  0% { opacity: 0; transform: translateY(1.5px); }
-  40% { opacity: 0.9; }
-  100% { opacity: 0; transform: translateY(-4px); }
+  0% {
+    opacity: 0;
+    transform: translateY(1.5px);
+  }
+  40% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
 }
-.greeter-steam { animation: greeter-steam 3.4s ease-out infinite; }
-.greeter-steam-s2 { animation-delay: 1.7s; }
+.greeter-steam {
+  animation: greeter-steam 3.4s ease-out infinite;
+}
+.greeter-steam-s2 {
+  animation-delay: 1.7s;
+}
 
 @keyframes fadein {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
-.fade-in { animation: fadein 0.35s ease-out both; }
+.fade-in {
+  animation: fadein 0.35s ease-out both;
+}
 
 /* ==================== Terminal effects ==================== */
 
 .glow {
-  text-shadow: 0 0 8px rgba(0, 244, 142, var(--glow-strength)), 0 0 24px rgba(0, 244, 142, var(--glow-spread));
+  text-shadow:
+    0 0 8px rgba(0, 244, 142, var(--glow-strength)),
+    0 0 24px rgba(0, 244, 142, var(--glow-spread));
 }
 
 .tool-grid-card {
-  transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    transform 0.15s ease;
 }
 .tool-grid-card:hover {
   transform: translateY(-2px);
@@ -469,31 +638,76 @@ pre.codeblock {
   color: var(--c-text);
   overflow-wrap: anywhere;
 }
-.md > :first-child { margin-top: 0; }
-.md > :last-child { margin-bottom: 0; }
+.md > :first-child {
+  margin-top: 0;
+}
+.md > :last-child {
+  margin-bottom: 0;
+}
 
-.md p { margin: 0.55rem 0; }
-.md h1, .md h2, .md h3, .md h4, .md h5, .md h6 {
+.md p {
+  margin: 0.55rem 0;
+}
+.md h1,
+.md h2,
+.md h3,
+.md h4,
+.md h5,
+.md h6 {
   color: var(--c-text-bright);
   font-weight: 600;
   margin: 0.9rem 0 0.45rem;
   line-height: 1.35;
 }
-.md h1 { font-size: 16px; }
-.md h2 { font-size: 15px; }
-.md h3 { font-size: 14px; }
-.md h4, .md h5, .md h6 { font-size: 13px; }
-.md h2 { border-bottom: 1px solid var(--c-line-soft); padding-bottom: 0.25rem; }
+.md h1 {
+  font-size: 16px;
+}
+.md h2 {
+  font-size: 15px;
+}
+.md h3 {
+  font-size: 14px;
+}
+.md h4,
+.md h5,
+.md h6 {
+  font-size: 13px;
+}
+.md h2 {
+  border-bottom: 1px solid var(--c-line-soft);
+  padding-bottom: 0.25rem;
+}
 
-.md ul, .md ol { margin: 0.5rem 0; padding-left: 1.35rem; }
-.md ul { list-style: disc; }
-.md ol { list-style: decimal; }
-.md li { margin: 0.18rem 0; }
-.md li > ul, .md li > ol { margin: 0.18rem 0; }
-.md li::marker { color: var(--c-phosphor); }
+.md ul,
+.md ol {
+  margin: 0.5rem 0;
+  padding-left: 1.35rem;
+}
+.md ul {
+  list-style: disc;
+}
+.md ol {
+  list-style: decimal;
+}
+.md li {
+  margin: 0.18rem 0;
+}
+.md li > ul,
+.md li > ol {
+  margin: 0.18rem 0;
+}
+.md li::marker {
+  color: var(--c-phosphor);
+}
 /* GFM 任务列表 */
-.md li.task-list-item { list-style: none; margin-left: -1.1rem; }
-.md input[type='checkbox'] { accent-color: var(--c-phosphor); margin-right: 0.35rem; }
+.md li.task-list-item {
+  list-style: none;
+  margin-left: -1.1rem;
+}
+.md input[type='checkbox'] {
+  accent-color: var(--c-phosphor);
+  margin-right: 0.35rem;
+}
 
 .md a {
   color: var(--c-amber);
@@ -501,9 +715,17 @@ pre.codeblock {
   text-underline-offset: 2px;
 }
 
-.md strong { color: var(--c-text-bright); font-weight: 600; }
-.md em { font-style: italic; color: var(--c-text-dim); }
-.md del { color: var(--c-muted); }
+.md strong {
+  color: var(--c-text-bright);
+  font-weight: 600;
+}
+.md em {
+  font-style: italic;
+  color: var(--c-text-dim);
+}
+.md del {
+  color: var(--c-muted);
+}
 
 .md blockquote {
   border-left: 3px solid var(--c-line);
@@ -512,7 +734,11 @@ pre.codeblock {
   color: var(--c-text-dim);
 }
 
-.md hr { border: 0; border-top: 1px solid var(--c-line-soft); margin: 0.9rem 0; }
+.md hr {
+  border: 0;
+  border-top: 1px solid var(--c-line-soft);
+  margin: 0.9rem 0;
+}
 
 .md-inline-code {
   background: var(--c-phosphor-faint);
@@ -552,17 +778,32 @@ pre.codeblock {
   color: var(--c-text-bright);
 }
 
-.md-table-wrap { margin: 0.6rem 0; overflow-x: auto; }
-.md table { border-collapse: collapse; font-size: 12px; min-width: 100%; }
-.md th, .md td {
+.md-table-wrap {
+  margin: 0.6rem 0;
+  overflow-x: auto;
+}
+.md table {
+  border-collapse: collapse;
+  font-size: 12px;
+  min-width: 100%;
+}
+.md th,
+.md td {
   border: 1px solid var(--c-line-soft);
   padding: 0.3rem 0.55rem;
   text-align: left;
   vertical-align: top;
 }
-.md th { background: var(--c-panel-2); color: var(--c-text-bright); font-weight: 600; }
+.md th {
+  background: var(--c-panel-2);
+  color: var(--c-text-bright);
+  font-weight: 600;
+}
 
-.md-img { max-width: 100%; margin: 0.4rem 0; }
+.md-img {
+  max-width: 100%;
+  margin: 0.4rem 0;
+}
 .md-img-blocked {
   display: inline-block;
   border: 1px dashed var(--c-line);
@@ -571,16 +812,57 @@ pre.codeblock {
   font-size: 11.5px;
   word-break: break-all;
 }
-.md-img-note { color: var(--c-amber); }
+.md-img-note {
+  color: var(--c-amber);
+}
 
 /* ---------- 代码高亮（hljs 类名 → 主题变量） ---------- */
-.md .hljs-comment, .md .hljs-quote { color: var(--c-hl-com); font-style: italic; }
-.md .hljs-keyword, .md .hljs-selector-tag, .md .hljs-literal, .md .hljs-doctag { color: var(--c-hl-key); }
-.md .hljs-string, .md .hljs-regexp, .md .hljs-addition, .md .hljs-attribute { color: var(--c-hl-str); }
-.md .hljs-number, .md .hljs-symbol, .md .hljs-bullet, .md .hljs-meta { color: var(--c-hl-num); }
-.md .hljs-title, .md .hljs-name, .md .hljs-section, .md .hljs-function .hljs-title { color: var(--c-hl-fn); }
-.md .hljs-type, .md .hljs-built_in, .md .hljs-class .hljs-title { color: var(--c-hl-typ); }
-.md .hljs-variable, .md .hljs-template-variable, .md .hljs-attr, .md .hljs-property { color: var(--c-hl-var); }
-.md .hljs-deletion { color: var(--c-danger); }
-.md .hljs-emphasis { font-style: italic; }
-.md .hljs-strong { font-weight: 600; }
+.md .hljs-comment,
+.md .hljs-quote {
+  color: var(--c-hl-com);
+  font-style: italic;
+}
+.md .hljs-keyword,
+.md .hljs-selector-tag,
+.md .hljs-literal,
+.md .hljs-doctag {
+  color: var(--c-hl-key);
+}
+.md .hljs-string,
+.md .hljs-regexp,
+.md .hljs-addition,
+.md .hljs-attribute {
+  color: var(--c-hl-str);
+}
+.md .hljs-number,
+.md .hljs-symbol,
+.md .hljs-bullet,
+.md .hljs-meta {
+  color: var(--c-hl-num);
+}
+.md .hljs-title,
+.md .hljs-name,
+.md .hljs-section,
+.md .hljs-function .hljs-title {
+  color: var(--c-hl-fn);
+}
+.md .hljs-type,
+.md .hljs-built_in,
+.md .hljs-class .hljs-title {
+  color: var(--c-hl-typ);
+}
+.md .hljs-variable,
+.md .hljs-template-variable,
+.md .hljs-attr,
+.md .hljs-property {
+  color: var(--c-hl-var);
+}
+.md .hljs-deletion {
+  color: var(--c-danger);
+}
+.md .hljs-emphasis {
+  font-style: italic;
+}
+.md .hljs-strong {
+  font-weight: 600;
+}

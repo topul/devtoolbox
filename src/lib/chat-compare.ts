@@ -27,11 +27,27 @@ export interface CompareColumn {
 }
 
 export function newColumn(requestId: string, label: string, model: string): CompareColumn {
-  return { requestId, label, model, text: '', reasoningChars: 0, status: 'pending', error: '', startedAt: null, firstTokenMs: null, totalMs: null, usage: null }
+  return {
+    requestId,
+    label,
+    model,
+    text: '',
+    reasoningChars: 0,
+    status: 'pending',
+    error: '',
+    startedAt: null,
+    firstTokenMs: null,
+    totalMs: null,
+    usage: null,
+  }
 }
 
 /** 纯文本对比规格：不带工具、不带系统提示 —— 列间唯一变量是模型 */
-export function buildCompareSpec(p: ModelProfile, question: string, requestId: string): ChatSendSpec {
+export function buildCompareSpec(
+  p: ModelProfile,
+  question: string,
+  requestId: string,
+): ChatSendSpec {
   return {
     requestId,
     baseUrl: p.baseUrl.trim(),
@@ -97,7 +113,11 @@ export function applyCompareEvent(cols: CompareColumn[], evt: ChatEvent): Compar
 }
 
 /** 一列的指标行文本片段（界面拼装用；空值跳过） */
-export function columnMetrics(c: CompareColumn): { firstToken: number | null; totalMs: number | null; tokens: number | null } {
+export function columnMetrics(c: CompareColumn): {
+  firstToken: number | null
+  totalMs: number | null
+  tokens: number | null
+} {
   return {
     firstToken: c.firstTokenMs,
     totalMs: c.totalMs,

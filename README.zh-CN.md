@@ -24,11 +24,11 @@ DevOps Toolbox 打开即进入 AI 对话。用自然语言提问，它即可调�
 
 从 [GitHub Releases](https://github.com/topul/devtoolbox/releases) 获取最新安装包。提供以下平台：
 
-| 平台 | 格式 |
-| --- | --- |
-| Windows | Setup、Portable、MSI |
-| macOS | DMG、ZIP（Intel 与 Apple Silicon） |
-| Linux | AppImage、DEB |
+| 平台    | 格式                               |
+| ------- | ---------------------------------- |
+| Windows | Setup、Portable、MSI               |
+| macOS   | DMG、ZIP（Intel 与 Apple Silicon） |
+| Linux   | AppImage、DEB                      |
 
 ### 从源码构建
 

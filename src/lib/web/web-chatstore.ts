@@ -30,7 +30,11 @@ function openDb(): Promise<IDBDatabase> {
   })
 }
 
-function tx<T>(store: string, mode: IDBTransactionMode, fn: (s: IDBObjectStore) => IDBRequest<T>): Promise<T> {
+function tx<T>(
+  store: string,
+  mode: IDBTransactionMode,
+  fn: (s: IDBObjectStore) => IDBRequest<T>,
+): Promise<T> {
   return openDb().then(
     (db) =>
       new Promise<T>((resolve, reject) => {
@@ -56,13 +60,22 @@ export function buildWebChatStore(): ElectronChatStore {
   return {
     list: async (): Promise<ChatStoreListResult> => {
       try {
-        const all = await tx<StoredSession[]>(STORE, 'readonly', (s) => s.getAll() as IDBRequest<StoredSession[]>)
+        const all = await tx<StoredSession[]>(
+          STORE,
+          'readonly',
+          (s) => s.getAll() as IDBRequest<StoredSession[]>,
+        )
         const sessions = all
           .map(({ turns: _turns, ...meta }) => meta)
           .sort((a, b) => b.updatedAt - a.updatedAt)
         let activeId: string | null = null
         try {
-          activeId = (await tx<string | undefined>(KV, 'readonly', (s) => s.get(ACTIVE_KEY) as IDBRequest<string | undefined>)) ?? null
+          activeId =
+            (await tx<string | undefined>(
+              KV,
+              'readonly',
+              (s) => s.get(ACTIVE_KEY) as IDBRequest<string | undefined>,
+            )) ?? null
         } catch {
           /* activeId 拿不到就当没有 */
         }
@@ -74,16 +87,28 @@ export function buildWebChatStore(): ElectronChatStore {
 
     load: async (id: string): Promise<ChatStoreLoadResult> => {
       try {
-        const hit = await tx<StoredSession | undefined>(STORE, 'readonly', (s) => s.get(id) as IDBRequest<StoredSession | undefined>)
+        const hit = await tx<StoredSession | undefined>(
+          STORE,
+          'readonly',
+          (s) => s.get(id) as IDBRequest<StoredSession | undefined>,
+        )
         return hit ? { ok: true, turns: hit.turns } : { ok: false, turns: [], error: 'NOT_FOUND' }
       } catch (e) {
         return { ok: false, turns: [], error: (e as Error).message }
       }
     },
 
-    save: async (input: { id: string; title: string; turns: unknown[] }): Promise<ChatStoreWriteResult> => {
+    save: async (input: {
+      id: string
+      title: string
+      turns: unknown[]
+    }): Promise<ChatStoreWriteResult> => {
       try {
-        const prev = await tx<StoredSession | undefined>(STORE, 'readonly', (s) => s.get(input.id) as IDBRequest<StoredSession | undefined>)
+        const prev = await tx<StoredSession | undefined>(
+          STORE,
+          'readonly',
+          (s) => s.get(input.id) as IDBRequest<StoredSession | undefined>,
+        )
         const record: StoredSession = {
           id: input.id,
           title: input.title,

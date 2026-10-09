@@ -17,8 +17,21 @@ import { formatMoney } from '../../lib/toolkit'
 type L = (typeof chatL)['zh']
 
 export function Composer({
-  input, onInput, onSend, onStop, streaming, profiles, activeId, onPickProfile,
-  onManageModels, onAddProfile, estimate, cost, roundInfo, toolCount, disabled,
+  input,
+  onInput,
+  onSend,
+  onStop,
+  streaming,
+  profiles,
+  activeId,
+  onPickProfile,
+  onManageModels,
+  onAddProfile,
+  estimate,
+  cost,
+  roundInfo,
+  toolCount,
+  disabled,
 }: {
   input: string
   onInput: (v: string) => void
@@ -71,7 +84,9 @@ export function Composer({
         </span>
         {streaming && roundInfo && roundInfo.round > 1 && (
           <span className="shrink-0 text-[10.5px] text-amber">
-            {l.roundLabel.replace('{a}', String(roundInfo.round)).replace('{b}', String(roundInfo.max))}
+            {l.roundLabel
+              .replace('{a}', String(roundInfo.round))
+              .replace('{b}', String(roundInfo.max))}
           </span>
         )}
         <ModelMenu
@@ -82,9 +97,13 @@ export function Composer({
           onAdd={onAddProfile}
           l={l}
         />
-        {streaming
-          ? <Btn onClick={onStop}>{l.stop}</Btn>
-          : <Btn variant="primary" onClick={onSend} disabled={disabled || !input.trim()}>{l.send}</Btn>}
+        {streaming ? (
+          <Btn onClick={onStop}>{l.stop}</Btn>
+        ) : (
+          <Btn variant="primary" onClick={onSend} disabled={disabled || !input.trim()}>
+            {l.send}
+          </Btn>
+        )}
       </div>
     </div>
   )
@@ -92,7 +111,14 @@ export function Composer({
 
 /* ================= 模型切换 ================= */
 
-function ModelMenu({ profiles, activeId, onPick, onManage, onAdd, l }: {
+function ModelMenu({
+  profiles,
+  activeId,
+  onPick,
+  onManage,
+  onAdd,
+  l,
+}: {
   profiles: ModelProfile[]
   activeId: string
   onPick: (id: string) => void
@@ -115,7 +141,9 @@ function ModelMenu({ profiles, activeId, onPick, onManage, onAdd, l }: {
         <span className="text-phosphor shrink-0">◆</span>
         <span className="truncate">{active ? profileName(active) : l.pickModel}</span>
         {active && (
-          <span className="text-muted/60 text-[10px] truncate hidden md:inline">@ {shortHost(active.baseUrl)}</span>
+          <span className="text-muted/60 text-[10px] truncate hidden md:inline">
+            @ {shortHost(active.baseUrl)}
+          </span>
         )}
         <span className="text-muted/60 text-[9px] shrink-0">{open ? '▾' : '▸'}</span>
       </button>
@@ -127,25 +155,44 @@ function ModelMenu({ profiles, activeId, onPick, onManage, onAdd, l }: {
             <div className="px-3 py-1.5 text-[9.5px] uppercase tracking-[0.2em] text-muted/60 border-b border-line-soft">
               {l.modelsTitle}
             </div>
-            {profiles.length === 0 && <div className="px-3 py-3 text-[11.5px] text-muted">{l.emptyProfiles}</div>}
+            {profiles.length === 0 && (
+              <div className="px-3 py-3 text-[11.5px] text-muted">{l.emptyProfiles}</div>
+            )}
             {profiles.map((p) => {
               const on = p.id === activeId
               return (
                 <button
                   key={p.id}
-                  onClick={() => { onPick(p.id); setOpen(false) }}
+                  onClick={() => {
+                    onPick(p.id)
+                    setOpen(false)
+                  }}
                   className={`w-full text-left px-3 py-2 border-b border-line-soft last:border-0 text-[12px] transition-colors ${on ? 'bg-phosphor-faint text-phosphor' : 'text-bright hover:bg-phosphor-faint'}`}
                 >
                   <div className="truncate">{profileName(p)}</div>
-                  <div className="text-[10px] text-muted truncate">{p.model} · {shortHost(p.baseUrl)}</div>
+                  <div className="text-[10px] text-muted truncate">
+                    {p.model} · {shortHost(p.baseUrl)}
+                  </div>
                 </button>
               )
             })}
             <div className="flex items-center border-t border-line-soft">
-              <button onClick={() => { onAdd(); setOpen(false) }} className="flex-1 text-left px-3 py-2 text-[11.5px] text-phosphor hover:bg-phosphor-faint">
+              <button
+                onClick={() => {
+                  onAdd()
+                  setOpen(false)
+                }}
+                className="flex-1 text-left px-3 py-2 text-[11.5px] text-phosphor hover:bg-phosphor-faint"
+              >
                 + {l.addModel}
               </button>
-              <button onClick={() => { onManage(); setOpen(false) }} className="flex-1 text-right px-3 py-2 text-[11.5px] text-muted hover:text-phosphor">
+              <button
+                onClick={() => {
+                  onManage()
+                  setOpen(false)
+                }}
+                className="flex-1 text-right px-3 py-2 text-[11.5px] text-muted hover:text-phosphor"
+              >
                 {l.manageModels}
               </button>
             </div>

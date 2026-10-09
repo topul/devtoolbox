@@ -24,11 +24,11 @@ DevOps Toolbox opens straight into an AI chat. Ask in plain language and it can 
 
 Grab the latest installer from [GitHub Releases](https://github.com/topul/devtoolbox/releases). Builds are provided for:
 
-| Platform | Formats |
-| --- | --- |
-| Windows | Setup, Portable, MSI |
-| macOS | DMG, ZIP (Intel & Apple Silicon) |
-| Linux | AppImage, DEB |
+| Platform | Formats                          |
+| -------- | -------------------------------- |
+| Windows  | Setup, Portable, MSI             |
+| macOS    | DMG, ZIP (Intel & Apple Silicon) |
+| Linux    | AppImage, DEB                    |
 
 ### Build from source
 

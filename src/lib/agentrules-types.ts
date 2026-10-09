@@ -75,8 +75,7 @@ export interface AgentScanFacts {
 }
 
 export type AgentScanResult =
-  | { ok: true; facts: AgentScanFacts }
-  | { ok: false; code: string; detail?: string }
+  { ok: true; facts: AgentScanFacts } | { ok: false; code: string; detail?: string }
 
 /** 规则文件的三种形态 */
 export type RulesTarget = 'agents' | 'cursor' | 'claude'

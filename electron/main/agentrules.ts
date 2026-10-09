@@ -19,11 +19,42 @@ import type {
 
 /** 这些目录一律不进树，也不参与探测（内容量大且没有信息增量） */
 const IGNORED_DIRS = new Set([
-  'node_modules', '.git', '.svn', '.hg', 'dist', 'out', 'build', 'release', 'coverage',
-  '.next', '.nuxt', '.svelte-kit', '.turbo', '.cache', '.parcel-cache',
-  '__pycache__', '.venv', 'venv', 'env', '.tox', '.mypy_cache', '.pytest_cache', '.ruff_cache',
-  'target', 'vendor', '.idea', '.vscode', '.vs', 'bin', 'obj', 'Pods', 'DerivedData',
-  '.gradle', '.mvn', 'tmp', 'logs',
+  'node_modules',
+  '.git',
+  '.svn',
+  '.hg',
+  'dist',
+  'out',
+  'build',
+  'release',
+  'coverage',
+  '.next',
+  '.nuxt',
+  '.svelte-kit',
+  '.turbo',
+  '.cache',
+  '.parcel-cache',
+  '__pycache__',
+  '.venv',
+  'venv',
+  'env',
+  '.tox',
+  '.mypy_cache',
+  '.pytest_cache',
+  '.ruff_cache',
+  'target',
+  'vendor',
+  '.idea',
+  '.vscode',
+  '.vs',
+  'bin',
+  'obj',
+  'Pods',
+  'DerivedData',
+  '.gradle',
+  '.mvn',
+  'tmp',
+  'logs',
 ])
 
 const DEFAULT_MAX_DEPTH = 3
@@ -249,7 +280,13 @@ function probeProject(root: string, tree: TreeEntry[]): ProbeResult {
 
   /* ---- Node / 前端 ---- */
   const pkg = readJson('package.json')
-  const pkgObj = pkg as { scripts?: Record<string, string>; dependencies?: Record<string, string>; devDependencies?: Record<string, string>; packageManager?: string; workspaces?: unknown } | null
+  const pkgObj = pkg as {
+    scripts?: Record<string, string>
+    dependencies?: Record<string, string>
+    devDependencies?: Record<string, string>
+    packageManager?: string
+    workspaces?: unknown
+  } | null
   if (pkgObj) {
     mark('package.json')
     const allDeps = { ...(pkgObj.dependencies ?? {}), ...(pkgObj.devDependencies ?? {}) }
@@ -259,7 +296,12 @@ function probeProject(root: string, tree: TreeEntry[]): ProbeResult {
     }
     for (const [name, cmd] of Object.entries(pkgObj.scripts ?? {})) {
       if (typeof cmd !== 'string') continue
-      commands.push({ kind: classifyScript(name), name, command: `npm run ${name}`, source: 'package.json' })
+      commands.push({
+        kind: classifyScript(name),
+        name,
+        command: `npm run ${name}`,
+        source: 'package.json',
+      })
     }
     if (typeof pkgObj.packageManager === 'string') {
       packageManager = pkgObj.packageManager.split('@')[0]
@@ -303,7 +345,8 @@ function probeProject(root: string, tree: TreeEntry[]): ProbeResult {
     signals.add('hasMonorepo')
     mark('lerna.json')
   }
-  if (tree.some((e) => e.dir && (e.name === 'packages' || e.name === 'apps'))) signals.add('hasMonorepo')
+  if (tree.some((e) => e.dir && (e.name === 'packages' || e.name === 'apps')))
+    signals.add('hasMonorepo')
 
   /* ---- Python ---- */
   if (exists('pyproject.toml')) {
@@ -385,12 +428,22 @@ function probeProject(root: string, tree: TreeEntry[]): ProbeResult {
       const name = m[1]
       if (seen.has(name) || name === 'all') continue
       seen.add(name)
-      commands.push({ kind: classifyScript(name), name, command: `make ${name}`, source: 'Makefile' })
+      commands.push({
+        kind: classifyScript(name),
+        name,
+        command: `make ${name}`,
+        source: 'Makefile',
+      })
     }
   }
 
   /* ---- 工程化配置 ---- */
-  if (exists('Dockerfile') || exists('docker-compose.yml') || exists('docker-compose.yaml') || exists('compose.yml')) {
+  if (
+    exists('Dockerfile') ||
+    exists('docker-compose.yml') ||
+    exists('docker-compose.yaml') ||
+    exists('compose.yml')
+  ) {
     signals.add('hasDocker')
   }
   if (exists('.github/workflows')) {
@@ -403,15 +456,24 @@ function probeProject(root: string, tree: TreeEntry[]): ProbeResult {
   }
   if (exists('.editorconfig')) signals.add('hasEditorconfig')
   if (
-    exists('.eslintrc') || exists('.eslintrc.json') || exists('.eslintrc.js') || exists('.eslintrc.cjs') ||
-    exists('eslint.config.js') || exists('eslint.config.mjs') || exists('ruff.toml') ||
+    exists('.eslintrc') ||
+    exists('.eslintrc.json') ||
+    exists('.eslintrc.js') ||
+    exists('.eslintrc.cjs') ||
+    exists('eslint.config.js') ||
+    exists('eslint.config.mjs') ||
+    exists('ruff.toml') ||
     (readText('pyproject.toml') ?? '').includes('[tool.ruff]')
   ) {
     signals.add('hasLinter')
   }
   if (
-    exists('.prettierrc') || exists('.prettierrc.json') || exists('.prettierrc.js') ||
-    exists('prettier.config.js') || exists('.prettierrc.yaml') || exists('biome.json')
+    exists('.prettierrc') ||
+    exists('.prettierrc.json') ||
+    exists('.prettierrc.js') ||
+    exists('prettier.config.js') ||
+    exists('.prettierrc.yaml') ||
+    exists('biome.json')
   ) {
     signals.add('hasFormatter')
   }
@@ -421,12 +483,18 @@ function probeProject(root: string, tree: TreeEntry[]): ProbeResult {
   }
 
   // 测试目录 / 测试文件
-  const hasTestDir = tree.some((e) => e.dir && ['test', 'tests', '__tests__', 'spec', 'e2e'].includes(e.name))
+  const hasTestDir = tree.some(
+    (e) => e.dir && ['test', 'tests', '__tests__', 'spec', 'e2e'].includes(e.name),
+  )
   if (hasTestDir) signals.add('hasTests')
   if (!signals.has('hasTests')) {
     const probeNested = (entries: TreeEntry[]): boolean =>
       entries.some((e) =>
-        e.dir ? (e.children ? probeNested(e.children) : false) : /(\.test\.|\.spec\.|_test\.)/.test(e.name),
+        e.dir
+          ? e.children
+            ? probeNested(e.children)
+            : false
+          : /(\.test\.|\.spec\.|_test\.)/.test(e.name),
       )
     if (probeNested(tree)) signals.add('hasTests')
   }
@@ -460,7 +528,12 @@ function probeProject(root: string, tree: TreeEntry[]): ProbeResult {
       source: packageManager,
     })
   } else if (pkgObj) {
-    commands.unshift({ kind: 'install', name: 'npm', command: 'npm install', source: 'package.json' })
+    commands.unshift({
+      kind: 'install',
+      name: 'npm',
+      command: 'npm install',
+      source: 'package.json',
+    })
   }
 
   // 命令去重（同名同命令只留一条）

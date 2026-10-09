@@ -48,7 +48,9 @@ export interface ChatTraceRegistry {
 }
 
 function clip(text: string, max: number): { text: string; truncated: boolean } {
-  return text.length > max ? { text: text.slice(0, max), truncated: true } : { text, truncated: false }
+  return text.length > max
+    ? { text: text.slice(0, max), truncated: true }
+    : { text, truncated: false }
 }
 
 function ensureRound(trace: ChatTrace, round: number): ChatTraceRound | null {
@@ -128,7 +130,8 @@ export function createChatTraceRegistry(): ChatTraceRegistry {
           // 结果按 id 回填到对应的调用上；找不到（防御）就追加
           const hit = r.tools.find((t) => t.call.id === callId && t.result === null)
           if (hit) hit.result = result
-          else if (r.tools.length < CHAT_TRACE_MAX_TOOLS) r.tools.push({ call: { id: callId, name: '', args: '' }, result })
+          else if (r.tools.length < CHAT_TRACE_MAX_TOOLS)
+            r.tools.push({ call: { id: callId, name: '', args: '' }, result })
         },
       }
     },

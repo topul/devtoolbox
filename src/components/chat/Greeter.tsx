@@ -49,7 +49,16 @@ export function Greeter(): React.ReactElement {
       >
         &gt;_
       </text>
-      <rect className="greeter-cursor" x="62.5" y="59.5" width="5.4" height="9.5" rx="1.2" fill="currentColor" stroke="none" />
+      <rect
+        className="greeter-cursor"
+        x="62.5"
+        y="59.5"
+        width="5.4"
+        height="9.5"
+        rx="1.2"
+        fill="currentColor"
+        stroke="none"
+      />
       <path d="M43 76h42l5.5 6H37z" fill="var(--c-bg)" />
       {/* 咖啡（热气两段错峰升起） */}
       <rect x="96" y="69" width="13" height="13" rx="2" />

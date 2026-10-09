@@ -20,7 +20,7 @@ export interface TlsDeps {
 /** 默认依赖 */
 export const defaultDeps: TlsDeps = {
   now: () => Date.now(),
-  isIp: host => net_isIp(host),
+  isIp: (host) => net_isIp(host),
 }
 
 // 避免顶层 import node:net（部分沙箱下测试环境拿不到），用正则自己判 IPv4/IPv6
@@ -117,12 +117,17 @@ function toCert(raw: ChainCert): TlsCert {
   const now = Date.now()
   const notAfter = new Date(raw.valid_to)
   // 有些自签证书的 valid_to 格式异常，解析失败时给 0（界面显示 '—'）
-  const daysLeft = Number.isNaN(notAfter.getTime()) ? 0 : Math.floor((notAfter.getTime() - now) / 86400000)
+  const daysLeft = Number.isNaN(notAfter.getTime())
+    ? 0
+    : Math.floor((notAfter.getTime() - now) / 86400000)
 
   // SAN 优先（现代证书的域名都在这儿），CN 作为兜底
   const san = raw.subjectaltname ?? ''
   const domains = san
-    ? san.split(',').map(s => s.trim().replace(/^DNS:/i, '')).filter(Boolean)
+    ? san
+        .split(',')
+        .map((s) => s.trim().replace(/^DNS:/i, ''))
+        .filter(Boolean)
     : []
   const cn = dn(raw.subject?.CN)
   if (cn && !domains.includes(cn)) domains.push(cn)
@@ -139,7 +144,7 @@ function toCert(raw: ChainCert): TlsCert {
     fingerprint256: (raw.fingerprint256 ?? '').toUpperCase(),
     fingerprint1: (raw.fingerprint ?? '').toUpperCase(),
     sigAlg: (raw as { sigalgname?: string }).sigalgname || guessSigAlg(raw.raw, ''),
-    pubkeyAlg: raw.asn1Curve ? `EC (${raw.asn1Curve})` : (raw.modulus ? 'RSA' : ''),
+    pubkeyAlg: raw.asn1Curve ? `EC (${raw.asn1Curve})` : raw.modulus ? 'RSA' : '',
     keyBits: raw.bits ?? 0,
   }
 }
@@ -185,18 +190,32 @@ export function probeTls(
 ): Promise<TlsProbe> {
   const p = port > 0 ? port : 443
   const base: TlsProbe = {
-    ok: false, host, port: p,
-    protocol: '', cipher: '', cipherName: '', cipherSuiteName: '', alpn: '', sni: '',
-    certs: [], elapsedMs: 0, authorized: false, authorizationError: '',
+    ok: false,
+    host,
+    port: p,
+    protocol: '',
+    cipher: '',
+    cipherName: '',
+    cipherSuiteName: '',
+    alpn: '',
+    sni: '',
+    certs: [],
+    elapsedMs: 0,
+    authorized: false,
+    authorizationError: '',
     isIpHost: deps.isIp(host),
   }
 
-  return new Promise<TlsProbe>(resolve => {
+  return new Promise<TlsProbe>((resolve) => {
     let settled = false
     const done = (r: TlsProbe): void => {
       if (settled) return
       settled = true
-      try { socket.destroy() } catch { /* 已断开 */ }
+      try {
+        socket.destroy()
+      } catch {
+        /* 已断开 */
+      }
       resolve(r)
     }
 
@@ -212,7 +231,12 @@ export function probeTls(
 
     // 无论成功失败都要有收场，否则界面会一直停在「探测中」
     const watchdog = setTimeout(() => {
-      done({ ...base, errorCode: 'TIMEOUT', errorDetail: `no handshake within ${timeoutMs}ms`, elapsedMs: deps.now() - started })
+      done({
+        ...base,
+        errorCode: 'TIMEOUT',
+        errorDetail: `no handshake within ${timeoutMs}ms`,
+        elapsedMs: deps.now() - started,
+      })
     }, timeoutMs)
 
     socket.on('secureConnect', () => {
@@ -248,7 +272,12 @@ export function probeTls(
       // 把 OpenSSL 的错误码带上，界面可以据此区分「证书过期」与「连不上」
       const code = (e as { opensslErrorStack?: string[] }).opensslErrorStack?.[0] ?? ''
       const detail = code ? `${e.code ?? ''} ${code}`.trim() : (e.message ?? '')
-      done({ ...base, errorCode: e.code || 'CONN_FAILED', errorDetail: detail, elapsedMs: deps.now() - started })
+      done({
+        ...base,
+        errorCode: e.code || 'CONN_FAILED',
+        errorDetail: detail,
+        elapsedMs: deps.now() - started,
+      })
     })
   })
 }

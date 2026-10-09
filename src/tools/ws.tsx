@@ -6,7 +6,7 @@ import { wsL } from '../lib/locales/ws'
 import type { WsEventFrame, WsSendSpec } from '../lib/ws-types'
 import { formatTime, newRowId } from '../lib/http-utils'
 
-type L = typeof wsL['zh']
+type L = (typeof wsL)['zh']
 
 /** 展示上限：超出丢最旧，防止长会话撑爆渲染层 */
 const MAX_SHOWN = 500
@@ -36,7 +36,10 @@ export function WsTool() {
         setRunning(false)
       } else if (evt.kind === 'message') {
         seq.current += 1
-        setEvents((prev) => [...prev.slice(-(MAX_SHOWN - 1)), { ...evt, seq: seq.current, at: Date.now() }])
+        setEvents((prev) => [
+          ...prev.slice(-(MAX_SHOWN - 1)),
+          { ...evt, seq: seq.current, at: Date.now() },
+        ])
       }
     })
     return off
@@ -64,7 +67,9 @@ export function WsTool() {
     const spec: WsSendSpec = {
       id: connId.current,
       url: url.trim(),
-      headers: headers.filter((r) => r.enabled && r.name.trim()).map((r) => [r.name, r.value] as [string, string]),
+      headers: headers
+        .filter((r) => r.enabled && r.name.trim())
+        .map((r) => [r.name, r.value] as [string, string]),
     }
     await api.connect(spec)
   }, [url, headers, l])
@@ -85,7 +90,17 @@ export function WsTool() {
       return
     }
     seq.current += 1
-    setEvents((prev) => [...prev.slice(-(MAX_SHOWN - 1)), { id: connId.current, kind: 'message', dir: 'out', data: text, seq: seq.current, at: Date.now() }])
+    setEvents((prev) => [
+      ...prev.slice(-(MAX_SHOWN - 1)),
+      {
+        id: connId.current,
+        kind: 'message',
+        dir: 'out',
+        data: text,
+        seq: seq.current,
+        at: Date.now(),
+      },
+    ])
     setDraft('')
   }, [draft, running, l])
 
@@ -95,20 +110,38 @@ export function WsTool() {
     <div className="space-y-3">
       <Panel
         title={l.title}
-        right={<span className="text-[11px] text-muted">{running ? l.open : l.idle} · {msgCount} {l.msgs}</span>}
+        right={
+          <span className="text-[11px] text-muted">
+            {running ? l.open : l.idle} · {msgCount} {l.msgs}
+          </span>
+        }
       >
         <div className="space-y-2">
           <Input label={l.urlLabel} value={url} onChange={setUrl} placeholder={l.urlPlaceholder} />
           <div className="flex items-center gap-2">
-            {running
-              ? <Btn variant="primary" onClick={() => void disconnect()}>{l.disconnect}</Btn>
-              : <Btn variant="primary" onClick={() => void connect()}>{l.connect}</Btn>}
+            {running ? (
+              <Btn variant="primary" onClick={() => void disconnect()}>
+                {l.disconnect}
+              </Btn>
+            ) : (
+              <Btn variant="primary" onClick={() => void connect()}>
+                {l.connect}
+              </Btn>
+            )}
           </div>
           {error && <ErrorNote msg={error} />}
           <details className="text-[12px]">
             <summary className="cursor-pointer text-muted select-none">{l.headersToggle}</summary>
             <div className="pt-2">
-              <KVEditor rows={headers} onChange={setHeaders} addLabel={l.kv.add} nameLabel={l.kv.name} valueLabel={l.kv.value} removeLabel={l.kv.remove} headerSuggest />
+              <KVEditor
+                rows={headers}
+                onChange={setHeaders}
+                addLabel={l.kv.add}
+                nameLabel={l.kv.name}
+                valueLabel={l.kv.value}
+                removeLabel={l.kv.remove}
+                headerSuggest
+              />
             </div>
           </details>
         </div>
@@ -120,13 +153,17 @@ export function WsTool() {
             <input
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) void send() }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.nativeEvent.isComposing) void send()
+              }}
               placeholder={running ? l.sendPlaceholder : l.sendDisabled}
               disabled={!running}
               spellCheck={false}
               className="flex-1 min-w-0 bg-panel-2 border border-line-soft px-2.5 py-1.5 text-[12px] text-bright placeholder:text-muted/50 focus:border-phosphor/40 disabled:opacity-50"
             />
-            <Btn variant="primary" onClick={() => void send()} disabled={!running}>{l.send}</Btn>
+            <Btn variant="primary" onClick={() => void send()} disabled={!running}>
+              {l.send}
+            </Btn>
           </div>
           {events.length === 0 ? (
             <div className="text-[12px] text-muted">{running ? l.waiting : l.none}</div>
@@ -137,15 +174,37 @@ export function WsTool() {
                   const out = e.dir === 'out'
                   return (
                     <div key={e.seq} className="flex items-start gap-2">
-                      <span className={`shrink-0 text-[11px] ${out ? 'text-phosphor' : 'text-amber'}`}>{out ? '↑' : '↓'}</span>
-                      <pre className={`codeblock flex-1 min-w-0 whitespace-pre-wrap break-all px-2 py-1 text-[12px] m-0 border ${out ? 'border-phosphor/30 text-phosphor' : 'border-line-soft text-bright bg-panel-2'}`}>{e.data}</pre>
+                      <span
+                        className={`shrink-0 text-[11px] ${out ? 'text-phosphor' : 'text-amber'}`}
+                      >
+                        {out ? '↑' : '↓'}
+                      </span>
+                      <pre
+                        className={`codeblock flex-1 min-w-0 whitespace-pre-wrap break-all px-2 py-1 text-[12px] m-0 border ${out ? 'border-phosphor/30 text-phosphor' : 'border-line-soft text-bright bg-panel-2'}`}
+                      >
+                        {e.data}
+                      </pre>
                       <span className="shrink-0 text-[11px] text-muted">{formatTime(e.at)}</span>
                     </div>
                   )
                 }
-                if (e.kind === 'error') return <div key={e.seq} className="text-[11.5px] text-danger break-all">{e.error}</div>
-                if (e.kind === 'close') return <div key={e.seq} className="text-[11.5px] text-muted">{l.closed(e.code, e.reason)}</div>
-                return <div key={e.seq} className="text-[11.5px] text-phosphor">{l.opened}</div>
+                if (e.kind === 'error')
+                  return (
+                    <div key={e.seq} className="text-[11.5px] text-danger break-all">
+                      {e.error}
+                    </div>
+                  )
+                if (e.kind === 'close')
+                  return (
+                    <div key={e.seq} className="text-[11.5px] text-muted">
+                      {l.closed(e.code, e.reason)}
+                    </div>
+                  )
+                return (
+                  <div key={e.seq} className="text-[11.5px] text-phosphor">
+                    {l.opened}
+                  </div>
+                )
               })}
             </div>
           )}

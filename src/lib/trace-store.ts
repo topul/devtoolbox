@@ -83,7 +83,10 @@ export async function saveTraceArchive(trace: ChatTrace): Promise<boolean> {
     // 淘汰最旧，再写入；两个事务分开，任何一个失败都只当「没存上」
     const all = await new Promise<TraceArchiveEntry[]>((resolve, reject) => {
       const req = db.transaction(STORE, 'readonly').objectStore(STORE).getAll()
-      req.onsuccess = () => resolve((req.result as unknown[]).map(coerceEntry).filter((x): x is TraceArchiveEntry => !!x))
+      req.onsuccess = () =>
+        resolve(
+          (req.result as unknown[]).map(coerceEntry).filter((x): x is TraceArchiveEntry => !!x),
+        )
       req.onerror = () => reject(req.error)
     })
     const evict = pickEvictions(all, TRACE_MAX_ENTRIES - 1)

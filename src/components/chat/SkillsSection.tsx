@@ -26,7 +26,10 @@ import {
 type L = (typeof chatL)['zh']
 
 /** 预设内容的参数摘要行（不含提示词）；保存预览与条目摘要共用，格式只写这一遍 */
-function summaryOf(s: Pick<SkillPreset, 'temperature' | 'maxTokens' | 'topP' | 'toolAllow' | 'toolsEnabled'>, l: L): string {
+function summaryOf(
+  s: Pick<SkillPreset, 'temperature' | 'maxTokens' | 'topP' | 'toolAllow' | 'toolsEnabled'>,
+  l: L,
+): string {
   const allowCount = parseAllowList(s.toolAllow).length
   return [
     s.temperature.trim() && `${l.skillTemp} ${s.temperature.trim()}`,
@@ -34,10 +37,15 @@ function summaryOf(s: Pick<SkillPreset, 'temperature' | 'maxTokens' | 'topP' | '
     s.topP.trim() && `topP ${s.topP.trim()}`,
     s.toolsEnabled ? l.skillToolsOn : l.skillToolsOff,
     allowCount > 0 && l.skillAllowCount(allowCount),
-  ].filter(Boolean).join(' · ')
+  ]
+    .filter(Boolean)
+    .join(' · ')
 }
 
-export function SkillsSection({ settings, patchSettings }: {
+export function SkillsSection({
+  settings,
+  patchSettings,
+}: {
   settings: ChatSettings
   patchSettings: (p: Partial<ChatSettings>) => void
 }): React.ReactElement {
@@ -74,7 +82,10 @@ export function SkillsSection({ settings, patchSettings }: {
   }
 
   const remove = (id: string): void => {
-    if (confirmDel !== id) { setConfirmDel(id); return }
+    if (confirmDel !== id) {
+      setConfirmDel(id)
+      return
+    }
     update(skills.filter((s) => s.id !== id))
     setConfirmDel('')
   }
@@ -89,12 +100,16 @@ export function SkillsSection({ settings, patchSettings }: {
         <input
           value={nameDraft}
           onChange={(e) => setNameDraft(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter') saveCurrent() }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') saveCurrent()
+          }}
           placeholder={l.skillNamePh}
           spellCheck={false}
           className="flex-1 min-w-0 bg-panel-2 border border-line-soft rounded-md px-2 py-1.5 text-[12.5px] text-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-phosphor focus-visible:outline-offset-2 focus:border-phosphor/40"
         />
-        <Btn variant="ghost" onClick={saveCurrent} disabled={!nameDraft.trim()}>+ {l.skillSaveAs}</Btn>
+        <Btn variant="ghost" onClick={saveCurrent} disabled={!nameDraft.trim()}>
+          + {l.skillSaveAs}
+        </Btn>
       </div>
 
       {/* 实时快照：当前将捕获的值，与下方预设条目的摘要同格式 */}
@@ -102,9 +117,11 @@ export function SkillsSection({ settings, patchSettings }: {
         <p className="text-[11px] text-muted leading-snug break-all">
           <span className="shrink-0 text-phosphor/80">{l.skillSnapshot}</span>
           {' · '}
-          {settings.system.trim()
-            ? settings.system.trim().slice(0, 60) + (settings.system.trim().length > 60 ? '…' : '')
-            : <span className="opacity-50">{l.skillNoSystem}</span>}
+          {settings.system.trim() ? (
+            settings.system.trim().slice(0, 60) + (settings.system.trim().length > 60 ? '…' : '')
+          ) : (
+            <span className="opacity-50">{l.skillNoSystem}</span>
+          )}
         </p>
         <p className="text-[10.5px] text-muted/80 leading-snug">{summaryOf(settings, l)}</p>
       </div>
@@ -112,23 +129,38 @@ export function SkillsSection({ settings, patchSettings }: {
       {skills.length === 0 && <p className="text-[11.5px] text-muted">{l.skillEmpty}</p>}
       <div className="space-y-1.5">
         {skills.map((s) => (
-          <div key={s.id} className="rounded-lg border border-line-soft bg-panel-2 px-2 py-1.5 space-y-1">
+          <div
+            key={s.id}
+            className="rounded-lg border border-line-soft bg-panel-2 px-2 py-1.5 space-y-1"
+          >
             <div className="flex items-center gap-2">
-              <span className="flex-1 min-w-0 text-[12.5px] text-bright truncate" title={s.label}>{s.label}</span>
-              {appliedId === s.id && <span className="shrink-0 text-[10px] text-phosphor">{l.skillApplied}</span>}
+              <span className="flex-1 min-w-0 text-[12.5px] text-bright truncate" title={s.label}>
+                {s.label}
+              </span>
+              {appliedId === s.id && (
+                <span className="shrink-0 text-[10px] text-phosphor">{l.skillApplied}</span>
+              )}
               <button
                 onClick={() => apply(s)}
                 className="shrink-0 text-[10.5px] text-muted hover:text-phosphor border border-line-soft rounded-md px-1.5 py-0.5 transition-colors"
-              >{l.skillApply}</button>
+              >
+                {l.skillApply}
+              </button>
               <button
                 onClick={() => remove(s.id)}
                 title={confirmDel === s.id ? l.skillConfirmDel : l.skillDelete}
                 aria-label={l.skillDelete}
                 className={`shrink-0 text-[13px] leading-none px-1 ${confirmDel === s.id ? 'text-danger' : 'text-muted hover:text-danger'}`}
-              >×</button>
+              >
+                ×
+              </button>
             </div>
             <p className="text-[11px] text-muted leading-snug break-all">
-              {s.system.trim() ? s.system.trim().slice(0, 80) + (s.system.trim().length > 80 ? '…' : '') : <span className="opacity-50">{l.skillNoSystem}</span>}
+              {s.system.trim() ? (
+                s.system.trim().slice(0, 80) + (s.system.trim().length > 80 ? '…' : '')
+              ) : (
+                <span className="opacity-50">{l.skillNoSystem}</span>
+              )}
             </p>
             <p className="text-[10.5px] text-muted/80 leading-snug">{summaryOf(s, l)}</p>
           </div>

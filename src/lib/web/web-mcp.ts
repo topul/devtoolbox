@@ -73,7 +73,11 @@ export class WebMcpHttpClient {
     return this.sessionId !== null
   }
 
-  private async rpc(method: string, params?: Record<string, unknown>, notify = false): Promise<JsonRpcResponse | null> {
+  private async rpc(
+    method: string,
+    params?: Record<string, unknown>,
+    notify = false,
+  ): Promise<JsonRpcResponse | null> {
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), this.timeoutMs)
     try {
@@ -88,7 +92,12 @@ export class WebMcpHttpClient {
       if (!notify) body.id = this.nextId++
       if (params !== undefined) body.params = params
 
-      const res = await fetch(this.url, { method: 'POST', headers, body: JSON.stringify(body), signal: controller.signal })
+      const res = await fetch(this.url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      })
       const sid = res.headers.get('mcp-session-id')
       if (sid) this.sessionId = sid
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
@@ -133,14 +142,21 @@ export class WebMcpHttpClient {
       const result = res?.result ?? {}
       const isError = result.isError === true
       const content = (result.content ?? []) as { type?: string; text?: string }[]
-      const text = content
-        .filter((c) => !c.type || c.type === 'text')
-        .map((c) => c.text ?? '')
-        .filter(Boolean)
-        .join('\n') || '(空结果)'
+      const text =
+        content
+          .filter((c) => !c.type || c.type === 'text')
+          .map((c) => c.text ?? '')
+          .filter(Boolean)
+          .join('\n') || '(空结果)'
       return { ok: true, isError, text, durationMs: Date.now() - started }
     } catch (e) {
-      return { ok: false, isError: true, text: '', durationMs: Date.now() - started, error: (e as Error).message }
+      return {
+        ok: false,
+        isError: true,
+        text: '',
+        durationMs: Date.now() - started,
+        error: (e as Error).message,
+      }
     }
   }
 

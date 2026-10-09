@@ -11,10 +11,7 @@ import type { SseSendSpec, SseEventFrame } from '../../src/lib/sse-types'
 /** 活跃连接：id → 请求对象，abort 用 */
 const active = new Map<string, http.ClientRequest>()
 
-export function startSse(
-  spec: SseSendSpec,
-  push: (evt: SseEventFrame) => void,
-): void {
+export function startSse(spec: SseSendSpec, push: (evt: SseEventFrame) => void): void {
   abortSse(spec.id) // 同 id 重连先断旧连接，避免双流
 
   let url: URL
@@ -36,7 +33,7 @@ export function startSse(
     // SSE 不压缩：gzip 会把帧边界藏进步里，逐 chunk 解析会乱
     'accept-encoding': 'identity',
     'cache-control': 'no-cache',
-    ...(Object.fromEntries(spec.headers ?? [])),
+    ...Object.fromEntries(spec.headers ?? []),
   }
   const mod = url.protocol === 'https:' ? https : http
   const req = mod.request(url, { method: spec.method ?? 'GET', headers })
@@ -62,12 +59,20 @@ export function startSse(
     const decoder = new SseDecoder()
     res.on('data', (chunk: Buffer) => {
       for (const frame of decoder.push(chunk.toString('utf8'))) {
-        push({ id: spec.id, kind: 'frame', frame: { event: frame.event, data: frame.data, id: frame.id, retry: frame.retry } })
+        push({
+          id: spec.id,
+          kind: 'frame',
+          frame: { event: frame.event, data: frame.data, id: frame.id, retry: frame.retry },
+        })
       }
     })
     res.on('end', () => {
       for (const frame of decoder.end()) {
-        push({ id: spec.id, kind: 'frame', frame: { event: frame.event, data: frame.data, id: frame.id, retry: frame.retry } })
+        push({
+          id: spec.id,
+          kind: 'frame',
+          frame: { event: frame.event, data: frame.data, id: frame.id, retry: frame.retry },
+        })
       }
       closeWith('ended')
     })

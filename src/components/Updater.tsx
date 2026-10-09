@@ -9,7 +9,13 @@ export interface UpdaterState {
   install: () => void
 }
 
-const initial: UpdaterState = { phase: 'idle', version: '', progress: 0, dismiss: () => {}, install: () => {} }
+const initial: UpdaterState = {
+  phase: 'idle',
+  version: '',
+  progress: 0,
+  dismiss: () => {},
+  install: () => {},
+}
 
 export function useUpdater(): UpdaterState {
   const [state, setState] = useState<UpdaterState>(initial)
@@ -19,11 +25,14 @@ export function useUpdater(): UpdaterState {
     if (!api?.onUpdaterEvent) return
 
     const off = api.onUpdaterEvent((evt) => {
-      setState(prev => {
+      setState((prev) => {
         if (evt.type === 'checking') return { ...prev, phase: 'checking' }
-        if (evt.type === 'available') return { ...prev, phase: 'downloading', version: evt.version || '', progress: 0 }
-        if (evt.type === 'progress') return { ...prev, phase: 'downloading', progress: Math.round(evt.percent || 0) }
-        if (evt.type === 'downloaded') return { ...prev, phase: 'ready', version: evt.version || prev.version }
+        if (evt.type === 'available')
+          return { ...prev, phase: 'downloading', version: evt.version || '', progress: 0 }
+        if (evt.type === 'progress')
+          return { ...prev, phase: 'downloading', progress: Math.round(evt.percent || 0) }
+        if (evt.type === 'downloaded')
+          return { ...prev, phase: 'ready', version: evt.version || prev.version }
         if (evt.type === 'none') return { ...prev, phase: 'none' }
         if (evt.type === 'error') return { ...prev, phase: 'error' }
         return prev
@@ -32,7 +41,7 @@ export function useUpdater(): UpdaterState {
     return off
   }, [])
 
-  const dismiss = useCallback(() => setState(prev => ({ ...prev, phase: 'idle' })), [])
+  const dismiss = useCallback(() => setState((prev) => ({ ...prev, phase: 'idle' })), [])
   const install = useCallback(() => {
     window.electronAPI?.quitAndInstall()
   }, [])
@@ -55,15 +64,9 @@ export function UpdateToast({ state }: { state: UpdaterState }) {
 
   return (
     <div className="fixed bottom-4 right-4 z-[100] w-[300px] border border-phosphor/40 bg-panel/95 backdrop-blur shadow-[0_0_30px_rgba(0,244,142,0.15)] px-4 py-3 text-[12px]">
-      {state.phase === 'checking' && (
-        <div className="text-muted">{t.updateChecking}</div>
-      )}
-      {state.phase === 'none' && (
-        <div className="text-phosphor">✓ {t.updateNone}</div>
-      )}
-      {state.phase === 'error' && (
-        <div className="text-danger">✗ {t.updateError}</div>
-      )}
+      {state.phase === 'checking' && <div className="text-muted">{t.updateChecking}</div>}
+      {state.phase === 'none' && <div className="text-phosphor">✓ {t.updateNone}</div>}
+      {state.phase === 'error' && <div className="text-danger">✗ {t.updateError}</div>}
       {state.phase === 'downloading' && (
         <div>
           <div className="text-bright mb-1.5">{t.updateProgress(state.progress)}</div>

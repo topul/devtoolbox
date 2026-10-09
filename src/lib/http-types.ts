@@ -85,7 +85,11 @@ export interface HttpTransferResult {
 
 export interface HttpTransferAPI {
   /** 把请求 JSON 存成文件（主进程弹系统保存框）；title/文件名由调用方给，避免主进程留界面文案 */
-  exportFile: (payload: { title: string; name: string; content: string }) => Promise<HttpTransferResult>
+  exportFile: (payload: {
+    title: string
+    name: string
+    content: string
+  }) => Promise<HttpTransferResult>
   /** 从文件读取请求 JSON；取消时 canceled=true */
   importFile: (title: string) => Promise<HttpTransferResult>
   /** 选择本地文件作为上传体；取消时 canceled=true，过大时 error=FILE_TOO_LARGE */

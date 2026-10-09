@@ -75,7 +75,12 @@ export function applyHeaderOps(headers: [string, string][], ops: HeaderOp[]): [s
 }
 
 /** 文本体查找替换；find 为空表示不改写 */
-export function replaceText(text: string, find?: string, replace?: string, isRegex?: boolean): string {
+export function replaceText(
+  text: string,
+  find?: string,
+  replace?: string,
+  isRegex?: boolean,
+): string {
   const from = find ?? ''
   if (!from) return text
   const to = replace ?? ''
@@ -137,7 +142,9 @@ export class RuleSet {
     try {
       fs.mkdirSync(path.dirname(this.file), { recursive: true })
       fs.writeFileSync(this.file, JSON.stringify(this.rules, null, 2))
-    } catch { /* 落盘失败不影响运行 */ }
+    } catch {
+      /* 落盘失败不影响运行 */
+    }
   }
 
   list(): ProxyRule[] {

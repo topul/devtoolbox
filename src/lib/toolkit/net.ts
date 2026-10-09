@@ -49,15 +49,21 @@ export function ipConvert(input: string): IpEquivalents {
   else if (/^0x[0-9a-f]+$/i.test(t)) n = parseInt(t, 16) >>> 0
   else if (/^0[0-7]+$/.test(t)) n = parseInt(t, 8) >>> 0
   else n = parseIpv4(t)
-  if (n === null || n > 0xFFFFFFFF) throw new Error('INVALID_IPV4')
+  if (n === null || n > 0xffffffff) throw new Error('INVALID_IPV4')
   const ip = intToIpv4(n)
   return {
     ip,
     decimal: n,
     hex: '0x' + n.toString(16).padStart(8, '0').toUpperCase(),
     octal: '0' + n.toString(8),
-    dottedHex: ip.split('.').map((o) => '0x' + parseInt(o).toString(16).padStart(2, '0')).join('.'),
-    dottedOctal: ip.split('.').map((o) => '0' + parseInt(o).toString(8).padStart(3, '0')).join('.'),
+    dottedHex: ip
+      .split('.')
+      .map((o) => '0x' + parseInt(o).toString(16).padStart(2, '0'))
+      .join('.'),
+    dottedOctal: ip
+      .split('.')
+      .map((o) => '0' + parseInt(o).toString(8).padStart(3, '0'))
+      .join('.'),
   }
 }
 
@@ -97,9 +103,21 @@ export function cidrInfo(input: string): CidrInfo {
     firstHost: cidr >= 31 ? intToIpv4(network) : intToIpv4(network + 1),
     lastHost: cidr >= 31 ? intToIpv4(broadcast) : intToIpv4(broadcast - 1),
     hosts,
-    ipClass: (ip >>> 24) < 128 ? 'A' : (ip >>> 24) < 192 ? 'B' : (ip >>> 24) < 224 ? 'C' : (ip >>> 24) < 240 ? 'D' : 'E',
-    isPrivate: (ip >>> 24) === 10 || ((ip >>> 20) & 0xfff) === 0xac1 || (ip >>> 16) === 0xc0a8,
-    binMask: maskStr.split('.').map((o) => parseInt(o).toString(2).padStart(8, '0')).join('.'),
+    ipClass:
+      ip >>> 24 < 128
+        ? 'A'
+        : ip >>> 24 < 192
+          ? 'B'
+          : ip >>> 24 < 224
+            ? 'C'
+            : ip >>> 24 < 240
+              ? 'D'
+              : 'E',
+    isPrivate: ip >>> 24 === 10 || ((ip >>> 20) & 0xfff) === 0xac1 || ip >>> 16 === 0xc0a8,
+    binMask: maskStr
+      .split('.')
+      .map((o) => parseInt(o).toString(2).padStart(8, '0'))
+      .join('.'),
   }
 }
 
@@ -131,7 +149,8 @@ export type ChmodBit = 'ur' | 'uw' | 'ux' | 'gr' | 'gw' | 'gx' | 'or' | 'ow' | '
 export type ChmodPerm = Record<ChmodBit, boolean>
 
 export function chmodFromBits(perm: ChmodPerm): ChmodEntry {
-  const digit = (r: boolean, w: boolean, x: boolean): number => (r ? 4 : 0) + (w ? 2 : 0) + (x ? 1 : 0)
+  const digit = (r: boolean, w: boolean, x: boolean): number =>
+    (r ? 4 : 0) + (w ? 2 : 0) + (x ? 1 : 0)
   const octal = `${digit(perm.ur, perm.uw, perm.ux)}${digit(perm.gr, perm.gw, perm.gx)}${digit(perm.or, perm.ow, perm.ox)}`
   const symbolic = ['u', 'g', 'o']
     .map((_, i) => {
@@ -148,9 +167,15 @@ export function chmodFromOctal(v: string): ChmodPerm {
   if (!/^[0-7]{3}$/.test(v)) throw new Error('BAD_OCTAL')
   const d = v.split('').map(Number)
   return {
-    ur: !!(d[0] & 4), uw: !!(d[0] & 2), ux: !!(d[0] & 1),
-    gr: !!(d[1] & 4), gw: !!(d[1] & 2), gx: !!(d[1] & 1),
-    or: !!(d[2] & 4), ow: !!(d[2] & 2), ox: !!(d[2] & 1),
+    ur: !!(d[0] & 4),
+    uw: !!(d[0] & 2),
+    ux: !!(d[0] & 1),
+    gr: !!(d[1] & 4),
+    gw: !!(d[1] & 2),
+    gx: !!(d[1] & 1),
+    or: !!(d[2] & 4),
+    ow: !!(d[2] & 2),
+    ox: !!(d[2] & 1),
   }
 }
 
@@ -162,9 +187,15 @@ export function chmodConvert(input: string): ChmodEntry {
   const on = (c: string): boolean => c !== '-'
   const [u, g, o] = [t.slice(0, 3), t.slice(3, 6), t.slice(6, 9)]
   return chmodFromBits({
-    ur: on(u[0]), uw: on(u[1]), ux: on(u[2]),
-    gr: on(g[0]), gw: on(g[1]), gx: on(g[2]),
-    or: on(o[0]), ow: on(o[1]), ox: on(o[2]),
+    ur: on(u[0]),
+    uw: on(u[1]),
+    ux: on(u[2]),
+    gr: on(g[0]),
+    gw: on(g[1]),
+    gx: on(g[2]),
+    or: on(o[0]),
+    ow: on(o[1]),
+    ox: on(o[2]),
   })
 }
 
@@ -219,11 +250,15 @@ export interface ParsedCookie {
 export function parseCookie(input: string): ParsedCookie {
   const t = input.trim()
   if (!t) throw new Error('EMPTY_INPUT')
-  const segs = t.split(';').map((s) => s.trim()).filter(Boolean)
+  const segs = t
+    .split(';')
+    .map((s) => s.trim())
+    .filter(Boolean)
   if (!segs.length) throw new Error('EMPTY_INPUT')
   const first = segs[0]
   const eq = first.indexOf('=')
-  const cookie = eq > 0 ? { name: first.slice(0, eq).trim(), value: first.slice(eq + 1).trim() } : null
+  const cookie =
+    eq > 0 ? { name: first.slice(0, eq).trim(), value: first.slice(eq + 1).trim() } : null
   const attrs = segs.slice(cookie ? 1 : 0).map((s) => {
     const i = s.indexOf('=')
     return {
@@ -247,7 +282,9 @@ export interface UaInfo {
 export function parseUserAgent(ua: string): UaInfo {
   const t = ua
   let bot: string | null = null
-  const botMatch = t.match(/(Googlebot|Bingbot|Baiduspider|YandexBot|DuckDuckBot|Slurp|Sogou|Bytespider|GPTBot|ClaudeBot|curl|wget|python-requests|PostmanRuntime|sqlmap|nmap|Nikto|masscan|Go-http-client)/i)
+  const botMatch = t.match(
+    /(Googlebot|Bingbot|Baiduspider|YandexBot|DuckDuckBot|Slurp|Sogou|Bytespider|GPTBot|ClaudeBot|curl|wget|python-requests|PostmanRuntime|sqlmap|nmap|Nikto|masscan|Go-http-client)/i,
+  )
   if (botMatch) bot = botMatch[1]
 
   let browser = ''
@@ -267,7 +304,11 @@ export function parseUserAgent(ua: string): UaInfo {
   ]
   for (const [re, name] of rules) {
     const m = t.match(re)
-    if (m) { browser = name; version = m[1]; break }
+    if (m) {
+      browser = name
+      version = m[1]
+      break
+    }
   }
 
   let os = ''
@@ -279,7 +320,8 @@ export function parseUserAgent(ua: string): UaInfo {
     os = 'iOS (iPhone)' + (m ? ' ' + m[1].replace(/_/g, '.') : '')
   } else if (/iPad/.test(t)) os = 'iOS (iPad)'
   else if (/Android ([\d.]+)/.test(t)) os = 'Android ' + t.match(/Android ([\d.]+)/)![1]
-  else if (/Mac OS X ([\d_]+)/.test(t)) os = 'macOS ' + t.match(/Mac OS X ([\d_]+)/)![1].replace(/_/g, '.')
+  else if (/Mac OS X ([\d_]+)/.test(t))
+    os = 'macOS ' + t.match(/Mac OS X ([\d_]+)/)![1].replace(/_/g, '.')
   else if (/Linux/.test(t)) os = 'Linux'
 
   let device: UaInfo['device'] = 'desktop'

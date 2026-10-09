@@ -43,7 +43,17 @@ export interface RulesStrings {
 }
 
 /** 命令分类的展示顺序：越靠前越是「一进来就要用」的 */
-const KIND_ORDER = ['install', 'dev', 'start', 'build', 'test', 'typecheck', 'lint', 'format', 'other']
+const KIND_ORDER = [
+  'install',
+  'dev',
+  'start',
+  'build',
+  'test',
+  'typecheck',
+  'lint',
+  'format',
+  'other',
+]
 
 function sortCommands(facts: AgentScanFacts): AgentScanFacts['commands'] {
   return [...facts.commands].sort((a, b) => {
@@ -62,7 +72,8 @@ function kindLabel(s: RulesStrings, kind: string): string {
 function overviewLines(facts: AgentScanFacts, s: RulesStrings): string[] {
   const lines: string[] = []
   if (facts.languages.length) lines.push(`- **${s.langLabel}**: ${facts.languages.join(', ')}`)
-  if (facts.frameworks.length) lines.push(`- **${s.frameworkLabel}**: ${facts.frameworks.join(', ')}`)
+  if (facts.frameworks.length)
+    lines.push(`- **${s.frameworkLabel}**: ${facts.frameworks.join(', ')}`)
   if (facts.packageManager) lines.push(`- **${s.pkgLabel}**: ${facts.packageManager}`)
   return lines
 }

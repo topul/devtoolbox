@@ -1,9 +1,14 @@
 import React, { useMemo, useState } from 'react'
 import { CopyBtn } from '../ui'
-import { CODE_TARGETS, generateCode, type CodeTarget, type RequestDoc } from '../../lib/http-codegen'
+import {
+  CODE_TARGETS,
+  generateCode,
+  type CodeTarget,
+  type RequestDoc,
+} from '../../lib/http-codegen'
 import type { httpClientL } from '../../lib/locales/httpclient'
 
-type L = typeof httpClientL['zh']
+type L = (typeof httpClientL)['zh']
 
 /**
  * 多语言代码生成面板。
@@ -13,7 +18,15 @@ type L = typeof httpClientL['zh']
  *
  * `codeHeight` 是给抽屉用的：抽屉有整屏高度，代码块还锁在 360px 会留一大片空白。
  */
-export function CodeSnippets({ doc, l, codeHeight = '360px' }: { doc: RequestDoc; l: L; codeHeight?: string }) {
+export function CodeSnippets({
+  doc,
+  l,
+  codeHeight = '360px',
+}: {
+  doc: RequestDoc
+  l: L
+  codeHeight?: string
+}) {
   const [target, setTarget] = useState<CodeTarget>('curl')
   const code = useMemo(() => generateCode(target, doc), [target, doc])
 
@@ -31,7 +44,12 @@ export function CodeSnippets({ doc, l, codeHeight = '360px' }: { doc: RequestDoc
         ))}
         <CopyBtn text={code} className="ml-auto" />
       </div>
-      <pre style={{ maxHeight: codeHeight }} className="codeblock overflow-auto bg-panel-2 border border-line-soft px-3 py-2 text-[11.5px] text-bright">{code}</pre>
+      <pre
+        style={{ maxHeight: codeHeight }}
+        className="codeblock overflow-auto bg-panel-2 border border-line-soft px-3 py-2 text-[11.5px] text-bright"
+      >
+        {code}
+      </pre>
       <div className="text-[11px] text-muted">{l.code.hint}</div>
     </div>
   )

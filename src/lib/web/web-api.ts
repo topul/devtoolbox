@@ -26,7 +26,9 @@ const ALLOWED_EXTERNAL = /^https?:\/\//i
 
 function getVersionString(): string {
   try {
-    const cr = (globalThis as { chrome?: { runtime?: { getManifest?: () => { version: string } } } }).chrome
+    const cr = (
+      globalThis as { chrome?: { runtime?: { getManifest?: () => { version: string } } } }
+    ).chrome
     return cr?.runtime?.getManifest?.().version ?? '1.7.0'
   } catch {
     return '1.7.0'
@@ -75,7 +77,13 @@ const PROXY_STATE: ProxyState = {
   sessionCount: 0,
   caReady: false,
   caInfo: null,
-  systemProxy: { enabled: false, server: '', supported: false, managed: false, detail: '' } satisfies SystemProxyState,
+  systemProxy: {
+    enabled: false,
+    server: '',
+    supported: false,
+    managed: false,
+    detail: '',
+  } satisfies SystemProxyState,
 }
 
 export function buildWebApi(): ElectronAPI {
@@ -133,7 +141,12 @@ export function buildWebApi(): ElectronAPI {
         throw new Error('浏览器版无法修改系统代理设置')
       },
       systemRestore: async () => PROXY_STATE.systemProxy,
-      exportSessions: async () => ({ ok: false, path: '', count: 0, error: '浏览器版不支持抓包代理' }),
+      exportSessions: async () => ({
+        ok: false,
+        path: '',
+        count: 0,
+        error: '浏览器版不支持抓包代理',
+      }),
       onEvent: () => () => undefined,
     },
     mcp: {
@@ -152,13 +165,34 @@ export function buildWebApi(): ElectronAPI {
       }),
     },
     tls: {
-    probe: async () => ({
-      ok: false, errorCode: 'DESKTOP_ONLY', errorDetail: 'TLS probing is not available in the browser build',
-      host: '', port: 443, protocol: '', cipher: '', cipherName: '', cipherSuiteName: '',
-      alpn: '', sni: '', certs: [], elapsedMs: 0, authorized: false,
-      authorizationError: '', isIpHost: false,
-    }),
-  },
+      probe: async () => ({
+        ok: false,
+        errorCode: 'DESKTOP_ONLY',
+        errorDetail: 'TLS probing is not available in the browser build',
+        host: '',
+        port: 443,
+        protocol: '',
+        cipher: '',
+        cipherName: '',
+        cipherSuiteName: '',
+        alpn: '',
+        sni: '',
+        certs: [],
+        elapsedMs: 0,
+        authorized: false,
+        authorizationError: '',
+        isIpHost: false,
+      }),
+    },
+    port: {
+      lookup: async () => ({
+        ok: false,
+        port: 0,
+        entries: [],
+        command: '',
+        error: 'Port lookup needs the desktop app (it shells out to lsof/netstat)',
+      }),
+    },
     mcpClient: {
       connect: async () => {
         throw new Error('浏览器版不支持 stdio MCP 连接，请使用桌面版或 Streamable HTTP 服务端')

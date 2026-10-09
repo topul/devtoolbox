@@ -39,7 +39,10 @@ export function mergeMissing(results: { missing: string[] }[]): string[] {
  * 单遍插值：只扫描输入文本本身，替换进去的变量值不会被再次扫描。
  * 变量名匹配不到（undefined / null）时保留 `{{name}}` 原样并记入 missing。
  */
-export function applyEnvVars(text: string, vars: Record<string, string | undefined>): EnvApplyResult {
+export function applyEnvVars(
+  text: string,
+  vars: Record<string, string | undefined>,
+): EnvApplyResult {
   const missing: string[] = []
   const out = text.replace(VAR_RE, (whole, name: string) => {
     const v = vars[name]

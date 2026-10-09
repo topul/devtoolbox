@@ -81,11 +81,21 @@ export function ChatTool(): React.ReactElement {
   /** 正在查看调用链路的消息 id（= requestId）；null = 关闭 */
   const [traceId, setTraceId] = useState<string | null>(null)
 
-  useEffect(() => { saveProfiles(profiles) }, [profiles])
-  useEffect(() => { saveSettings(settings) }, [settings])
-  useEffect(() => { saveServers(servers) }, [servers])
-  useEffect(() => { savePrices(prices) }, [prices])
-  useEffect(() => { setDesktop(typeof window !== 'undefined' && !!window.electronAPI) }, [])
+  useEffect(() => {
+    saveProfiles(profiles)
+  }, [profiles])
+  useEffect(() => {
+    saveSettings(settings)
+  }, [settings])
+  useEffect(() => {
+    saveServers(servers)
+  }, [servers])
+  useEffect(() => {
+    savePrices(prices)
+  }, [prices])
+  useEffect(() => {
+    setDesktop(typeof window !== 'undefined' && !!window.electronAPI)
+  }, [])
 
   /** 当前模型：档案列表里选中的那条；选不到就退回第一条 */
   const active = findProfile(profiles, activeId) ?? profiles[0] ?? null
@@ -116,16 +126,23 @@ export function ChatTool(): React.ReactElement {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const patchProfile = useCallback((p: Partial<ModelProfile>) => {
-    setProfiles((list) => {
-      const hit = findProfile(list, activeId) ?? list[0]
-      if (!hit) return list
-      return list.map((x) => (x.id === hit.id ? { ...x, ...p } : x))
-    })
-  }, [activeId])
+  const patchProfile = useCallback(
+    (p: Partial<ModelProfile>) => {
+      setProfiles((list) => {
+        const hit = findProfile(list, activeId) ?? list[0]
+        if (!hit) return list
+        return list.map((x) => (x.id === hit.id ? { ...x, ...p } : x))
+      })
+    },
+    [activeId],
+  )
 
   /* ================= 工具服务端 ================= */
-  const [toolServer, setToolServer] = useState<{ command: string; args: string[]; env: Record<string, string> } | null>(null)
+  const [toolServer, setToolServer] = useState<{
+    command: string
+    args: string[]
+    env: Record<string, string>
+  } | null>(null)
   const [toolServerErr, setToolServerErr] = useState('')
   const [toolNames, setToolNames] = useState<string[]>([])
   const [roundInfo, setRoundInfo] = useState<{ round: number; max: number } | null>(null)
@@ -141,12 +158,20 @@ export function ChatTool(): React.ReactElement {
     const api = typeof window !== 'undefined' ? window.electronAPI?.mcp : undefined
     if (!api) return
     let alive = true
-    api.info().then((v) => {
-      if (!alive) return
-      if (v.launch.serverPathExists) setToolServer({ command: v.launch.command, args: v.launch.args, env: v.launch.env })
-      else setToolServerErr(l.toolsNotBuilt)
-    }).catch(() => { if (alive) setToolServerErr(l.toolsNotBuilt) })
-    return () => { alive = false }
+    api
+      .info()
+      .then((v) => {
+        if (!alive) return
+        if (v.launch.serverPathExists)
+          setToolServer({ command: v.launch.command, args: v.launch.args, env: v.launch.env })
+        else setToolServerErr(l.toolsNotBuilt)
+      })
+      .catch(() => {
+        if (alive) setToolServerErr(l.toolsNotBuilt)
+      })
+    return () => {
+      alive = false
+    }
   }, [l])
 
   /* ================= 会话持久化 ================= */
@@ -169,24 +194,38 @@ export function ChatTool(): React.ReactElement {
     try {
       const res = await storeApi.list()
       if (res.ok) setSessions(res.sessions)
-    } catch { /* 列表刷新失败不打断对话 */ }
+    } catch {
+      /* 列表刷新失败不打断对话 */
+    }
   }, [storeApi])
 
   /**
    * 写盘。**不含正在流式输出的那条助手消息** —— 半截回答落盘后，
    * 重启看到的半句话比看不到更让人困惑。
    */
-  const persist = useCallback(async (id: string, title: string, msgs: ChatUIMessage[]): Promise<void> => {
-    if (!storeApi || !id) return
-    const settled = msgs.filter((m, i) => !(i === msgs.length - 1 && m.role === 'assistant' && !messageMeta(m).meta && !m.parts.length))
-    try {
-      const res = await storeApi.save({ id, title, turns: settled })
-      if (!res.ok) setStoreNote(res.tooLarge ? l.storeTooLarge : `${l.storeFailed}: ${res.error ?? ''}`)
-      else void refreshSessions()
-    } catch (e) {
-      setStoreNote(`${l.storeFailed}: ${(e as Error).message}`)
-    }
-  }, [storeApi, l, refreshSessions])
+  const persist = useCallback(
+    async (id: string, title: string, msgs: ChatUIMessage[]): Promise<void> => {
+      if (!storeApi || !id) return
+      const settled = msgs.filter(
+        (m, i) =>
+          !(
+            i === msgs.length - 1 &&
+            m.role === 'assistant' &&
+            !messageMeta(m).meta &&
+            !m.parts.length
+          ),
+      )
+      try {
+        const res = await storeApi.save({ id, title, turns: settled })
+        if (!res.ok)
+          setStoreNote(res.tooLarge ? l.storeTooLarge : `${l.storeFailed}: ${res.error ?? ''}`)
+        else void refreshSessions()
+      } catch (e) {
+        setStoreNote(`${l.storeFailed}: ${(e as Error).message}`)
+      }
+    },
+    [storeApi, l, refreshSessions],
+  )
 
   const persistRef = useRef(persist)
   persistRef.current = persist
@@ -194,8 +233,17 @@ export function ChatTool(): React.ReactElement {
   useEffect(() => {
     if (!storeApi) return
     let alive = true
-    storeApi.file().then((p) => { if (alive) setStorePath(p) }).catch(() => { /* 拿不到就不显示 */ })
-    return () => { alive = false }
+    storeApi
+      .file()
+      .then((p) => {
+        if (alive) setStorePath(p)
+      })
+      .catch(() => {
+        /* 拿不到就不显示 */
+      })
+    return () => {
+      alive = false
+    }
   }, [storeApi])
 
   /* ================= 传输层 ================= */
@@ -232,29 +280,50 @@ export function ChatTool(): React.ReactElement {
       tools: useTools
         ? {
             servers: [
-              ...(c.toolServer ? [{ label: c.l.toolSelfLabel, command: c.toolServer.command, args: c.toolServer.args, env: c.toolServer.env }] : []),
+              ...(c.toolServer
+                ? [
+                    {
+                      label: c.l.toolSelfLabel,
+                      command: c.toolServer.command,
+                      args: c.toolServer.args,
+                      env: c.toolServer.env,
+                    },
+                  ]
+                : []),
               ...custom,
             ],
             maxRounds,
-            ...(parseAllowList(c.settings.toolAllow).length ? { allow: parseAllowList(c.settings.toolAllow) } : {}),
+            ...(parseAllowList(c.settings.toolAllow).length
+              ? { allow: parseAllowList(c.settings.toolAllow) }
+              : {}),
           }
         : null,
     }
   }, [])
 
-  const transport = useMemo(() => createIpcChatTransport({
-    get api() { return typeof window !== 'undefined' ? window.electronAPI?.chat : undefined },
-    buildSpec,
-    onUserMessage: (msgs) => {
-      // 用户消息先落盘：万一聊天中途退出，至少问题还在
-      const { id, title } = sessionRef.current
-      void persistRef.current(id, title, msgs)
-    },
-    onTools: (tools) => setToolNames(tools.map((t) => t.name)),
-    onRound: (info) => setRoundInfo(info),
-    onNotice: (text) => setAgentNotice(text),
-    onRequestStart: () => { setToolNames([]); setRoundInfo(null); setAgentNotice('') },
-  }), [buildSpec])
+  const transport = useMemo(
+    () =>
+      createIpcChatTransport({
+        get api() {
+          return typeof window !== 'undefined' ? window.electronAPI?.chat : undefined
+        },
+        buildSpec,
+        onUserMessage: (msgs) => {
+          // 用户消息先落盘：万一聊天中途退出，至少问题还在
+          const { id, title } = sessionRef.current
+          void persistRef.current(id, title, msgs)
+        },
+        onTools: (tools) => setToolNames(tools.map((t) => t.name)),
+        onRound: (info) => setRoundInfo(info),
+        onNotice: (text) => setAgentNotice(text),
+        onRequestStart: () => {
+          setToolNames([])
+          setRoundInfo(null)
+          setAgentNotice('')
+        },
+      }),
+    [buildSpec],
+  )
 
   const setMessagesRef = useRef<(m: ChatUIMessage[]) => void>(() => {})
   const errorRef = useRef('')
@@ -263,7 +332,9 @@ export function ChatTool(): React.ReactElement {
     id: CHAT_ID,
     transport,
     generateId: () => uuidV4(),
-    onError: (err) => { errorRef.current = err.message },
+    onError: (err) => {
+      errorRef.current = err.message
+    },
     onFinish: ({ messages, isAbort, isError }) => {
       const { id, title } = sessionRef.current
       const patched = messages.map((m, i) => {
@@ -300,10 +371,14 @@ export function ChatTool(): React.ReactElement {
       try {
         const res = await storeApi.list()
         if (!alive) return
-        if (!res.ok) { setStoreNote(l.storeFailed); return }
+        if (!res.ok) {
+          setStoreNote(l.storeFailed)
+          return
+        }
         setSessions(res.sessions)
         if (res.recovered) setStoreNote(l.storeRecovered)
-        const id = res.activeId && res.sessions.some((x) => x.id === res.activeId) ? res.activeId : ''
+        const id =
+          res.activeId && res.sessions.some((x) => x.id === res.activeId) ? res.activeId : ''
         if (!id) return
         const loaded = await storeApi.load(id)
         if (!alive || !loaded.ok) return
@@ -314,7 +389,9 @@ export function ChatTool(): React.ReactElement {
         if (alive) setStoreNote(`${l.storeFailed}: ${(e as Error).message}`)
       }
     })()
-    return () => { alive = false }
+    return () => {
+      alive = false
+    }
   }, [storeApi, l, setMessages])
 
   const newSession = async (): Promise<void> => {
@@ -331,11 +408,17 @@ export function ChatTool(): React.ReactElement {
   }
 
   const switchSession = async (id: string): Promise<void> => {
-    if (id === sessionId) { setShowSessions(false); return }
+    if (id === sessionId) {
+      setShowSessions(false)
+      return
+    }
     if (!storeApi || busy) return
     await flushCurrent()
     const loaded = await storeApi.load(id)
-    if (!loaded.ok) { setStoreNote(`${l.storeFailed}: ${loaded.error ?? ''}`); return }
+    if (!loaded.ok) {
+      setStoreNote(`${l.storeFailed}: ${loaded.error ?? ''}`)
+      return
+    }
     setSessionId(id)
     setSessionTitle(sessions.find((s) => s.id === id)?.title ?? '')
     setMessages(normalizeStoredTurns(loaded.turns))
@@ -384,7 +467,9 @@ export function ChatTool(): React.ReactElement {
     await send(text)
   }
 
-  const stopStream = (): void => { stop() }
+  const stopStream = (): void => {
+    stop()
+  }
 
   /* ================= 派生数据 ================= */
 
@@ -423,18 +508,37 @@ export function ChatTool(): React.ReactElement {
           <p className="text-[12.5px] text-muted leading-relaxed mb-4">{l.onboardIntro}</p>
           {!desktop && <ErrorNote msg={l.noDesktop} />}
           <div className="space-y-3">
-            <Input value={active?.baseUrl ?? ''} onChange={(v) => patchProfile({ baseUrl: v })} label={l.baseUrl} placeholder={l.baseUrlPh} />
+            <Input
+              value={active?.baseUrl ?? ''}
+              onChange={(v) => patchProfile({ baseUrl: v })}
+              label={l.baseUrl}
+              placeholder={l.baseUrlPh}
+            />
             <div className="flex flex-wrap gap-1.5">
               {PRESET_BASE_URLS.map(([name, url]) => (
-                <button key={name} onClick={() => patchProfile({ baseUrl: url })}
-                  className="px-2 py-0.5 text-[11px] border border-line-soft text-muted hover:text-phosphor hover:border-phosphor/40 transition-colors">
+                <button
+                  key={name}
+                  onClick={() => patchProfile({ baseUrl: url })}
+                  className="px-2 py-0.5 text-[11px] border border-line-soft text-muted hover:text-phosphor hover:border-phosphor/40 transition-colors"
+                >
                   {name}
                 </button>
               ))}
             </div>
             <div className="grid grid-cols-1 min-[640px]:grid-cols-2 gap-3">
-              <Input value={active?.model ?? ''} onChange={(v) => patchProfile({ model: v })} label={l.model} placeholder={l.modelPh} />
-              <Input value={active?.apiKey ?? ''} onChange={(v) => patchProfile({ apiKey: v })} label={l.apiKey} placeholder={l.apiKeyPh} type="password" />
+              <Input
+                value={active?.model ?? ''}
+                onChange={(v) => patchProfile({ model: v })}
+                label={l.model}
+                placeholder={l.modelPh}
+              />
+              <Input
+                value={active?.apiKey ?? ''}
+                onChange={(v) => patchProfile({ apiKey: v })}
+                label={l.apiKey}
+                placeholder={l.apiKeyPh}
+                type="password"
+              />
             </div>
           </div>
           <p className="text-[11px] text-muted mt-4 leading-relaxed border-t border-line-soft pt-3">
@@ -456,9 +560,14 @@ export function ChatTool(): React.ReactElement {
         + {l.newSession}
       </button>
       <div className="flex-1 overflow-y-auto px-1.5 pb-2">
-        {sessions.length === 0 && <div className="px-2 py-4 text-[11px] text-muted leading-relaxed">{l.emptySessions}</div>}
+        {sessions.length === 0 && (
+          <div className="px-2 py-4 text-[11px] text-muted leading-relaxed">{l.emptySessions}</div>
+        )}
         {sessions.map((sess) => (
-          <div key={sess.id} className={`group flex items-center gap-1 rounded-sm mb-0.5 ${sess.id === sessionId ? 'bg-phosphor-faint' : 'hover:bg-phosphor-faint/50'}`}>
+          <div
+            key={sess.id}
+            className={`group flex items-center gap-1 rounded-sm mb-0.5 ${sess.id === sessionId ? 'bg-phosphor-faint' : 'hover:bg-phosphor-faint/50'}`}
+          >
             <button
               onClick={() => void switchSession(sess.id)}
               disabled={busy}
@@ -471,24 +580,41 @@ export function ChatTool(): React.ReactElement {
             {/* 管理操作常驻可见（不再 hover 才出现）：触屏点得到，删错也有二次确认兜底 */}
             {sess.id === sessionId && (
               <button
-                onClick={() => { setTitleDraft(sessionTitle || sess.title); setRenaming(true) }}
+                onClick={() => {
+                  setTitleDraft(sessionTitle || sess.title)
+                  setRenaming(true)
+                }}
                 title={l.rename}
                 aria-label={l.rename}
                 className="shrink-0 text-muted/50 hover:text-phosphor text-[11px] px-0.5"
-              >✎</button>
+              >
+                ✎
+              </button>
             )}
             <button
-              onClick={() => { if (sess.id === sessionId) { if (confirmDel) void removeSession(sess.id); else setConfirmDel(true) } else void removeSession(sess.id) }}
+              onClick={() => {
+                if (sess.id === sessionId) {
+                  if (confirmDel) void removeSession(sess.id)
+                  else setConfirmDel(true)
+                } else void removeSession(sess.id)
+              }}
               title={confirmDel && sess.id === sessionId ? l.confirmDelete : l.deleteSession}
               aria-label={l.deleteSession}
               className={`shrink-0 text-[12px] px-0.5 ${confirmDel && sess.id === sessionId ? 'text-danger' : 'text-muted/50 hover:text-danger'}`}
-            >×</button>
+            >
+              ×
+            </button>
           </div>
         ))}
       </div>
       {/* 存储位置从常驻文字降级为 ⓘ 悬浮提示：这一行信息价值低，不该常驻占位 */}
       <div className="border-t border-line-soft px-2.5 py-1.5">
-        <span className="cursor-help text-[10px] text-muted/40 hover:text-muted" title={`${l.savedHint}${storePath ? ` · ${storePath}` : ''}`}>ⓘ</span>
+        <span
+          className="cursor-help text-[10px] text-muted/40 hover:text-muted"
+          title={`${l.savedHint}${storePath ? ` · ${storePath}` : ''}`}
+        >
+          ⓘ
+        </span>
       </div>
     </aside>
   )
@@ -525,14 +651,20 @@ export function ChatTool(): React.ReactElement {
             <input
               value={titleDraft}
               onChange={(e) => setTitleDraft(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') void commitRename(); if (e.key === 'Escape') setRenaming(false) }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') void commitRename()
+                if (e.key === 'Escape') setRenaming(false)
+              }}
               autoFocus
               spellCheck={false}
               className="flex-1 min-w-0 bg-panel-2 border border-line-soft px-2 py-1 text-[12px] text-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-phosphor focus-visible:outline-offset-2 focus:border-phosphor/40"
             />
           ) : (
             <button
-              onClick={() => { setTitleDraft(sessionTitle); setRenaming(true) }}
+              onClick={() => {
+                setTitleDraft(sessionTitle)
+                setRenaming(true)
+              }}
               className="min-w-0 max-w-[50%] truncate text-left text-[12.5px] text-bright hover:text-phosphor transition-colors !min-h-0"
               title={l.rename}
             >
@@ -541,8 +673,12 @@ export function ChatTool(): React.ReactElement {
           )}
           {renaming ? (
             <>
-              <Btn variant="ghost" onClick={() => void commitRename()}>{l.renameSave}</Btn>
-              <Btn variant="ghost" onClick={() => setRenaming(false)}>{l.renameCancel}</Btn>
+              <Btn variant="ghost" onClick={() => void commitRename()}>
+                {l.renameSave}
+              </Btn>
+              <Btn variant="ghost" onClick={() => setRenaming(false)}>
+                {l.renameCancel}
+              </Btn>
             </>
           ) : (
             <span className="text-[10px] text-muted/60 truncate hidden md:inline">
@@ -551,46 +687,93 @@ export function ChatTool(): React.ReactElement {
           )}
           <span className="flex-1" />
           {notice && (
-            <span className="hidden md:inline text-[10.5px] text-amber truncate max-w-[40%]" title={notice}>{notice}</span>
+            <span
+              className="hidden md:inline text-[10.5px] text-amber truncate max-w-[40%]"
+              title={notice}
+            >
+              {notice}
+            </span>
           )}
           <button
             onClick={() => setShowSessions((v) => !v)}
             disabled={!storeApi}
             className="lg:hidden border border-line-soft px-2 py-1 text-[11px] text-muted hover:text-phosphor"
-          >{l.sessionsTitle}</button>
+          >
+            {l.sessionsTitle}
+          </button>
           <button
             onClick={() => setShowSettings(true)}
             className="border border-line-soft px-2.5 py-1 text-[12px] text-muted hover:text-phosphor hover:border-phosphor/40 transition-colors"
             title={l.settingsTitle}
-          >⚙</button>
+          >
+            ⚙
+          </button>
         </header>
 
-        {notice && <p className="lg:hidden px-3 py-1.5 text-[11px] text-amber border-b border-line-soft">{notice}</p>}
+        {notice && (
+          <p className="lg:hidden px-3 py-1.5 text-[11px] text-amber border-b border-line-soft">
+            {notice}
+          </p>
+        )}
 
         {showSessions && (
           <div className="lg:hidden border-b border-line max-h-[40vh] overflow-auto">
-            <button onClick={() => void newSession()} className="w-full text-left px-3 py-2 text-[12px] text-phosphor border-b border-line-soft">
+            <button
+              onClick={() => void newSession()}
+              className="w-full text-left px-3 py-2 text-[12px] text-phosphor border-b border-line-soft"
+            >
               + {l.newSession}
             </button>
-            {sessions.length === 0 && <div className="px-3 py-3 text-[11.5px] text-muted">{l.emptySessions}</div>}
+            {sessions.length === 0 && (
+              <div className="px-3 py-3 text-[11.5px] text-muted">{l.emptySessions}</div>
+            )}
             {sessions.map((sess) => (
               /* 行结构从「整行一个按钮」改为「主按钮 + 行内操作」：
                  窄屏没有 hover，管理操作必须和桌面一样点得到 */
-              <div key={sess.id} className={`flex items-stretch border-b border-line-soft last:border-0 ${sess.id === sessionId ? 'bg-phosphor-faint' : ''}`}>
-                <button onClick={() => void switchSession(sess.id)}
-                  className="flex-1 min-w-0 text-left px-3 py-2 text-[12px]">
-                  <div className={`truncate ${sess.id === sessionId ? 'text-phosphor' : 'text-bright'}`}>{sess.title || l.untitledSession}</div>
-                  <div className="text-[10px] text-muted">{l.msgCount(sess.turnCount)} · {new Date(sess.updatedAt).toLocaleString()}</div>
+              <div
+                key={sess.id}
+                className={`flex items-stretch border-b border-line-soft last:border-0 ${sess.id === sessionId ? 'bg-phosphor-faint' : ''}`}
+              >
+                <button
+                  onClick={() => void switchSession(sess.id)}
+                  className="flex-1 min-w-0 text-left px-3 py-2 text-[12px]"
+                >
+                  <div
+                    className={`truncate ${sess.id === sessionId ? 'text-phosphor' : 'text-bright'}`}
+                  >
+                    {sess.title || l.untitledSession}
+                  </div>
+                  <div className="text-[10px] text-muted">
+                    {l.msgCount(sess.turnCount)} · {new Date(sess.updatedAt).toLocaleString()}
+                  </div>
                 </button>
                 {sess.id === sessionId && (
-                  <button onClick={() => { setTitleDraft(sessionTitle || sess.title); setRenaming(true); setShowSessions(false) }}
-                    aria-label={l.rename} title={l.rename}
-                    className="shrink-0 px-2.5 flex items-center text-muted/70 hover:text-phosphor text-[13px]">✎</button>
+                  <button
+                    onClick={() => {
+                      setTitleDraft(sessionTitle || sess.title)
+                      setRenaming(true)
+                      setShowSessions(false)
+                    }}
+                    aria-label={l.rename}
+                    title={l.rename}
+                    className="shrink-0 px-2.5 flex items-center text-muted/70 hover:text-phosphor text-[13px]"
+                  >
+                    ✎
+                  </button>
                 )}
-                <button onClick={() => { if (sess.id === sessionId) { if (confirmDel) void removeSession(sess.id); else setConfirmDel(true) } else void removeSession(sess.id) }}
+                <button
+                  onClick={() => {
+                    if (sess.id === sessionId) {
+                      if (confirmDel) void removeSession(sess.id)
+                      else setConfirmDel(true)
+                    } else void removeSession(sess.id)
+                  }}
                   aria-label={l.deleteSession}
                   title={confirmDel && sess.id === sessionId ? l.confirmDelete : l.deleteSession}
-                  className={`shrink-0 px-3 flex items-center text-[14px] ${confirmDel && sess.id === sessionId ? 'text-danger' : 'text-muted/70 hover:text-danger'}`}>×</button>
+                  className={`shrink-0 px-3 flex items-center text-[14px] ${confirmDel && sess.id === sessionId ? 'text-danger' : 'text-muted/70 hover:text-danger'}`}
+                >
+                  ×
+                </button>
               </div>
             ))}
           </div>
@@ -651,7 +834,16 @@ export function ChatTool(): React.ReactElement {
 
 /* ================= 消息流 ================= */
 
-function MessageList({ messages, busy, prices, model, emptyText, sendError, onRetry, onTrace }: {
+function MessageList({
+  messages,
+  busy,
+  prices,
+  model,
+  emptyText,
+  sendError,
+  onRetry,
+  onTrace,
+}: {
   messages: ChatUIMessage[]
   busy: boolean
   prices: ModelPrice[]

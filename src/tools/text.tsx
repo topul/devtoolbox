@@ -1,5 +1,15 @@
 import React, { useState, useMemo } from 'react'
-import { Btn, TA, Input, ErrorNote, Stat, Select, CopyBtn, ResultPanel, usePersistedState } from '../components/ui'
+import {
+  Btn,
+  TA,
+  Input,
+  ErrorNote,
+  Stat,
+  Select,
+  CopyBtn,
+  ResultPanel,
+  usePersistedState,
+} from '../components/ui'
 import { useLocalized } from '../lib/i18n'
 import { textL } from '../lib/locales/text'
 import {
@@ -25,14 +35,16 @@ export function DiffTool() {
   const stats = useMemo(() => {
     if (!result) return null
     return {
-      add: result.filter(r => r.type === 'add').length,
-      del: result.filter(r => r.type === 'del').length,
-      same: result.filter(r => r.type === 'same').length,
+      add: result.filter((r) => r.type === 'add').length,
+      del: result.filter((r) => r.type === 'del').length,
+      same: result.filter((r) => r.type === 'same').length,
     }
   }, [result])
   // 带符号前缀的纯文本副本：原来 diff 结果只能手动框选复制
   const copyText = result
-    ? result.map(r => `${r.type === 'add' ? '+' : r.type === 'del' ? '-' : ' '} ${r.text}`).join('\n')
+    ? result
+        .map((r) => `${r.type === 'add' ? '+' : r.type === 'del' ? '-' : ' '} ${r.text}`)
+        .join('\n')
     : ''
 
   return (
@@ -41,21 +53,37 @@ export function DiffTool() {
         <TA value={a} onChange={setA} label={l.inputA} rows={8} toolInput />
         <TA value={b} onChange={setB} label={l.inputB} rows={8} />
       </div>
-      <Btn variant="primary" onClick={compare}>{l.compare}</Btn>
+      <Btn variant="primary" onClick={compare}>
+        {l.compare}
+      </Btn>
       {result && stats && (
         <div className="space-y-3">
           <div className="flex gap-4 text-[12px]">
-            <span className="text-phosphor">+ {stats.add} {l.added}</span>
-            <span className="text-danger">− {stats.del} {l.deleted}</span>
-            <span className="text-muted">= {stats.same} {l.unchanged}</span>
+            <span className="text-phosphor">
+              + {stats.add} {l.added}
+            </span>
+            <span className="text-danger">
+              − {stats.del} {l.deleted}
+            </span>
+            <span className="text-muted">
+              = {stats.same} {l.unchanged}
+            </span>
           </div>
           <div className="border border-line-soft bg-panel-2 max-h-[480px] overflow-auto">
             {result.map((r, i) => (
-              <div key={i} className={`flex px-2 text-[12px] leading-6 ${
-                r.type === 'add' ? 'bg-phosphor-faint text-phosphor' :
-                r.type === 'del' ? 'bg-danger/10 text-danger line-through decoration-danger/50' : 'text-dim'
-              }`}>
-                <span className="w-6 shrink-0 select-none text-muted/60">{r.type === 'add' ? '+' : r.type === 'del' ? '−' : ' '}</span>
+              <div
+                key={i}
+                className={`flex px-2 text-[12px] leading-6 ${
+                  r.type === 'add'
+                    ? 'bg-phosphor-faint text-phosphor'
+                    : r.type === 'del'
+                      ? 'bg-danger/10 text-danger line-through decoration-danger/50'
+                      : 'text-dim'
+                }`}
+              >
+                <span className="w-6 shrink-0 select-none text-muted/60">
+                  {r.type === 'add' ? '+' : r.type === 'del' ? '−' : ' '}
+                </span>
                 <span className="whitespace-pre-wrap break-all">{r.text || ' '}</span>
               </div>
             ))}
@@ -97,14 +125,22 @@ export function RegexTool() {
     <div className="space-y-3">
       <div className="flex gap-2 items-end flex-wrap">
         <div className="flex-1 min-w-[240px]">
-          <Input value={pattern} onChange={setPattern} label={l.patternLabel} placeholder={l.patternPh} />
+          <Input
+            value={pattern}
+            onChange={setPattern}
+            label={l.patternLabel}
+            placeholder={l.patternPh}
+          />
         </div>
         <Select value={flags} onChange={setFlags} label={l.flagsLabel} options={l.flags} />
       </div>
       <div className="flex gap-2 flex-wrap">
-        {l.presets.map(p => (
-          <button key={p.name} onClick={() => setPattern(p.pattern)}
-            className="px-2 py-0.5 text-[11px] border border-line-soft text-muted hover:text-phosphor hover:border-phosphor/40 transition-colors">
+        {l.presets.map((p) => (
+          <button
+            key={p.name}
+            onClick={() => setPattern(p.pattern)}
+            className="px-2 py-0.5 text-[11px] border border-line-soft text-muted hover:text-phosphor hover:border-phosphor/40 transition-colors"
+          >
             {p.name}
           </button>
         ))}
@@ -113,19 +149,31 @@ export function RegexTool() {
       <ErrorNote msg={probe.err} />
       {probe.list && (
         <div className="space-y-2">
-          <div className="text-[12px] text-muted">{l.matchesPre}<span className="text-phosphor">{probe.list.length}</span>{l.matchesSuf}</div>
+          <div className="text-[12px] text-muted">
+            {l.matchesPre}
+            <span className="text-phosphor">{probe.list.length}</span>
+            {l.matchesSuf}
+          </div>
           <div className="border border-line-soft bg-panel-2 max-h-[320px] overflow-auto">
             {probe.list.map((m, i) => (
-              <div key={i} className="flex gap-3 px-3 py-1.5 border-b border-line-soft last:border-0 text-[12px]">
+              <div
+                key={i}
+                className="flex gap-3 px-3 py-1.5 border-b border-line-soft last:border-0 text-[12px]"
+              >
                 <span className="text-muted/60 w-8 shrink-0">#{i + 1}</span>
                 <span className="text-phosphor break-all">{m.match}</span>
                 <span className="text-muted shrink-0">@{m.index}</span>
                 {m.groups.length > 0 && (
-                  <span className="text-amber break-all">{l.groups}{m.groups.map(g => JSON.stringify(g)).join(', ')}</span>
+                  <span className="text-amber break-all">
+                    {l.groups}
+                    {m.groups.map((g) => JSON.stringify(g)).join(', ')}
+                  </span>
                 )}
               </div>
             ))}
-            {probe.list.length === 0 && <div className="px-3 py-2 text-muted text-[12px]">{l.noMatch}</div>}
+            {probe.list.length === 0 && (
+              <div className="px-3 py-2 text-muted text-[12px]">{l.noMatch}</div>
+            )}
           </div>
         </div>
       )}
@@ -176,9 +224,14 @@ export function CaseTool() {
       {out && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
           {out.map(({ style, value }) => (
-            <div key={style} className="border border-line-soft bg-panel-2 px-3 py-2 flex items-center justify-between gap-2">
+            <div
+              key={style}
+              className="border border-line-soft bg-panel-2 px-3 py-2 flex items-center justify-between gap-2"
+            >
               <div>
-                <div className="text-[10px] uppercase tracking-widest text-muted">{STYLE_LABEL[style] ?? style}</div>
+                <div className="text-[10px] uppercase tracking-widest text-muted">
+                  {STYLE_LABEL[style] ?? style}
+                </div>
                 <div className="text-phosphor text-[13px] break-all">{value}</div>
               </div>
               <CopyBtn text={value} />
@@ -202,7 +255,9 @@ export function LineOpsTool() {
       <TA value={input} onChange={setInput} label={l.input} rows={7} />
       <div className="flex gap-2 flex-wrap">
         {l.ops.map((name, i) => (
-          <Btn key={name} onClick={() => setOutput(applyLineOp(input, LINE_OPS[i]))}>{name}</Btn>
+          <Btn key={name} onClick={() => setOutput(applyLineOp(input, LINE_OPS[i]))}>
+            {name}
+          </Btn>
         ))}
       </div>
       <TA value={output} readOnly label={l.output} rows={7} />

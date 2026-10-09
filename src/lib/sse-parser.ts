@@ -84,7 +84,8 @@ export class SseDecoder {
   }
 
   private flush(): SseFrame | null {
-    if (this.data.length === 0 && !this.event && this.id === undefined && this.retry === undefined) return null
+    if (this.data.length === 0 && !this.event && this.id === undefined && this.retry === undefined)
+      return null
     const f: SseFrame = {
       event: this.event || 'message',
       data: this.data.join('\n'),

@@ -34,7 +34,12 @@ export function base64ToBytes(b64: string): Uint8Array {
   return out
 }
 
-function emptyResult(spec: HttpRequestSpec, ok: boolean, error?: string, errorCode?: string): HttpRequestResult {
+function emptyResult(
+  spec: HttpRequestSpec,
+  ok: boolean,
+  error?: string,
+  errorCode?: string,
+): HttpRequestResult {
   return {
     ok,
     error,
@@ -83,7 +88,9 @@ function pickFileOnce(): Promise<File | null> {
     }
     input.addEventListener('change', () => done(input.files?.[0] ?? null))
     // 取消（不选文件直接关掉）没有原生事件：监听 focus 兜底
-    window.addEventListener('focus', () => setTimeout(() => done(input.files?.[0] ?? null), 300), { once: true })
+    window.addEventListener('focus', () => setTimeout(() => done(input.files?.[0] ?? null), 300), {
+      once: true,
+    })
     document.body.appendChild(input)
     input.click()
   })
@@ -105,7 +112,12 @@ export function buildWebHttp(): ElectronHttp {
   return {
     async send(spec: HttpRequestSpec): Promise<HttpRequestResult> {
       if (spec.proxy) {
-        return emptyResult(spec, false, '浏览器版不支持上游代理，请直连或使用桌面版', 'PROXY_UNSUPPORTED')
+        return emptyResult(
+          spec,
+          false,
+          '浏览器版不支持上游代理，请直连或使用桌面版',
+          'PROXY_UNSUPPORTED',
+        )
       }
       let url: URL
       try {
@@ -161,7 +173,12 @@ export function buildWebHttp(): ElectronHttp {
           contentEncoding: encoding,
           decompressed: !!encoding && bytes.length > 0,
           truncated: false,
-          timings: { connectMs: 0, tlsMs: 0, ttfbMs: Math.round(ttfbMs), totalMs: Math.round(totalMs) },
+          timings: {
+            connectMs: 0,
+            tlsMs: 0,
+            ttfbMs: Math.round(ttfbMs),
+            totalMs: Math.round(totalMs),
+          },
           redirects: [],
           viaProxy: false,
           remoteAddress: '',
@@ -178,7 +195,11 @@ export function buildWebHttp(): ElectronHttp {
       }
     },
 
-    async exportFile(payload: { title: string; name: string; content: string }): Promise<HttpTransferResult> {
+    async exportFile(payload: {
+      title: string
+      name: string
+      content: string
+    }): Promise<HttpTransferResult> {
       try {
         downloadText(payload.name, payload.content)
         return { ok: true, path: payload.name }
@@ -211,7 +232,11 @@ export function buildWebHttp(): ElectronHttp {
 
 interface ElectronHttp {
   send: (spec: HttpRequestSpec) => Promise<HttpRequestResult>
-  exportFile: (payload: { title: string; name: string; content: string }) => Promise<HttpTransferResult>
+  exportFile: (payload: {
+    title: string
+    name: string
+    content: string
+  }) => Promise<HttpTransferResult>
   importFile: (title: string) => Promise<HttpTransferResult>
   pickFile: () => Promise<HttpPickFileResult>
 }

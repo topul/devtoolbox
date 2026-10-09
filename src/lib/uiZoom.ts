@@ -22,7 +22,11 @@ export function useUiZoom() {
     const root = document.documentElement
     if (!step) root.style.removeProperty('--ui-zoom')
     else root.style.setProperty('--ui-zoom', step)
-    try { localStorage.setItem(STORAGE_KEY, step) } catch { /* 隐私模式忽略 */ }
+    try {
+      localStorage.setItem(STORAGE_KEY, step)
+    } catch {
+      /* 隐私模式忽略 */
+    }
   }, [step])
 
   const cycle = useCallback(() => {

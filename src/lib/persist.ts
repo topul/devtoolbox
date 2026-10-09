@@ -132,7 +132,9 @@ export function clearPersisted(key: string, opts: PersistOpts = {}): void {
   if (!s) return
   try {
     s.removeItem(PERSIST_PREFIX + key)
-  } catch { /* 隐私模式忽略 */ }
+  } catch {
+    /* 隐私模式忽略 */
+  }
 }
 
 /** 某个键当前是否已有内容（「清空」按钮决定是否可点的依据） */

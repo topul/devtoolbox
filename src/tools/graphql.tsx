@@ -1,7 +1,17 @@
 import React, { useState, useCallback, useRef } from 'react'
 import {
-  Btn, TA, Input, ErrorNote, Panel, Collapse, KV, ResultPanel,
-  usePersistedState, useAsyncAction, ToolGuide, Drawer,
+  Btn,
+  TA,
+  Input,
+  ErrorNote,
+  Panel,
+  Collapse,
+  KV,
+  ResultPanel,
+  usePersistedState,
+  useAsyncAction,
+  ToolGuide,
+  Drawer,
 } from '../components/ui'
 import { useLocalized } from '../lib/i18n'
 import { graphqlL } from '../lib/locales/graphql'
@@ -59,7 +69,10 @@ export function GraphqlTool() {
 
   const { busy: schemaBusy, run: runSchema } = useAsyncAction(async () => {
     setSchemaErr(null)
-    if (!api) { setSchemaErr(l.desktopOnly); return }
+    if (!api) {
+      setSchemaErr(l.desktopOnly)
+      return
+    }
     let body: string
     try {
       body = JSON.stringify({ query: INTROSPECTION_QUERY })
@@ -100,7 +113,10 @@ export function GraphqlTool() {
   const { busy: sending, run: runQuery } = useAsyncAction(async () => {
     setReqErr(null)
     setResult(null)
-    if (!api) { setReqErr(l.desktopOnly); return }
+    if (!api) {
+      setReqErr(l.desktopOnly)
+      return
+    }
     abortRef.current = false
 
     let body: string
@@ -138,16 +154,23 @@ export function GraphqlTool() {
 
   return (
     <div className="space-y-3">
-      <ToolGuide
-        title={l.title}
-        steps={[l.sub, l.fetchSchema, l.send]}
-        note={l.desktopNote}
-      />
+      <ToolGuide title={l.title} steps={[l.sub, l.fetchSchema, l.send]} note={l.desktopNote} />
 
       <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-3 items-end">
-        <Input value={endpoint} onChange={setEndpoint} label={l.endpoint} placeholder={l.endpointPh} toolInput />
+        <Input
+          value={endpoint}
+          onChange={setEndpoint}
+          label={l.endpoint}
+          placeholder={l.endpointPh}
+          toolInput
+        />
         <div className="flex gap-2">
-          <Btn variant="primary" onClick={() => void runSchema()} disabled={schemaBusy || !endpoint.trim()} aria-busy={schemaBusy}>
+          <Btn
+            variant="primary"
+            onClick={() => void runSchema()}
+            disabled={schemaBusy || !endpoint.trim()}
+            aria-busy={schemaBusy}
+          >
             {schemaBusy ? l.fetching : l.fetchSchema}
           </Btn>
           <Btn onClick={() => setSchemaOpen(true)} disabled={!schema}>
@@ -157,11 +180,20 @@ export function GraphqlTool() {
       </div>
 
       <Panel title={l.headers}>
-        <TA value={headers} onChange={setHeaders} rows={3} placeholder={'Authorization: Bearer <token>'} />
+        <TA
+          value={headers}
+          onChange={setHeaders}
+          rows={3}
+          placeholder={'Authorization: Bearer <token>'}
+        />
         <p className="text-[11px] text-muted mt-1">{l.headersHint}</p>
       </Panel>
 
-      {schemaBusy && <p className="text-[12px] text-muted" role="status">{l.fetching}</p>}
+      {schemaBusy && (
+        <p className="text-[12px] text-muted" role="status">
+          {l.fetching}
+        </p>
+      )}
       {schemaErr && <ErrorNote msg={schemaErr} />}
       {schema && !schemaErr && (
         <p className="text-[12px] text-phosphor">
@@ -183,7 +215,12 @@ export function GraphqlTool() {
           </div>
           <p className="text-[11px] text-muted">{l.operationHint}</p>
           <div className="flex gap-2">
-            <Btn variant="primary" onClick={() => void runQuery()} disabled={sending || !endpoint.trim() || !query.trim()} aria-busy={sending}>
+            <Btn
+              variant="primary"
+              onClick={() => void runQuery()}
+              disabled={sending || !endpoint.trim() || !query.trim()}
+              aria-busy={sending}
+            >
               {sending ? l.sending : l.send}
             </Btn>
             {sending && (
@@ -193,7 +230,9 @@ export function GraphqlTool() {
                   // 但至少 UI 立刻收场，不会一直停在「发送中」
                   abortRef.current = true
                 }}
-              >{l.cancel}</Btn>
+              >
+                {l.cancel}
+              </Btn>
             )}
           </div>
         </div>
@@ -213,7 +252,9 @@ export function GraphqlTool() {
             <span className={result.status === 200 ? 'text-phosphor' : 'text-danger'}>
               {l.httpStatus.replace('{code}', String(result.status))}
             </span>
-            <span className="text-muted">{l.elapsed.replace('{ms}', String(result.elapsedMs))}</span>
+            <span className="text-muted">
+              {l.elapsed.replace('{ms}', String(result.elapsedMs))}
+            </span>
           </div>
 
           {result.errors.length > 0 && (
@@ -224,9 +265,23 @@ export function GraphqlTool() {
                     <div className="text-[12.5px] text-danger break-all">{e.message}</div>
                     {(e.path || e.code || e.locations) && (
                       <div className="text-[11px] text-muted mt-0.5">
-                        {e.path && <>{l.errPath}: {e.path}</>}
-                        {e.code && <> · {l.errCode}: {e.code}</>}
-                        {e.locations && <> · {l.errLocation}: {e.locations}</>}
+                        {e.path && (
+                          <>
+                            {l.errPath}: {e.path}
+                          </>
+                        )}
+                        {e.code && (
+                          <>
+                            {' '}
+                            · {l.errCode}: {e.code}
+                          </>
+                        )}
+                        {e.locations && (
+                          <>
+                            {' '}
+                            · {l.errLocation}: {e.locations}
+                          </>
+                        )}
                       </div>
                     )}
                   </div>
@@ -239,51 +294,74 @@ export function GraphqlTool() {
 
           {/* 原始体收在折叠里：出错时它往往才是关键信息（网关HTML、字段级 detail） */}
           <Collapse title={l.rawResponse}>
-            <pre className="codeblock text-[11.5px] whitespace-pre-wrap break-all">{result.raw}</pre>
+            <pre className="codeblock text-[11.5px] whitespace-pre-wrap break-all">
+              {result.raw}
+            </pre>
           </Collapse>
         </div>
       )}
 
       {schemaOpen && schema && (
         <Drawer title={l.schemaTitle} onClose={() => setSchemaOpen(false)}>
-          <SchemaView schema={schema} onInsert={f => {
-            setQuery(q => (q ? `${q}\n  ${f.name}` : `{ ${f.name} }`))
-            setSchemaOpen(false)
-          }} l={l} />
+          <SchemaView
+            schema={schema}
+            onInsert={(f) => {
+              setQuery((q) => (q ? `${q}\n  ${f.name}` : `{ ${f.name} }`))
+              setSchemaOpen(false)
+            }}
+            l={l}
+          />
         </Drawer>
       )}
     </div>
   )
 }
 
-type L = typeof graphqlL['zh']
+type L = (typeof graphqlL)['zh']
 
 /** Schema 浏览：Query/Mutation 字段 + 类型列表 */
-function SchemaView({ schema, onInsert, l }: { schema: GqlSchema; onInsert: (f: GqlField) => void; l: L }) {
+function SchemaView({
+  schema,
+  onInsert,
+  l,
+}: {
+  schema: GqlSchema
+  onInsert: (f: GqlField) => void
+  l: L
+}) {
   const [tab, setTab] = useState<'query' | 'mutation' | 'types'>('query')
-  const fields = tab === 'query' ? schema.queryFields : tab === 'mutation' ? schema.mutationFields : []
+  const fields =
+    tab === 'query' ? schema.queryFields : tab === 'mutation' ? schema.mutationFields : []
   return (
     <div className="space-y-3">
       <div className="flex gap-1.5">
-        {(['query', 'mutation', 'types'] as const).map(k => (
+        {(['query', 'mutation', 'types'] as const).map((k) => (
           <button
             key={k}
             onClick={() => setTab(k)}
             className={`px-2 py-1 text-[11.5px] border transition-colors ${
-              tab === k ? 'border-phosphor text-phosphor' : 'border-line-soft text-muted hover:text-bright'
+              tab === k
+                ? 'border-phosphor text-phosphor'
+                : 'border-line-soft text-muted hover:text-bright'
             }`}
           >
-            {k === 'query' ? l.queryFields : k === 'mutation' ? l.mutationFields : `${l.types} (${schema.types.length})`}
+            {k === 'query'
+              ? l.queryFields
+              : k === 'mutation'
+                ? l.mutationFields
+                : `${l.types} (${schema.types.length})`}
           </button>
         ))}
       </div>
 
       {tab === 'types' ? (
         <div className="space-y-2">
-          {schema.types.map(t => (
+          {schema.types.map((t) => (
             <Panel key={t.name} title={`${t.name}${t.desc ? ` — ${t.desc}` : ''}`}>
               {t.enumValues.length > 0 ? (
-                <div className="text-[12px] text-muted">{l.enumValues}: {t.enumValues.join(' · ')}</div>
+                <div className="text-[12px] text-muted">
+                  {l.enumValues}: {t.enumValues.join(' · ')}
+                </div>
               ) : t.fields.length > 0 ? (
                 <FieldList fields={t.fields} l={l} />
               ) : (
@@ -296,21 +374,24 @@ function SchemaView({ schema, onInsert, l }: { schema: GqlSchema; onInsert: (f: 
         <p className="text-[12px] text-muted">{l.noFields}</p>
       ) : (
         <div className="space-y-1.5">
-          {fields.map(f => (
+          {fields.map((f) => (
             <div key={f.name} className="border border-line-soft bg-panel-2 px-2.5 py-2">
               <div className="flex items-baseline justify-between gap-2">
                 <span className="text-[12.5px] text-phosphor break-all">
-                  {f.name}<span className="text-muted">: {f.type}</span>
+                  {f.name}
+                  <span className="text-muted">: {f.type}</span>
                 </span>
                 <button
                   onClick={() => onInsert(f)}
                   className="text-[11px] text-muted hover:text-phosphor shrink-0"
-                >{l.insertField}</button>
+                >
+                  {l.insertField}
+                </button>
               </div>
               {f.desc && <div className="text-[11.5px] text-muted mt-0.5">{f.desc}</div>}
               {f.args.length > 0 && (
                 <div className="text-[11px] text-muted mt-1">
-                  {l.args}: {f.args.map(a => `${a.name}: ${a.type}`).join(', ')}
+                  {l.args}: {f.args.map((a) => `${a.name}: ${a.type}`).join(', ')}
                 </div>
               )}
             </div>
@@ -324,7 +405,7 @@ function SchemaView({ schema, onInsert, l }: { schema: GqlSchema; onInsert: (f: 
 function FieldList({ fields, l }: { fields: GqlField[]; l: L }) {
   return (
     <div className="space-y-0.5">
-      {fields.map(f => (
+      {fields.map((f) => (
         <KV key={f.name} k={f.name} v={<span className="text-phosphor">{f.type}</span>} />
       ))}
       {fields.length === 0 && <span className="text-[12px] text-muted">{l.noFields}</span>}

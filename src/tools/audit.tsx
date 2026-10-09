@@ -67,32 +67,71 @@ export function HeaderAuditTool() {
       <SecNote scene="audit" />
       <Input value={url} onChange={setUrl} label={l.urlLabel} placeholder={l.urlPh} />
       <div className="flex gap-2 flex-wrap">
-        <Btn variant="primary" onClick={() => void run()} disabled={busy}>{l.fetch}</Btn>
-        <Btn variant="ghost" onClick={() => { setUrl(''); setAudit(null); setRawHeaders([]); setStatus(''); setErr(null) }}>{l.clear}</Btn>
+        <Btn variant="primary" onClick={() => void run()} disabled={busy}>
+          {l.fetch}
+        </Btn>
+        <Btn
+          variant="ghost"
+          onClick={() => {
+            setUrl('')
+            setAudit(null)
+            setRawHeaders([])
+            setStatus('')
+            setErr(null)
+          }}
+        >
+          {l.clear}
+        </Btn>
       </div>
       <ErrorNote msg={err} />
 
       {audit && (
         <>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-            <Stat label={l.statIssues} value={<span className={`text-sm ${audit.issues > 0 ? 'text-amber' : 'text-phosphor'}`}>{audit.issues}</span>} />
-            <Stat label={l.statOk} value={<span className="text-sm">{audit.findings.filter((f) => f.level === 'ok').length}</span>} />
+            <Stat
+              label={l.statIssues}
+              value={
+                <span className={`text-sm ${audit.issues > 0 ? 'text-amber' : 'text-phosphor'}`}>
+                  {audit.issues}
+                </span>
+              }
+            />
+            <Stat
+              label={l.statOk}
+              value={
+                <span className="text-sm">
+                  {audit.findings.filter((f) => f.level === 'ok').length}
+                </span>
+              }
+            />
             <Stat label={l.statStatus} value={<span className="text-sm">{status}</span>} />
           </div>
 
           <Panel title={l.findingsTitle}>
             <div className="space-y-1.5">
               {audit.findings.map((f, i) => {
-                const text: { title: string; desc: string } | undefined = l.findings[f.id as keyof typeof l.findings]
+                const text: { title: string; desc: string } | undefined =
+                  l.findings[f.id as keyof typeof l.findings]
                 return (
-                  <div key={`${f.id}-${i}`} className="flex items-start gap-3 py-1.5 border-b border-line-soft last:border-0">
-                    <span className={`shrink-0 mt-0.5 px-1.5 py-0.5 text-[10.5px] border rounded ${LEVEL_CLS[f.level]}`}>
+                  <div
+                    key={`${f.id}-${i}`}
+                    className="flex items-start gap-3 py-1.5 border-b border-line-soft last:border-0"
+                  >
+                    <span
+                      className={`shrink-0 mt-0.5 px-1.5 py-0.5 text-[10.5px] border rounded ${LEVEL_CLS[f.level]}`}
+                    >
                       {l[LEVEL_KEY[f.level]]}
                     </span>
                     <div className="min-w-0">
                       <div className="text-[12.5px] text-bright">{text?.title ?? f.id}</div>
-                      <div className="text-[11.5px] text-muted leading-relaxed">{text?.desc ?? ''}</div>
-                      {f.value && <div className="text-[11.5px] font-mono text-phosphor break-all mt-0.5">{f.value}</div>}
+                      <div className="text-[11.5px] text-muted leading-relaxed">
+                        {text?.desc ?? ''}
+                      </div>
+                      {f.value && (
+                        <div className="text-[11.5px] font-mono text-phosphor break-all mt-0.5">
+                          {f.value}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )

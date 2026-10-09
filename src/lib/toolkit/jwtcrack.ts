@@ -75,7 +75,12 @@ const CRYPTOJS_HMAC: Record<JwtAlg, string> = {
 
 /** HMAC 签名（crypto-js 同步 API，SHA384 直接走 CryptoJS.HmacSHA384） */
 function hmac(alg: JwtAlg, data: string, key: string): string {
-  const fn = (CryptoJS as unknown as Record<string, ((m: string, k: string) => { toString(): string }) | undefined>)[CRYPTOJS_HMAC[alg]]
+  const fn = (
+    CryptoJS as unknown as Record<
+      string,
+      ((m: string, k: string) => { toString(): string }) | undefined
+    >
+  )[CRYPTOJS_HMAC[alg]]
   if (!fn) throw new Error('BAD_ALGO:' + alg)
   return fn(data, key).toString()
 }
@@ -216,7 +221,7 @@ export function jwtAnalyze(token: string, extraKeys: string[] = []): JwtCrackRes
  * 用指定密钥重签 token（验证「拿到弱密钥后能伪造任意身份」时演示用）。
  * alg 固定 HS256，与爆破命中的算法无关时调用方自行判断。
  */
-export function jwtForge(payloadJson: string, key: string, alg: JwtAlg = 'HS256'): string {
+export function jwtForge(payloadJson: string, key: string, alg: JwtAlg | 'none' = 'HS256'): string {
   const header = JSON.stringify({ alg, typ: 'JWT' })
   const b64url = (s: string): string => {
     const bytes = new TextEncoder().encode(s)
@@ -225,6 +230,8 @@ export function jwtForge(payloadJson: string, key: string, alg: JwtAlg = 'HS256'
     return btoaLocal(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
   }
   const signingInput = `${b64url(header)}.${b64url(payloadJson)}`
+  // alg=none 是「无签名」：按 JWS 规范只返回两段，而不是拿着不存在的算法去签
+  if (alg === 'none') return signingInput
   const sig = hmac(alg, signingInput, key)
   // crypto-js 输出 hex；JWT 签名段要 base64url
   const sigBytes = hexToBytesLocal(sig)
@@ -252,7 +259,13 @@ function btoaLocal(bin: string): string {
 }
 
 /** payload 概览（界面展示用） */
-export function jwtSummary(token: string): { alg: string; typ: string; iss?: string; sub?: string; exp?: string } {
+export function jwtSummary(token: string): {
+  alg: string
+  typ: string
+  iss?: string
+  sub?: string
+  exp?: string
+} {
   const d = jwtDecode(token)
   const h = d.headerObj
   const p = d.payloadObj

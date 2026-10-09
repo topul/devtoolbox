@@ -39,7 +39,10 @@ export function detectUnit(n: number): 's' | 'ms' | 'us' | 'ns' {
   return 'ns'
 }
 
-export function timestampToDate(input: string | number, unit?: 's' | 'ms' | 'us' | 'ns' | 'auto'): TimeParts {
+export function timestampToDate(
+  input: string | number,
+  unit?: 's' | 'ms' | 'us' | 'ns' | 'auto',
+): TimeParts {
   const n = typeof input === 'number' ? input : parseFloat(String(input).trim())
   if (Number.isNaN(n)) throw new Error('INVALID_NUMBER')
   const u = !unit || unit === 'auto' ? detectUnit(n) : unit
@@ -100,7 +103,13 @@ export type CronError =
   | { code: 'BAD_FIELD'; field: string }
   | { code: 'OUT_OF_RANGE'; field: string; min: number; max: number }
 
-const CRON_RANGES: [number, number][] = [[0, 59], [0, 23], [1, 31], [1, 12], [0, 6]]
+const CRON_RANGES: [number, number][] = [
+  [0, 59],
+  [0, 23],
+  [1, 31],
+  [1, 12],
+  [0, 6],
+]
 
 function parseCronField(f: string, min: number, max: number): number[] | CronError {
   const vals = new Set<number>()
@@ -132,7 +141,9 @@ function classifyField(raw: string): CronFieldKind {
 }
 
 /** 只做解析，便于界面按语言渲染说明文案 */
-export function cronParseFields(expr: string): { ok: true; fields: CronField[] } | { ok: false; error: CronError } {
+export function cronParseFields(
+  expr: string,
+): { ok: true; fields: CronField[] } | { ok: false; error: CronError } {
   const parts = expr.trim().split(/\s+/)
   if (parts.length !== 5) return { ok: false, error: { code: 'NEED_5_FIELDS', got: parts.length } }
   const fields: CronField[] = []
@@ -170,7 +181,13 @@ export function cronNextRuns(
     const dow = cursor.getDay()
     const h = cursor.getHours()
     const mi = cursor.getMinutes()
-    if (sets[3].includes(mo) && sets[2].includes(dom) && sets[4].includes(dow) && sets[1].includes(h) && sets[0].includes(mi)) {
+    if (
+      sets[3].includes(mo) &&
+      sets[2].includes(dom) &&
+      sets[4].includes(dow) &&
+      sets[1].includes(h) &&
+      sets[0].includes(mi)
+    ) {
       out.push(new Date(cursor))
     }
     cursor.setMinutes(cursor.getMinutes() + 1)

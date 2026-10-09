@@ -17,7 +17,9 @@ export function bytesToUtf8(b: Uint8Array): string {
 }
 
 export function bytesToHex(b: Uint8Array): string {
-  return Array.from(b).map((x) => x.toString(16).padStart(2, '0')).join('')
+  return Array.from(b)
+    .map((x) => x.toString(16).padStart(2, '0'))
+    .join('')
 }
 
 export function hexToBytes(hex: string): Uint8Array {
@@ -51,7 +53,13 @@ export function base58Encode(bytes: Uint8Array): string {
       carry = (carry / 58) | 0
     }
   }
-  return '1'.repeat(zeros) + digits.reverse().map((d) => B58_ALPHABET[d]).join('')
+  return (
+    '1'.repeat(zeros) +
+    digits
+      .reverse()
+      .map((d) => B58_ALPHABET[d])
+      .join('')
+  )
 }
 
 export function base58Decode(s: string): Uint8Array {
@@ -88,7 +96,11 @@ const B32HEX_MAP: Map<string, number> = new Map([...B32HEX_ALPHABET].map((c, i) 
 
 export type Base32Variant = 'rfc4648' | 'hex'
 
-export function base32Encode(bytes: Uint8Array, variant: Base32Variant = 'rfc4648', padding = true): string {
+export function base32Encode(
+  bytes: Uint8Array,
+  variant: Base32Variant = 'rfc4648',
+  padding = true,
+): string {
   const alphabet = variant === 'hex' ? B32HEX_ALPHABET : B32_ALPHABET
   let out = ''
   let buffer = 0
@@ -145,7 +157,7 @@ function adapt(delta: number, numPoints: number, firstTime: boolean): number {
     delta = Math.floor(delta / (BASE - TMIN))
     k += BASE
   }
-  return Math.floor(k + (((BASE - TMIN + 1) * delta) / (delta + SKEW)))
+  return Math.floor(k + ((BASE - TMIN + 1) * delta) / (delta + SKEW))
 }
 
 function encodeDigit(d: number): number {

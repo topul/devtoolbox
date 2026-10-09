@@ -88,7 +88,11 @@ export function generatePassword(opts: PasswordOptions = {}): PasswordResult {
   if (upper) pool += PASSWORD_CHARSETS.upper
   if (digit) pool += PASSWORD_CHARSETS.digit
   if (symbol) pool += PASSWORD_CHARSETS.symbol
-  if (excludeAmbiguous) pool = pool.split('').filter((c) => !PASSWORD_CHARSETS.ambiguous.includes(c)).join('')
+  if (excludeAmbiguous)
+    pool = pool
+      .split('')
+      .filter((c) => !PASSWORD_CHARSETS.ambiguous.includes(c))
+      .join('')
   if (!pool) throw new Error('EMPTY_CHARSET')
   const n = Math.min(Math.max(length, 4), 128)
   let out = ''
@@ -126,7 +130,9 @@ function rndIPv4(): string {
 }
 
 function rndMac(): string {
-  return Array.from({ length: 6 }, () => rndInt(0, 255).toString(16).padStart(2, '0')).join(':').toUpperCase()
+  return Array.from({ length: 6 }, () => rndInt(0, 255).toString(16).padStart(2, '0'))
+    .join(':')
+    .toUpperCase()
 }
 
 /** 身份证号：GB 11643 校验位算法 */
@@ -135,7 +141,8 @@ function rndIdCardZh(areas: string[]): string {
   const y = rndInt(1970, 2002)
   const m = rndInt(1, 12)
   const d = rndInt(1, 28)
-  const body = area + y + String(m).padStart(2, '0') + String(d).padStart(2, '0') + String(rndInt(100, 999))
+  const body =
+    area + y + String(m).padStart(2, '0') + String(d).padStart(2, '0') + String(rndInt(100, 999))
   const W = [7, 9, 10, 5, 8, 4, 2, 1, 6, 3, 7, 9, 10, 5, 8, 4, 2]
   const C = ['1', '0', 'X', '9', '8', '7', '6', '5', '4', '3', '2']
   const sum = body.split('').reduce((acc, ch, i) => acc + parseInt(ch) * W[i], 0)

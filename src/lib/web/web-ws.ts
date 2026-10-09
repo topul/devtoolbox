@@ -39,7 +39,8 @@ export function buildWebWs(): WsAPI {
       }
       conns.set(id, { ws })
 
-      ws.onopen = () => emit({ id, kind: 'open', ...(ws.protocol ? { protocol: ws.protocol } : {}) })
+      ws.onopen = () =>
+        emit({ id, kind: 'open', ...(ws.protocol ? { protocol: ws.protocol } : {}) })
       ws.onmessage = (ev: MessageEvent) => {
         if (typeof ev.data === 'string') {
           emit({ id, kind: 'message', dir: 'in', data: ev.data })
@@ -47,9 +48,12 @@ export function buildWebWs(): WsAPI {
         }
         // 二进制帧：尽力转成文本（契约 v1 只有文本帧）
         const blob = ev.data as Blob
-        void blob.text().then((text) => {
-          emit({ id, kind: 'message', dir: 'in', data: text })
-        }).catch(() => undefined)
+        void blob
+          .text()
+          .then((text) => {
+            emit({ id, kind: 'message', dir: 'in', data: text })
+          })
+          .catch(() => undefined)
       }
       ws.onerror = () => {
         // onclose 一定跟着来，这里只报错误不重复收场

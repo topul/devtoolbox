@@ -21,26 +21,86 @@ import { RULES_FILENAMES } from '../agentrules-types'
 /* ---- 与桌面版同款的纯表（改动需两侧同步） ---- */
 
 const IGNORED_DIRS = new Set([
-  'node_modules', '.git', '.svn', '.hg', 'dist', 'out', 'build', 'release', 'coverage',
-  '.next', '.nuxt', '.svelte-kit', '.turbo', '.cache', '.parcel-cache',
-  '__pycache__', '.venv', 'venv', 'env', '.tox', '.mypy_cache', '.pytest_cache', '.ruff_cache',
-  'target', 'vendor', '.idea', '.vscode', '.vs', 'bin', 'obj', 'Pods', 'DerivedData',
-  '.gradle', '.mvn', 'tmp', 'logs',
+  'node_modules',
+  '.git',
+  '.svn',
+  '.hg',
+  'dist',
+  'out',
+  'build',
+  'release',
+  'coverage',
+  '.next',
+  '.nuxt',
+  '.svelte-kit',
+  '.turbo',
+  '.cache',
+  '.parcel-cache',
+  '__pycache__',
+  '.venv',
+  'venv',
+  'env',
+  '.tox',
+  '.mypy_cache',
+  '.pytest_cache',
+  '.ruff_cache',
+  'target',
+  'vendor',
+  '.idea',
+  '.vscode',
+  '.vs',
+  'bin',
+  'obj',
+  'Pods',
+  'DerivedData',
+  '.gradle',
+  '.mvn',
+  'tmp',
+  'logs',
 ])
 
 const DEFAULT_MAX_DEPTH = 3
 const DEFAULT_MAX_ENTRIES = 4000
 
 const FRAMEWORK_HINTS: Record<string, string> = {
-  react: 'React', 'react-dom': 'React', vue: 'Vue', svelte: 'Svelte', '@angular/core': 'Angular',
-  next: 'Next.js', nuxt: 'Nuxt', electron: 'Electron', 'electron-builder': 'Electron',
-  vite: 'Vite', webpack: 'Webpack', express: 'Express', fastify: 'Fastify', koa: 'Koa',
-  '@nestjs/core': 'NestJS', tailwindcss: 'Tailwind CSS', typescript: 'TypeScript',
-  jest: 'Jest', vitest: 'Vitest', mocha: 'Mocha', playwright: 'Playwright', '@playwright/test': 'Playwright',
-  cypress: 'Cypress', prisma: 'Prisma', typeorm: 'TypeORM', sequelize: 'Sequelize',
-  django: 'Django', flask: 'Flask', fastapi: 'FastAPI', pandas: 'pandas', numpy: 'NumPy',
-  pytest: 'pytest', torch: 'PyTorch', tensorflow: 'TensorFlow', pydantic: 'pydantic',
-  'pydantic-ai': 'pydantic-ai', ortools: 'OR-Tools', scrapy: 'Scrapy',
+  react: 'React',
+  'react-dom': 'React',
+  vue: 'Vue',
+  svelte: 'Svelte',
+  '@angular/core': 'Angular',
+  next: 'Next.js',
+  nuxt: 'Nuxt',
+  electron: 'Electron',
+  'electron-builder': 'Electron',
+  vite: 'Vite',
+  webpack: 'Webpack',
+  express: 'Express',
+  fastify: 'Fastify',
+  koa: 'Koa',
+  '@nestjs/core': 'NestJS',
+  tailwindcss: 'Tailwind CSS',
+  typescript: 'TypeScript',
+  jest: 'Jest',
+  vitest: 'Vitest',
+  mocha: 'Mocha',
+  playwright: 'Playwright',
+  '@playwright/test': 'Playwright',
+  cypress: 'Cypress',
+  prisma: 'Prisma',
+  typeorm: 'TypeORM',
+  sequelize: 'Sequelize',
+  django: 'Django',
+  flask: 'Flask',
+  fastapi: 'FastAPI',
+  pandas: 'pandas',
+  numpy: 'NumPy',
+  pytest: 'pytest',
+  torch: 'PyTorch',
+  tensorflow: 'TensorFlow',
+  pydantic: 'pydantic',
+  'pydantic-ai': 'pydantic-ai',
+  ortools: 'OR-Tools',
+  scrapy: 'Scrapy',
 }
 
 const SCRIPT_KINDS: [RegExp, string][] = [
@@ -82,7 +142,11 @@ type DirHandle = any
 const handles = new Map<string, DirHandle>()
 
 async function pickDirectory(): Promise<DirHandle | null> {
-  const picker = (window as unknown as { showDirectoryPicker?: (opts?: { mode?: 'read' | 'readwrite' }) => Promise<DirHandle> }).showDirectoryPicker
+  const picker = (
+    window as unknown as {
+      showDirectoryPicker?: (opts?: { mode?: 'read' | 'readwrite' }) => Promise<DirHandle>
+    }
+  ).showDirectoryPicker
   if (!picker) return null // Firefox / Safari：没有 File System Access API
   try {
     return await picker({ mode: 'readwrite' })
@@ -110,7 +174,12 @@ async function readText(h: DirHandle, name: string, limit = 200_000): Promise<st
 
 /* ---- 目录树 ---- */
 
-async function readTree(dir: DirHandle, depth: number, budget: Budget, maxEntries: number): Promise<TreeEntry[]> {
+async function readTree(
+  dir: DirHandle,
+  depth: number,
+  budget: Budget,
+  maxEntries: number,
+): Promise<TreeEntry[]> {
   if (depth < 0) return []
   const dirs: TreeEntry[] = []
   const files: TreeEntry[] = []
@@ -126,7 +195,8 @@ async function readTree(dir: DirHandle, depth: number, budget: Budget, maxEntrie
       if (handle.kind === 'directory') {
         if (IGNORED_DIRS.has(name)) continue
         budget.dirs++
-        const children = depth > 0 ? await readTree(handle, depth - 1, budget, maxEntries) : undefined
+        const children =
+          depth > 0 ? await readTree(handle, depth - 1, budget, maxEntries) : undefined
         dirs.push({ name, dir: true, children })
       } else {
         budget.files++
@@ -172,9 +242,10 @@ async function probeProject(root: DirHandle, tree: TreeEntry[]): Promise<ProbeRe
       const parts = rel.split('/')
       let h = root
       for (let i = 0; i < parts.length; i++) {
-        h = i === parts.length - 1
-          ? await h.getFileHandle(parts[i]).catch(() => h.getDirectoryHandle(parts[i]))
-          : await h.getDirectoryHandle(parts[i])
+        h =
+          i === parts.length - 1
+            ? await h.getFileHandle(parts[i]).catch(() => h.getDirectoryHandle(parts[i]))
+            : await h.getDirectoryHandle(parts[i])
       }
       return !!h
     } catch {
@@ -199,7 +270,13 @@ async function probeProject(root: DirHandle, tree: TreeEntry[]): Promise<ProbeRe
   const pkgObj = (() => {
     if (pkgBody == null) return null
     try {
-      return JSON.parse(pkgBody) as { scripts?: Record<string, string>; dependencies?: Record<string, string>; devDependencies?: Record<string, string>; packageManager?: string; workspaces?: unknown }
+      return JSON.parse(pkgBody) as {
+        scripts?: Record<string, string>
+        dependencies?: Record<string, string>
+        devDependencies?: Record<string, string>
+        packageManager?: string
+        workspaces?: unknown
+      }
     } catch {
       return null
     }
@@ -213,9 +290,15 @@ async function probeProject(root: DirHandle, tree: TreeEntry[]): Promise<ProbeRe
     }
     for (const [name, cmd] of Object.entries(pkgObj.scripts ?? {})) {
       if (typeof cmd !== 'string') continue
-      commands.push({ kind: classifyScript(name), name, command: `npm run ${name}`, source: 'package.json' })
+      commands.push({
+        kind: classifyScript(name),
+        name,
+        command: `npm run ${name}`,
+        source: 'package.json',
+      })
     }
-    if (typeof pkgObj.packageManager === 'string') packageManager = pkgObj.packageManager.split('@')[0]
+    if (typeof pkgObj.packageManager === 'string')
+      packageManager = pkgObj.packageManager.split('@')[0]
     if (pkgObj.workspaces) signals.add('hasMonorepo')
   }
 
@@ -255,7 +338,8 @@ async function probeProject(root: DirHandle, tree: TreeEntry[]): Promise<ProbeRe
     signals.add('hasMonorepo')
     mark('lerna.json')
   }
-  if (tree.some((e) => e.dir && (e.name === 'packages' || e.name === 'apps'))) signals.add('hasMonorepo')
+  if (tree.some((e) => e.dir && (e.name === 'packages' || e.name === 'apps')))
+    signals.add('hasMonorepo')
 
   /* ---- Python ---- */
   const pyproject = await readText(root, 'pyproject.toml')
@@ -270,7 +354,8 @@ async function probeProject(root: DirHandle, tree: TreeEntry[]): Promise<ProbeRe
       signals.add('hasTests')
     }
     for (const [dep, label] of Object.entries(FRAMEWORK_HINTS)) {
-      if (new RegExp(`(^|[^a-z0-9-])${dep}([^a-z0-9-]|$)`, 'i').test(pyproject)) frameworks.add(label)
+      if (new RegExp(`(^|[^a-z0-9-])${dep}([^a-z0-9-]|$)`, 'i').test(pyproject))
+        frameworks.add(label)
     }
   }
   const reqTxt = await readText(root, 'requirements.txt')
@@ -311,7 +396,7 @@ async function probeProject(root: DirHandle, tree: TreeEntry[]): Promise<ProbeRe
     mark('pom.xml')
     packageManager = packageManager ?? 'maven'
   }
-  if (await exists('build.gradle') || await exists('build.gradle.kts')) {
+  if ((await exists('build.gradle')) || (await exists('build.gradle.kts'))) {
     if (!languages.includes('Java')) languages.push('Java')
     packageManager = packageManager ?? 'gradle'
     mark('build.gradle')
@@ -337,12 +422,22 @@ async function probeProject(root: DirHandle, tree: TreeEntry[]): Promise<ProbeRe
       const name = m[1]
       if (seen.has(name) || name === 'all') continue
       seen.add(name)
-      commands.push({ kind: classifyScript(name), name, command: `make ${name}`, source: 'Makefile' })
+      commands.push({
+        kind: classifyScript(name),
+        name,
+        command: `make ${name}`,
+        source: 'Makefile',
+      })
     }
   }
 
   /* ---- 工程化配置 ---- */
-  if (await exists('Dockerfile') || await exists('docker-compose.yml') || await exists('docker-compose.yaml') || await exists('compose.yml')) {
+  if (
+    (await exists('Dockerfile')) ||
+    (await exists('docker-compose.yml')) ||
+    (await exists('docker-compose.yaml')) ||
+    (await exists('compose.yml'))
+  ) {
     signals.add('hasDocker')
   }
   if (await exists('.github/workflows')) {
@@ -355,12 +450,13 @@ async function probeProject(root: DirHandle, tree: TreeEntry[]): Promise<ProbeRe
   }
   if (await exists('.editorconfig')) signals.add('hasEditorconfig')
   if (
-    await exists('eslint.config.js') || await exists('eslint.config.mjs') ||
+    (await exists('eslint.config.js')) ||
+    (await exists('eslint.config.mjs')) ||
     (pyproject ?? '').includes('[tool.ruff]')
   ) {
     signals.add('hasLinter')
   }
-  if (await exists('prettier.config.js') || await exists('biome.json')) {
+  if ((await exists('prettier.config.js')) || (await exists('biome.json'))) {
     signals.add('hasFormatter')
   }
   if (await exists('.env.example')) {
@@ -368,12 +464,18 @@ async function probeProject(root: DirHandle, tree: TreeEntry[]): Promise<ProbeRe
     mark('.env.example')
   }
 
-  const hasTestDir = tree.some((e) => e.dir && ['test', 'tests', '__tests__', 'spec', 'e2e'].includes(e.name))
+  const hasTestDir = tree.some(
+    (e) => e.dir && ['test', 'tests', '__tests__', 'spec', 'e2e'].includes(e.name),
+  )
   if (hasTestDir) signals.add('hasTests')
   if (!signals.has('hasTests')) {
     const probeNested = (entries: TreeEntry[]): boolean =>
       entries.some((e) =>
-        e.dir ? (e.children ? probeNested(e.children) : false) : /(\.test\.|\.spec\.|_test\.)/.test(e.name),
+        e.dir
+          ? e.children
+            ? probeNested(e.children)
+            : false
+          : /(\.test\.|\.spec\.|_test\.)/.test(e.name),
       )
     if (probeNested(tree)) signals.add('hasTests')
   }
@@ -386,15 +488,34 @@ async function probeProject(root: DirHandle, tree: TreeEntry[]): Promise<ProbeRe
   if (await exists('CHANGELOG.md')) signals.add('hasChangelog')
 
   const installCommand: Record<string, string> = {
-    npm: 'npm install', pnpm: 'pnpm install', yarn: 'yarn', bun: 'bun install',
-    poetry: 'poetry install', uv: 'uv sync', pip: 'pip install -r requirements.txt', pipenv: 'pipenv install',
-    'go modules': 'go mod download', cargo: 'cargo build', maven: 'mvn install',
-    gradle: './gradlew build', composer: 'composer install',
+    npm: 'npm install',
+    pnpm: 'pnpm install',
+    yarn: 'yarn',
+    bun: 'bun install',
+    poetry: 'poetry install',
+    uv: 'uv sync',
+    pip: 'pip install -r requirements.txt',
+    pipenv: 'pipenv install',
+    'go modules': 'go mod download',
+    cargo: 'cargo build',
+    maven: 'mvn install',
+    gradle: './gradlew build',
+    composer: 'composer install',
   }
   if (packageManager && installCommand[packageManager]) {
-    commands.unshift({ kind: 'install', name: packageManager, command: installCommand[packageManager], source: packageManager })
+    commands.unshift({
+      kind: 'install',
+      name: packageManager,
+      command: installCommand[packageManager],
+      source: packageManager,
+    })
   } else if (pkgObj) {
-    commands.unshift({ kind: 'install', name: 'npm', command: 'npm install', source: 'package.json' })
+    commands.unshift({
+      kind: 'install',
+      name: 'npm',
+      command: 'npm install',
+      source: 'package.json',
+    })
   }
 
   const seenCmd = new Set<string>()
@@ -416,7 +537,11 @@ async function probeProject(root: DirHandle, tree: TreeEntry[]): Promise<ProbeRe
 
 /* ---- 扫描入口 ---- */
 
-async function scanHandle(root: DirHandle, rootName: string, spec: AgentScanSpec): Promise<AgentScanResult> {
+async function scanHandle(
+  root: DirHandle,
+  rootName: string,
+  spec: AgentScanSpec,
+): Promise<AgentScanResult> {
   const maxDepth = Math.max(1, Math.min(spec.maxDepth ?? DEFAULT_MAX_DEPTH, 8))
   const maxEntries = Math.max(1, Math.min(spec.maxEntries ?? DEFAULT_MAX_ENTRIES, 20000))
   if (!(await ensurePermission(root))) return { ok: false, code: 'PERMISSION_DENIED' }
@@ -457,7 +582,11 @@ export function buildWebAgentRules(): ElectronAgentRules {
       if (!h) return { ok: false, code: 'ROOT_NOT_FOUND', detail: '请先选择目录' }
       return scanHandle(h, spec.root, spec)
     },
-    save: async (root: string, target: RulesTarget, content: string): Promise<AgentRulesSaveResult> => {
+    save: async (
+      root: string,
+      target: RulesTarget,
+      content: string,
+    ): Promise<AgentRulesSaveResult> => {
       const h = handles.get(root)
       if (!h) return { ok: false, code: 'ROOT_NOT_FOUND', detail: '请先选择目录' }
       if (!(await ensurePermission(h, true))) return { ok: false, code: 'PERMISSION_DENIED' }

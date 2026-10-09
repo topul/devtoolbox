@@ -92,16 +92,25 @@ function stripComments(sql: string): string {
     const c = sql[i]
     const c2 = sql[i + 1]
     if ((c === '-' && c2 === '-') || c === '#') {
-      while (i < n && sql[i] !== '\n') { out[i] = ' '; i++ }
+      while (i < n && sql[i] !== '\n') {
+        out[i] = ' '
+        i++
+      }
       continue
     }
     if (c === '/' && c2 === '*') {
-      out[i] = ' '; out[i + 1] = ' '; i += 2
+      out[i] = ' '
+      out[i + 1] = ' '
+      i += 2
       while (i < n && !(sql[i] === '*' && sql[i + 1] === '/')) {
         if (sql[i] !== '\n') out[i] = ' '
         i++
       }
-      if (i < n) { out[i] = ' '; out[i + 1] = ' '; i += 2 }
+      if (i < n) {
+        out[i] = ' '
+        out[i + 1] = ' '
+        i += 2
+      }
       continue
     }
     i++
@@ -128,17 +137,26 @@ function blankLiterals(sql: string): string {
 
     // -- 行注释 与 # 行注释
     if ((c === '-' && c2 === '-') || c === '#') {
-      while (i < n && sql[i] !== '\n') { out[i] = ' '; i++ }
+      while (i < n && sql[i] !== '\n') {
+        out[i] = ' '
+        i++
+      }
       continue
     }
     // /* 块注释 */
     if (c === '/' && c2 === '*') {
-      out[i] = ' '; out[i + 1] = ' '; i += 2
+      out[i] = ' '
+      out[i + 1] = ' '
+      i += 2
       while (i < n && !(sql[i] === '*' && sql[i + 1] === '/')) {
         if (sql[i] !== '\n') out[i] = ' '
         i++
       }
-      if (i < n) { out[i] = ' '; out[i + 1] = ' '; i += 2 }
+      if (i < n) {
+        out[i] = ' '
+        out[i + 1] = ' '
+        i += 2
+      }
       continue
     }
     // '...' 与 "..." 与 `...`：整体抹成空格
@@ -147,10 +165,20 @@ function blankLiterals(sql: string): string {
       out[i] = ' '
       i++
       while (i < n) {
-        if (sql[i] === '\\' && i + 1 < n) { out[i] = ' '; out[i + 1] = ' '; i += 2; continue }
+        if (sql[i] === '\\' && i + 1 < n) {
+          out[i] = ' '
+          out[i + 1] = ' '
+          i += 2
+          continue
+        }
         if (sql[i] === quote) {
           // '' 是转义（SQL 里 'it''s'），不结束
-          if (sql[i + 1] === quote) { out[i] = ' '; out[i + 1] = ' '; i += 2; continue }
+          if (sql[i + 1] === quote) {
+            out[i] = ' '
+            out[i + 1] = ' '
+            i += 2
+            continue
+          }
           out[i] = ' '
           i++
           break
@@ -193,7 +221,8 @@ export function whereColumns(masked: string): string[] {
   // `col = ...` / `col >= ...` / `col <op> ...`
   // 前缀允许省略：WHERE 后的第一个条件前没有 and/or，只靠「标识符 + 比较符」识别。
   // 风险是把字面量里的内容当列名 —— 但字面量在 masked 里已被抹成空格，不会误伤。
-  const re = /(?:\bwhere\b|\band\b|\bor\b)?\s*\b([a-z_][a-z0-9_.]*)\s*(?:=|<>|!=|<=|>=|<|>|\blike\b|\bin\b|\bbetween\b)/gi
+  const re =
+    /(?:\bwhere\b|\band\b|\bor\b)?\s*\b([a-z_][a-z0-9_.]*)\s*(?:=|<>|!=|<=|>=|<|>|\blike\b|\bin\b|\bbetween\b)/gi
   let r: RegExpExecArray | null
   while ((r = re.exec(seg)) !== null) cols.add(r[1].toLowerCase())
   // 补一段：`col` 紧跟在括号后（IN (1,2) 的值列表里不能取，靠上面的模式已经覆盖）
@@ -219,7 +248,13 @@ export function lintSql(sql: string): SqlIssue[] {
   // 注释已去掉、字面量还在
   const noComments = stripComments(sql)
   const issues: SqlIssue[] = []
-  const add = (rule: string, severity: SqlSeverity, message: string, hint: string, index: number): void => {
+  const add = (
+    rule: string,
+    severity: SqlSeverity,
+    message: string,
+    hint: string,
+    index: number,
+  ): void => {
     const line = lineAt(masked, index)
     issues.push({ rule, severity, message, hint, line, snippet: lineText(sql, line) })
   }
@@ -232,8 +267,13 @@ export function lintSql(sql: string): SqlIssue[] {
     // 前面紧邻 COUNT( 的跳过
     const before = masked.slice(Math.max(0, m.index - 8), m.index)
     if (/count\s*\(\s*$/i.test(before)) continue
-    add('select-star', 'warn', 'SELECT_STAR',
-      '列出实际需要的列：加列会改缓存失效逻辑，减列能减少 I/O', m.index)
+    add(
+      'select-star',
+      'warn',
+      'SELECT_STAR',
+      '列出实际需要的列：加列会改缓存失效逻辑，减列能减少 I/O',
+      m.index,
+    )
   }
 
   /* --- 前导通配 LIKE ---
@@ -243,33 +283,54 @@ export function lintSql(sql: string): SqlIssue[] {
    */
   const likeRe = /\blike\s+'%/gi
   while ((m = likeRe.exec(noComments)) !== null) {
-    add('like-prefix', 'error', 'LIKE_PREFIX',
-      '前导 % 让 B-Tree 索引完全失效。改用全文检索，或把高频前缀拆出来单独建索引', m.index)
+    add(
+      'like-prefix',
+      'error',
+      'LIKE_PREFIX',
+      '前导 % 让 B-Tree 索引完全失效。改用全文检索，或把高频前缀拆出来单独建索引',
+      m.index,
+    )
   }
 
   /* --- NOT IN --- */
   const notInRe = /\bnot\s+in\s*\(/gi
   while ((m = notInRe.exec(masked)) !== null) {
-    add('not-in', 'warn', 'NOT_IN',
-      'NOT IN 在列表有 NULL 时结果恒为空，且优化器常改写成更慢的计划。改用 NOT EXISTS', m.index)
+    add(
+      'not-in',
+      'warn',
+      'NOT_IN',
+      'NOT IN 在列表有 NULL 时结果恒为空，且优化器常改写成更慢的计划。改用 NOT EXISTS',
+      m.index,
+    )
   }
 
   /* --- OR 条件 --- */
   const orRe = /\bor\b/gi
   while ((m = orRe.exec(masked)) !== null) {
-    add('or-condition', 'info', 'OR',
-      'OR 的各分支难以同时走索引。确认每个分支都命中索引，否则考虑 UNION ALL', m.index)
+    add(
+      'or-condition',
+      'info',
+      'OR',
+      'OR 的各分支难以同时走索引。确认每个分支都命中索引，否则考虑 UNION ALL',
+      m.index,
+    )
   }
 
   /* --- 逗号连接（笛卡尔积风险）--- */
   const commaJoin = /\bfrom\s+[a-z_][a-z0-9_]*\s*,\s*[a-z_]/i.exec(masked)
   if (commaJoin) {
-    add('cross-join', 'warn', 'CROSS_JOIN',
-      '逗号连接容易漏写连接条件，变成笛卡尔积。改用显式 JOIN ... ON', commaJoin.index)
+    add(
+      'cross-join',
+      'warn',
+      'CROSS_JOIN',
+      '逗号连接容易漏写连接条件，变成笛卡尔积。改用显式 JOIN ... ON',
+      commaJoin.index,
+    )
   }
 
   /* --- 函数包裹列 --- */
-  const fnRe = /\b(year|month|day|date|upper|lower|trim|substring|substr|concat|abs|left|right|round|length|lower)\s*\(\s*([a-z_][a-z0-9_]*)\s*\)/gi
+  const fnRe =
+    /\b(year|month|day|date|upper|lower|trim|substring|substr|concat|abs|left|right|round|length|lower)\s*\(\s*([a-z_][a-z0-9_]*)\s*\)/gi
   while ((m = fnRe.exec(masked)) !== null) {
     const fn = m[1].toLowerCase()
     const col = m[2]
@@ -288,7 +349,8 @@ export function lintSql(sql: string): SqlIssue[] {
    *   - 右边是纯数字（不带引号给数字列也可能反向出问题）
    * 其余情况宁可漏报也不误报 —— 误报多了用户就不看了。
    */
-  const NUMERIC_HINT = /(?:^|_)(?:id|no|num|count|qty|amount|price|age|year|month|day|phone|mobile|zip|code)$/i
+  const NUMERIC_HINT =
+    /(?:^|_)(?:id|no|num|count|qty|amount|price|age|year|month|day|phone|mobile|zip|code)$/i
   const colSet = new Set(whereColumns(masked))
 
   // 形态 A：col = '123'（列名像数字列，右边是数字字符串）
@@ -298,15 +360,26 @@ export function lintSql(sql: string): SqlIssue[] {
     if (!colSet.has(col)) continue
     if (!NUMERIC_HINT.test(col)) continue
     if (!/^-?\d+(\.\d+)?$/.test(m[2].trim())) continue
-    add('implicit-conversion', 'error', 'IMPLICIT_CONVERSION',
-      `${col} 看起来是数字列，却与字符串比较，索引会失效。去掉引号：${col} = ${m[2].trim()}`, m.index)
+    add(
+      'implicit-conversion',
+      'error',
+      'IMPLICIT_CONVERSION',
+      `${col} 看起来是数字列，却与字符串比较，索引会失效。去掉引号：${col} = ${m[2].trim()}`,
+      m.index,
+    )
   }
 
   // 形态 B：col = 123（列名像字符串列，右边是裸数字）
-  const numLitRe = /\b(name|title|code|status|type|email|phone_number|label|desc|description)\s*=\s*(\d+)\b/gi
+  const numLitRe =
+    /\b(name|title|code|status|type|email|phone_number|label|desc|description)\s*=\s*(\d+)\b/gi
   while ((m = numLitRe.exec(masked)) !== null) {
-    add('implicit-conversion', 'warn', 'IMPLICIT_CONVERSION',
-      `${m[1]} 看起来是字符串列，却与数字比较。给值加引号：${m[1]} = '${m[2]}'`, m.index)
+    add(
+      'implicit-conversion',
+      'warn',
+      'IMPLICIT_CONVERSION',
+      `${m[1]} 看起来是字符串列，却与数字比较。给值加引号：${m[1]} = '${m[2]}'`,
+      m.index,
+    )
   }
 
   /* --- 大 LIMIT --- */
@@ -314,8 +387,13 @@ export function lintSql(sql: string): SqlIssue[] {
   while ((m = limitRe.exec(masked)) !== null) {
     const n = Number(m[1])
     if (n >= 10000) {
-      add('big-limit', 'warn', 'BIG_LIMIT',
-        `一次取 ${n} 行通常不是真实需求。确认是否该用分页，并给排序字段建索引`, m.index)
+      add(
+        'big-limit',
+        'warn',
+        'BIG_LIMIT',
+        `一次取 ${n} 行通常不是真实需求。确认是否该用分页，并给排序字段建索引`,
+        m.index,
+      )
     }
   }
 
@@ -324,14 +402,19 @@ export function lintSql(sql: string): SqlIssue[] {
   while ((m = offRe.exec(masked)) !== null) {
     const n = Number(m[1])
     if (n >= 10000) {
-      add('large-offset', 'warn', 'LARGE_OFFSET',
-        `OFFSET ${n} 要求数据库先扫描并丢弃前 ${n} 行。改用游标分页：WHERE id > <上一页最后一个 id>`, m.index)
+      add(
+        'large-offset',
+        'warn',
+        'LARGE_OFFSET',
+        `OFFSET ${n} 要求数据库先扫描并丢弃前 ${n} 行。改用游标分页：WHERE id > <上一页最后一个 id>`,
+        m.index,
+      )
     }
   }
 
   // 同规则同行不重复
   const seen = new Set<string>()
-  return issues.filter(i => {
+  return issues.filter((i) => {
     const k = `${i.line}:${i.rule}`
     if (seen.has(k)) return false
     seen.add(k)
@@ -420,7 +503,15 @@ function walkMysqlJson(node: unknown, out: ExplainTable[], depth = 0): void {
     }
   }
   // 常见的包装节点：继续往下走
-  for (const key of ['table', 'query_block', 'ordering_operation', 'grouping_operation', 'duplicates_removal', 'materialize_from_subquery', 'attached_subqueries']) {
+  for (const key of [
+    'table',
+    'query_block',
+    'ordering_operation',
+    'grouping_operation',
+    'duplicates_removal',
+    'materialize_from_subquery',
+    'attached_subqueries',
+  ]) {
     if (o[key]) walkMysqlJson(o[key], out, depth + 1)
   }
 }
@@ -433,19 +524,30 @@ function parseTextTable(text: string, dialect: 'mysql' | 'postgres'): ExplainTab
   for (const raw of text.split('\n')) {
     const line = raw.trim()
     if (!line.startsWith('|')) continue
-    const cells = line.split('|').slice(1, -1).map(c => c.trim())
+    const cells = line
+      .split('|')
+      .slice(1, -1)
+      .map((c) => c.trim())
     if (cells.length < 5) continue
     // 分隔行（CLI 无此行，markdown 是 | --- | :---: |）
-    if (cells.every(c => /^:?-+:?$/.test(c))) continue
+    if (cells.every((c) => /^:?-+:?$/.test(c))) continue
     // 表头行：记录列名 → 下标
-    if (cells.some(c => /^table$/i.test(c)) && cells.some(c => /^type$/i.test(c))) {
+    if (cells.some((c) => /^table$/i.test(c)) && cells.some((c) => /^type$/i.test(c))) {
       colMap = {}
-      cells.forEach((c, i) => { colMap![c.toLowerCase()] = i })
+      cells.forEach((c, i) => {
+        colMap![c.toLowerCase()] = i
+      })
       continue
     }
-    let name: string, type: string, rows: number, key: string, possibleKeys: string, filtered: number, extra: string
+    let name: string,
+      type: string,
+      rows: number,
+      key: string,
+      possibleKeys: string,
+      filtered: number,
+      extra: string
     if (colMap) {
-      const g = (k: string) => (colMap![k] != null ? cells[colMap![k]] ?? '' : '')
+      const g = (k: string) => (colMap![k] != null ? (cells[colMap![k]] ?? '') : '')
       name = g('table')
       type = g('type')
       rows = Number(g('rows').replace(/[^\d.]/g, '')) || 0
@@ -489,12 +591,15 @@ function fromMysqlRows(rows: unknown[], out: ExplainTable[]): void {
     const rowNum = Number(str(o.rows).replace(/[^\d.]/g, '')) || 0
     const j = judgeRisk(type, rowNum)
     out.push({
-      name, type, rows: rowNum,
+      name,
+      type,
+      rows: rowNum,
       key: str(o.key),
       possibleKeys: str(o.possible_keys),
       filtered: Number(str(o.filtered).replace(/[^\d.]/g, '')) || 0,
       extra: str(o.extra),
-      risk: j.risk, note: j.note,
+      risk: j.risk,
+      note: j.note,
     })
   }
 }
@@ -508,11 +613,14 @@ function fromMysqlRows(rows: unknown[], out: ExplainTable[]): void {
  * @param input 粘进来的文本或 JSON
  * @param dialect 方言，影响文本表格的列序假设
  */
-export function parseExplain(input: string, dialect: 'mysql' | 'postgres' = 'mysql'): ExplainResult {
+export function parseExplain(
+  input: string,
+  dialect: 'mysql' | 'postgres' = 'mysql',
+): ExplainResult {
   const raw = input.trim()
   if (!raw) {
     // 解析不出来时给一句可执行的提示 —— 空数组加「无法识别」等于让用户猜
-  return { tables: [], summary: ['UNPARSED'], unparsed: true }
+    return { tables: [], summary: ['UNPARSED'], unparsed: true }
   }
 
   // 尝试 JSON
@@ -543,8 +651,8 @@ export function parseExplain(input: string, dialect: 'mysql' | 'postgres' = 'mys
 
 function buildSummary(tables: ExplainTable[]): string[] {
   const out: string[] = []
-  const high = tables.filter(t => t.risk === 'high')
-  const mid = tables.filter(t => t.risk === 'mid')
+  const high = tables.filter((t) => t.risk === 'high')
+  const mid = tables.filter((t) => t.risk === 'mid')
   for (const t of high) out.push(`HIGH:${t.name} ${t.note}`)
   for (const t of mid) out.push(`MID:${t.name} ${t.note}`)
   const total = tables.reduce((n, t) => n + t.rows, 0)
@@ -576,9 +684,9 @@ export function suggestIndex(
   if (!t || columns.length === 0) return []
 
   const cols = columns
-    .map(c => c.split('.').pop() ?? c) // t.col → col
-    .map(c => c.toLowerCase())
-    .filter(c => c && !LIKELY_KEY.has(c)) // id 之类通常是主键
+    .map((c) => c.split('.').pop() ?? c) // t.col → col
+    .map((c) => c.toLowerCase())
+    .filter((c) => c && !LIKELY_KEY.has(c)) // id 之类通常是主键
     .filter((c, i, arr) => arr.indexOf(c) === i) // 去重
 
   if (cols.length === 0) return []
@@ -593,14 +701,16 @@ export function suggestIndex(
     'not-in': 'NOT EXISTS 改写后可用该列索引',
     'select-star': '减少读取的列可降低 I/O',
   }
-  const reason = issues.map(i => REASON[i.rule]).find(Boolean) ?? '常用过滤条件'
+  const reason = issues.map((i) => REASON[i.rule]).find(Boolean) ?? '常用过滤条件'
 
   const name = `idx_${t}_${cols.join('_')}`.slice(0, 60)
-  return [{
-    table: t,
-    name,
-    columns: cols,
-    reason,
-    sql: `CREATE INDEX ${name} ON ${t} (${cols.join(', ')});`,
-  }]
+  return [
+    {
+      table: t,
+      name,
+      columns: cols,
+      reason,
+      sql: `CREATE INDEX ${name} ON ${t} (${cols.join(', ')});`,
+    },
+  ]
 }

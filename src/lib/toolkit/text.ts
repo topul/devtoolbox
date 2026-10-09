@@ -22,9 +22,17 @@ export function lineDiff(a: string, b: string): DiffLine[] {
   let i = 0
   let j = 0
   while (i < m && j < n) {
-    if (al[i] === bl[j]) { out.push({ type: 'same', text: al[i] }); i++; j++ }
-    else if (dp[i + 1][j] >= dp[i][j + 1]) { out.push({ type: 'del', text: al[i] }); i++ }
-    else { out.push({ type: 'add', text: bl[j] }); j++ }
+    if (al[i] === bl[j]) {
+      out.push({ type: 'same', text: al[i] })
+      i++
+      j++
+    } else if (dp[i + 1][j] >= dp[i][j + 1]) {
+      out.push({ type: 'del', text: al[i] })
+      i++
+    } else {
+      out.push({ type: 'add', text: bl[j] })
+      j++
+    }
   }
   while (i < m) out.push({ type: 'del', text: al[i++] })
   while (j < n) out.push({ type: 'add', text: bl[j++] })
@@ -58,7 +66,13 @@ function splitWords(s: string): string[] {
 }
 
 export const CASE_STYLES = [
-  'camelCase', 'PascalCase', 'snake_case', 'SCREAMING_SNAKE', 'kebab-case', 'UPPERCASE', 'lowercase',
+  'camelCase',
+  'PascalCase',
+  'snake_case',
+  'SCREAMING_SNAKE',
+  'kebab-case',
+  'UPPERCASE',
+  'lowercase',
 ] as const
 export type CaseStyle = (typeof CASE_STYLES)[number]
 
@@ -66,7 +80,13 @@ export function convertCase(input: string, style: CaseStyle): string {
   const w = splitWords(input)
   switch (style) {
     case 'camelCase':
-      return w.length ? w[0] + w.slice(1).map((x) => x[0].toUpperCase() + x.slice(1)).join('') : ''
+      return w.length
+        ? w[0] +
+            w
+              .slice(1)
+              .map((x) => x[0].toUpperCase() + x.slice(1))
+              .join('')
+        : ''
     case 'PascalCase':
       return w.map((x) => x[0].toUpperCase() + x.slice(1)).join('')
     case 'snake_case':
@@ -87,24 +107,49 @@ export function convertCaseAll(input: string): { style: CaseStyle; value: string
 }
 
 export const LINE_OPS = [
-  'dedupe', 'removeEmpty', 'trim', 'sortAsc', 'sortDesc', 'sortNumeric', 'shuffle', 'reverse', 'number', 'quote', 'join',
+  'dedupe',
+  'removeEmpty',
+  'trim',
+  'sortAsc',
+  'sortDesc',
+  'sortNumeric',
+  'shuffle',
+  'reverse',
+  'number',
+  'quote',
+  'join',
 ] as const
 export type LineOp = (typeof LINE_OPS)[number]
 
-export function applyLineOp(text: string, op: LineOp, options: { separator?: string } = {}): string {
+export function applyLineOp(
+  text: string,
+  op: LineOp,
+  options: { separator?: string } = {},
+): string {
   const lines = text.split('\n')
   switch (op) {
-    case 'dedupe': return [...new Set(lines)].join('\n')
-    case 'removeEmpty': return lines.filter((v) => v.trim()).join('\n')
-    case 'trim': return lines.map((v) => v.trim()).join('\n')
-    case 'sortAsc': return [...lines].sort().join('\n')
-    case 'sortDesc': return [...lines].sort().reverse().join('\n')
-    case 'sortNumeric': return [...lines].sort((a, b) => parseFloat(a) - parseFloat(b)).join('\n')
-    case 'shuffle': return [...lines].sort(() => Math.random() - 0.5).join('\n')
-    case 'reverse': return [...lines].reverse().join('\n')
-    case 'number': return lines.map((v, i) => `${i + 1}. ${v}`).join('\n')
-    case 'quote': return lines.map((v) => `"${v}"`).join('\n')
-    case 'join': return lines.join(options.separator ?? ',')
+    case 'dedupe':
+      return [...new Set(lines)].join('\n')
+    case 'removeEmpty':
+      return lines.filter((v) => v.trim()).join('\n')
+    case 'trim':
+      return lines.map((v) => v.trim()).join('\n')
+    case 'sortAsc':
+      return [...lines].sort().join('\n')
+    case 'sortDesc':
+      return [...lines].sort().reverse().join('\n')
+    case 'sortNumeric':
+      return [...lines].sort((a, b) => parseFloat(a) - parseFloat(b)).join('\n')
+    case 'shuffle':
+      return [...lines].sort(() => Math.random() - 0.5).join('\n')
+    case 'reverse':
+      return [...lines].reverse().join('\n')
+    case 'number':
+      return lines.map((v, i) => `${i + 1}. ${v}`).join('\n')
+    case 'quote':
+      return lines.map((v) => `"${v}"`).join('\n')
+    case 'join':
+      return lines.join(options.separator ?? ',')
   }
 }
 

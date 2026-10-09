@@ -115,7 +115,8 @@ export function costOf(
   const fresh = usage.promptTokens - cached
   const useCache = cached > 0 && typeof price.cacheInPerM === 'number'
   const input =
-    (fresh / 1e6) * price.inPerM + (useCache ? (cached / 1e6) * (price.cacheInPerM as number) : (cached / 1e6) * price.inPerM)
+    (fresh / 1e6) * price.inPerM +
+    (useCache ? (cached / 1e6) * (price.cacheInPerM as number) : (cached / 1e6) * price.inPerM)
   const output = (usage.completionTokens / 1e6) * price.outPerM
   return { input, output, total: input + output, price, usedCache: useCache }
 }

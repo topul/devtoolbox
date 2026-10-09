@@ -25,7 +25,12 @@ import type { ChatMeta } from '../../lib/chat-types'
 
 type L = (typeof chatL)['zh']
 
-export function MessageView({ msg, price, live, onTrace }: {
+export function MessageView({
+  msg,
+  price,
+  live,
+  onTrace,
+}: {
   msg: ChatUIMessage
   price: ModelPrice | null
   /** 这条消息正处在流式输出中（决定思考块是否自动展开） */
@@ -41,9 +46,12 @@ export function MessageView({ msg, price, live, onTrace }: {
   const toolById = new Map(tools.map((t) => [t.toolCallId, t]))
 
   const badge = live ? l.streaming : meta.error ? l.failed : meta.aborted ? l.stopped : l.done
-  const badgeCls = meta.error ? 'text-danger border-danger/40'
-    : live ? 'text-amber border-amber/40'
-      : meta.aborted ? 'text-muted border-line-soft'
+  const badgeCls = meta.error
+    ? 'text-danger border-danger/40'
+    : live
+      ? 'text-amber border-amber/40'
+      : meta.aborted
+        ? 'text-muted border-line-soft'
         : 'text-muted border-line-soft'
 
   return (
@@ -51,18 +59,24 @@ export function MessageView({ msg, price, live, onTrace }: {
        原来两边共用同一条 2px 左边线、只换颜色，扫一眼分不清谁说的 ——
        对齐方向 + 描边颜色双重编码，谁讲的哪段一眼可辨。 */
     <div className={isUser ? 'flex justify-end' : undefined}>
-      <div className={`rounded-lg px-3 py-2 ${
-        isUser
-          ? 'max-w-[88%] border border-phosphor/25 bg-phosphor-faint/40'
-          : 'border border-line-soft bg-panel-2/25'
-      }`}>
+      <div
+        className={`rounded-lg px-3 py-2 ${
+          isUser
+            ? 'max-w-[88%] border border-phosphor/25 bg-phosphor-faint/40'
+            : 'border border-line-soft bg-panel-2/25'
+        }`}
+      >
         <div className={`flex items-center gap-2 flex-wrap ${isUser ? 'justify-end' : ''}`}>
-          <span className={`text-[11px] uppercase tracking-wider ${isUser ? 'text-phosphor' : 'text-muted'}`}>
+          <span
+            className={`text-[11px] uppercase tracking-wider ${isUser ? 'text-phosphor' : 'text-muted'}`}
+          >
             {isUser ? l.roleUser : l.roleAssistant}
           </span>
           {!isUser && <span className={`text-[10px] px-1.5 border ${badgeCls}`}>{badge}</span>}
           {!isUser && meta.rounds !== undefined && meta.rounds > 1 && (
-            <span className="text-[10px] text-muted">{l.roundsLabel.replace('{n}', String(meta.rounds))}</span>
+            <span className="text-[10px] text-muted">
+              {l.roundsLabel.replace('{n}', String(meta.rounds))}
+            </span>
           )}
           {!!text && <CopyBtn text={text} className="ml-auto" />}
         </div>
@@ -72,13 +86,25 @@ export function MessageView({ msg, price, live, onTrace }: {
             if (part.type === 'text') {
               if (isUser) {
                 return (
-                  <pre key={i} className="text-[12.5px] whitespace-pre-wrap break-words text-bright">{part.text}</pre>
+                  <pre
+                    key={i}
+                    className="text-[12.5px] whitespace-pre-wrap break-words text-bright"
+                  >
+                    {part.text}
+                  </pre>
                 )
               }
               return part.text ? <Markdown key={i} text={part.text} /> : null
             }
             if (part.type === 'reasoning') {
-              return <ReasoningBlock key={i} text={part.text} l={l} autoOpen={live && part.state === 'streaming'} />
+              return (
+                <ReasoningBlock
+                  key={i}
+                  text={part.text}
+                  l={l}
+                  autoOpen={live && part.state === 'streaming'}
+                />
+              )
             }
             if (part.type === 'dynamic-tool' || part.type.startsWith('tool-')) {
               const view = toolById.get((part as { toolCallId?: string }).toolCallId ?? '')
@@ -87,15 +113,22 @@ export function MessageView({ msg, price, live, onTrace }: {
             return null
           })}
 
-          {live && !text && !tools.length && !msg.parts.some((p) => p.type === 'reasoning' && p.text) && (
-            <div className="text-[12px] text-muted">{l.streaming}…</div>
-          )}
+          {live &&
+            !text &&
+            !tools.length &&
+            !msg.parts.some((p) => p.type === 'reasoning' && p.text) && (
+              <div className="text-[12px] text-muted">{l.streaming}…</div>
+            )}
           {!live && !text && tools.length > 0 && (
             <div className="text-[11.5px] text-muted">{l.onlyToolNoAnswer}</div>
           )}
         </div>
 
-        {meta.error && <div className="mt-1.5"><ErrorNote msg={meta.error} /></div>}
+        {meta.error && (
+          <div className="mt-1.5">
+            <ErrorNote msg={meta.error} />
+          </div>
+        )}
         {!isUser && !!meta.meta && (
           <InlineMetrics
             meta={meta.meta}
@@ -114,7 +147,15 @@ export function MessageView({ msg, price, live, onTrace }: {
 
 /* ================= 思考块 ================= */
 
-function ReasoningBlock({ text, l, autoOpen }: { text: string; l: L; autoOpen: boolean }): React.ReactElement {
+function ReasoningBlock({
+  text,
+  l,
+  autoOpen,
+}: {
+  text: string
+  l: L
+  autoOpen: boolean
+}): React.ReactElement {
   const [open, setOpen] = useState(autoOpen)
   // 用户手动点过之后，自动折叠就不再抢方向盘；否则流式结束会把他刚展开的内容又收起来
   const touched = useRef(false)
@@ -125,7 +166,10 @@ function ReasoningBlock({ text, l, autoOpen }: { text: string; l: L; autoOpen: b
   return (
     <div className="border border-line-soft bg-panel-2/40">
       <button
-        onClick={() => { touched.current = true; setOpen((v) => !v) }}
+        onClick={() => {
+          touched.current = true
+          setOpen((v) => !v)
+        }}
         aria-expanded={open}
         className="flex w-full items-center gap-2 px-2.5 py-1 text-left"
       >
@@ -151,21 +195,34 @@ function ToolBlock({ part, l }: { part: ToolPartView; l: L }): React.ReactElemen
   const [open, setOpen] = useState(false)
   const running = part.state === 'input-available'
   const failed = part.state === 'output-error'
-  const cls = running ? 'text-amber border-amber/40'
-    : failed ? 'text-danger border-danger/40'
+  const cls = running
+    ? 'text-amber border-amber/40'
+    : failed
+      ? 'text-danger border-danger/40'
       : 'text-phosphor border-phosphor/40'
   const label = running ? l.toolRunning : failed ? l.toolReported : l.toolOk
-  const body = failed ? (part.errorText ?? '') : (typeof part.output === 'string' ? part.output : part.output === undefined ? '' : JSON.stringify(part.output, null, 2))
+  const body = failed
+    ? (part.errorText ?? '')
+    : typeof part.output === 'string'
+      ? part.output
+      : part.output === undefined
+        ? ''
+        : JSON.stringify(part.output, null, 2)
 
   return (
     <div className="border border-line-soft bg-panel-2/60 px-2.5 py-1.5">
       <div className="flex items-center gap-2 flex-wrap">
         <span className="text-[11px] text-muted">→</span>
         {/* 工具名走主题变量而不是硬编码色：那个浅蓝在亮色白底上只有 1.81:1，几乎看不见 */}
-        <span className="text-[12px] break-all" style={{ color: 'var(--c-hl-fn)' }}>{part.toolName}</span>
+        <span className="text-[12px] break-all" style={{ color: 'var(--c-hl-fn)' }}>
+          {part.toolName}
+        </span>
         <span className={`text-[10px] px-1.5 border ${cls}`}>{label}</span>
         {!!body && (
-          <button onClick={() => setOpen((v) => !v)} className="text-[11px] text-muted hover:text-phosphor transition-colors">
+          <button
+            onClick={() => setOpen((v) => !v)}
+            className="text-[11px] text-muted hover:text-phosphor transition-colors"
+          >
             {open ? l.hideToolOutput : l.showToolOutput}
           </button>
         )}
@@ -174,7 +231,9 @@ function ToolBlock({ part, l }: { part: ToolPartView; l: L }): React.ReactElemen
         {l.toolArgsLabel} {formatArgs(part.input)}
       </div>
       {open && !!body && (
-        <pre className="codeblock text-[11.5px] text-phosphor whitespace-pre-wrap break-words max-h-[30vh] overflow-auto mt-1">{body}</pre>
+        <pre className="codeblock text-[11.5px] text-phosphor whitespace-pre-wrap break-words max-h-[30vh] overflow-auto mt-1">
+          {body}
+        </pre>
       )}
     </div>
   )
@@ -193,7 +252,15 @@ function formatArgs(input: unknown): string {
 /* ================= 指标 ================= */
 
 /** 消息尾部的一行指标摘要：点开才是完整指标面板，不再常驻右栏 */
-function InlineMetrics({ meta, text, tools, rounds, l, price, onTrace }: {
+function InlineMetrics({
+  meta,
+  text,
+  tools,
+  rounds,
+  l,
+  price,
+  onTrace,
+}: {
   meta: ChatMeta
   text: string
   tools: number
@@ -206,7 +273,11 @@ function InlineMetrics({ meta, text, tools, rounds, l, price, onTrace }: {
   const tokensOut = meta.usage?.completionTokens ?? Math.ceil(meta.chars / 3.2)
   const tokensTotal = meta.usage?.totalTokens ?? (meta.usage?.promptTokens ?? 0) + tokensOut
   const cost = price
-    ? costOf(price, { promptTokens: meta.usage?.promptTokens ?? 0, completionTokens: tokensOut, cachedTokens: meta.usage?.cachedTokens ?? 0 }).total
+    ? costOf(price, {
+        promptTokens: meta.usage?.promptTokens ?? 0,
+        completionTokens: tokensOut,
+        cachedTokens: meta.usage?.cachedTokens ?? 0,
+      }).total
     : null
   const exact = !!meta.usage
 
@@ -237,7 +308,14 @@ function InlineMetrics({ meta, text, tools, rounds, l, price, onTrace }: {
   )
 }
 
-function MetricsView({ meta, text, tools, rounds, l, price }: {
+function MetricsView({
+  meta,
+  text,
+  tools,
+  rounds,
+  l,
+  price,
+}: {
   meta: ChatMeta
   text: string
   tools: number
@@ -251,13 +329,14 @@ function MetricsView({ meta, text, tools, rounds, l, price }: {
   const est = meta.usage ? 0 : estimateTokens(text).tokens
   const tokensOut = meta.usage?.completionTokens ?? est
   const exact = !!meta.usage
-  const cost = price && (exact || est)
-    ? costOf(price, {
-        promptTokens: meta.usage?.promptTokens ?? 0,
-        completionTokens: tokensOut,
-        cachedTokens: meta.usage?.cachedTokens ?? 0,
-      })
-    : null
+  const cost =
+    price && (exact || est)
+      ? costOf(price, {
+          promptTokens: meta.usage?.promptTokens ?? 0,
+          completionTokens: tokensOut,
+          cachedTokens: meta.usage?.cachedTokens ?? 0,
+        })
+      : null
 
   return (
     <div className="space-y-2">
@@ -274,9 +353,17 @@ function MetricsView({ meta, text, tools, rounds, l, price }: {
       <KV k={l.chunks} v={String(meta.chunks)} />
       <KV k={l.chars} v={String(meta.chars)} />
       {meta.reasoningChars > 0 && <KV k={l.reasoningChars} v={String(meta.reasoningChars)} />}
-      <KV k={l.tokensTotal} v={`${meta.usage ? meta.usage.totalTokens : tokensOut}${exact ? '' : ' *'}`} />
+      <KV
+        k={l.tokensTotal}
+        v={`${meta.usage ? meta.usage.totalTokens : tokensOut}${exact ? '' : ' *'}`}
+      />
       {meta.model && <KV k={l.servedModel} v={meta.model} />}
-      {meta.finishReason && <KV k={l.finishReason} v={meta.finishReason === 'max_rounds' ? l.finishMaxRounds : meta.finishReason} />}
+      {meta.finishReason && (
+        <KV
+          k={l.finishReason}
+          v={meta.finishReason === 'max_rounds' ? l.finishMaxRounds : meta.finishReason}
+        />
+      )}
       <KV
         k={l.costLabel}
         v={
@@ -288,7 +375,9 @@ function MetricsView({ meta, text, tools, rounds, l, price }: {
       />
       {cost && (
         <p className="text-[11px] text-muted">
-          {l.costDetail.replace('{in}', formatMoney(cost.input)).replace('{out}', formatMoney(cost.output))}
+          {l.costDetail
+            .replace('{in}', formatMoney(cost.input))
+            .replace('{out}', formatMoney(cost.output))}
         </p>
       )}
       {!exact && <p className="text-[11px] text-muted">{l.noUsageNote}</p>}

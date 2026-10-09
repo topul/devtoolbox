@@ -23,7 +23,10 @@ function probeError(message: string): McpProbeResult {
  * 探测一个工具源。输入与 agent 吃的形态一致（ChatToolServer），
  * 渲染层先用 toChatToolServers 把草稿转好再传进来。
  */
-export async function probeServer(src: ChatToolServer, timeoutMs = PROBE_TIMEOUT_MS): Promise<McpProbeResult> {
+export async function probeServer(
+  src: ChatToolServer,
+  timeoutMs = PROBE_TIMEOUT_MS,
+): Promise<McpProbeResult> {
   const url = src.url?.trim()
   const command = src.command?.trim()
   if (!url && !command) return probeError('没有配置地址或启动命令')
@@ -47,13 +50,20 @@ export async function probeServer(src: ChatToolServer, timeoutMs = PROBE_TIMEOUT
           timeoutMs,
         },
     // 探测过程不产生事件流；结果一次性返回
-    { emit: () => { /* 静默 */ } },
+    {
+      emit: () => {
+        /* 静默 */
+      },
+    },
   )
 
   // 总保险：McpClient 内部超时覆盖单次请求，这里再兜一层（含 disconnect 卡死的情况）
   let timer: ReturnType<typeof setTimeout> | null = null
   const guard = new Promise<McpProbeResult>((_, reject) => {
-    timer = setTimeout(() => reject(new Error(`探测超时（${Math.round(timeoutMs / 1000)}s）`)), timeoutMs + 5_000)
+    timer = setTimeout(
+      () => reject(new Error(`探测超时（${Math.round(timeoutMs / 1000)}s）`)),
+      timeoutMs + 5_000,
+    )
   })
 
   try {
@@ -80,6 +90,8 @@ export async function probeServer(src: ChatToolServer, timeoutMs = PROBE_TIMEOUT
     if (timer) clearTimeout(timer)
     try {
       await client.disconnect()
-    } catch { /* 断开失败不影响结果 */ }
+    } catch {
+      /* 断开失败不影响结果 */
+    }
   }
 }

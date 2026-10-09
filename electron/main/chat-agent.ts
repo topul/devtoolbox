@@ -29,7 +29,11 @@ import type {
 /** 发给模型的对话消息（比界面用的 ChatMessage 多 tool/tool_calls 两种形态） */
 type WireMessage =
   | { role: 'system' | 'user'; content: string }
-  | { role: 'assistant'; content: string | null; tool_calls?: { id: string; type: 'function'; function: { name: string; arguments: string } }[] }
+  | {
+      role: 'assistant'
+      content: string | null
+      tool_calls?: { id: string; type: 'function'; function: { name: string; arguments: string } }[]
+    }
   | { role: 'tool'; tool_call_id: string; content: string }
 
 export interface ChatAgentSpec extends Omit<ChatSendSpec, 'tools'> {
@@ -76,11 +80,19 @@ export function runChatAgent(spec: ChatAgentSpec, host: ChatAgentHost): { abort:
   }
 
   /** 跑一轮流式请求；deltas 直接转发给界面 */
-  const runRound = (round: number, messages: WireMessage[], toolDefs: OpenAiToolDef[]): Promise<{ meta: ChatMeta; content: string }> =>
+  const runRound = (
+    round: number,
+    messages: WireMessage[],
+    toolDefs: OpenAiToolDef[],
+  ): Promise<{ meta: ChatMeta; content: string }> =>
     new Promise((resolve, reject) => {
       let content = ''
       streamHandle = chatStream(
-        { ...baseConfig, messages: messages as unknown as ChatMessage[], toolDefs: toolDefs.length ? toolDefs : undefined },
+        {
+          ...baseConfig,
+          messages: messages as unknown as ChatMessage[],
+          toolDefs: toolDefs.length ? toolDefs : undefined,
+        },
         {
           onDelta: (text, kind) => {
             if (kind === 'content') content += text
@@ -109,7 +121,8 @@ export function runChatAgent(spec: ChatAgentSpec, host: ChatAgentHost): { abort:
     let args: Record<string, unknown>
     try {
       const parsed = call.args.trim() ? JSON.parse(call.args) : {}
-      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('参数必须是 JSON 对象')
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed))
+        throw new Error('参数必须是 JSON 对象')
       args = parsed as Record<string, unknown>
     } catch (e) {
       // 模型给的参数不是合法 JSON —— 把错误原样喂回去让它自己改，这是标准做法
@@ -124,7 +137,14 @@ export function runChatAgent(spec: ChatAgentSpec, host: ChatAgentHost): { abort:
     }
     const hit = registry.get(call.name)
     if (!hit) {
-      return { id: call.id, name: call.name, ok: false, isError: true, text: '未知工具，或对应的工具源没有连上', durationMs: 0 }
+      return {
+        id: call.id,
+        name: call.name,
+        ok: false,
+        isError: true,
+        text: '未知工具，或对应的工具源没有连上',
+        durationMs: 0,
+      }
     }
     const out = await hit.client.callTool(hit.original, args)
     return {
@@ -186,7 +206,11 @@ export function runChatAgent(spec: ChatAgentSpec, host: ChatAgentHost): { abort:
                 timeoutMs: 30_000,
               },
           // agent 内部的 MCP 事件不转发给界面：它们属于 Inspector 那条时间轴，混进对话会很难看
-          { emit: () => { /* 静默 */ } },
+          {
+            emit: () => {
+              /* 静默 */
+            },
+          },
         )
         try {
           await client.connect()
@@ -215,13 +239,19 @@ export function runChatAgent(spec: ChatAgentSpec, host: ChatAgentHost): { abort:
       }
 
       if (!registry.size) {
-        throw new Error(failed.length ? `工具源全部连接失败 —— ${failed.join('；')}` : '工具源没有声明任何工具')
+        throw new Error(
+          failed.length ? `工具源全部连接失败 —— ${failed.join('；')}` : '工具源没有声明任何工具',
+        )
       }
-      if (failed.length) emit({ type: 'notice', requestId, text: `部分工具源没有连上：${failed.join('；')}` })
+      if (failed.length)
+        emit({ type: 'notice', requestId, text: `部分工具源没有连上：${failed.join('；')}` })
       emit({ type: 'toolsReady', requestId, tools: usable })
 
       /* 2. 循环 */
-      const messages: WireMessage[] = spec.messages.map((m) => ({ role: m.role, content: m.content })) as WireMessage[]
+      const messages: WireMessage[] = spec.messages.map((m) => ({
+        role: m.role,
+        content: m.content,
+      })) as WireMessage[]
       let rounds = 0
       let lastMeta: ChatMeta | null = null
 
@@ -269,15 +299,17 @@ export function runChatAgent(spec: ChatAgentSpec, host: ChatAgentHost): { abort:
           emit({ type: 'toolResult', requestId, round: rounds, result })
           trace?.toolResult(rounds, call.id, result)
           const body = result.error ? `调用失败：${result.error}` : result.text
-          const clipped = body.length > TOOL_RESULT_MAX
-            ? `${body.slice(0, TOOL_RESULT_MAX)}\n…（结果过长已截断，原始长度 ${body.length} 字符）`
-            : body
+          const clipped =
+            body.length > TOOL_RESULT_MAX
+              ? `${body.slice(0, TOOL_RESULT_MAX)}\n…（结果过长已截断，原始长度 ${body.length} 字符）`
+              : body
           messages.push({ role: 'tool', tool_call_id: call.id, content: clipped })
         }
       }
 
       // 轮数用尽：不是错误，但要让界面说得清楚为什么停了
-      if (lastMeta) emit({ type: 'done', requestId, meta: { ...lastMeta, finishReason: 'max_rounds' }, rounds })
+      if (lastMeta)
+        emit({ type: 'done', requestId, meta: { ...lastMeta, finishReason: 'max_rounds' }, rounds })
     } catch (e) {
       const code = (e as Error & { code?: string }).code
       // 取消要当成正常收场（界面据此显示「已停止」），不能走失败分支
@@ -291,7 +323,9 @@ export function runChatAgent(spec: ChatAgentSpec, host: ChatAgentHost): { abort:
       for (const c of cs) {
         try {
           await c.disconnect()
-        } catch { /* 断开失败不影响收场 */ }
+        } catch {
+          /* 断开失败不影响收场 */
+        }
       }
     }
   })()

@@ -186,7 +186,8 @@ export function chatStream(cfg: ChatStreamConfig, hooks: ChatHooks): { abort: ()
           const idx = typeof part?.index === 'number' ? part.index : 0
           const slot = toolAcc.get(idx) ?? { id: '', name: '', args: '' }
           if (typeof part?.id === 'string' && part.id) slot.id = part.id
-          if (typeof part?.function?.name === 'string' && part.function.name) slot.name += part.function.name
+          if (typeof part?.function?.name === 'string' && part.function.name)
+            slot.name += part.function.name
           if (typeof part?.function?.arguments === 'string') slot.args += part.function.arguments
           toolAcc.set(idx, slot)
         }
@@ -231,11 +232,16 @@ export function chatStream(cfg: ChatStreamConfig, hooks: ChatHooks): { abort: ()
               fail('响应里没有 choices，返回内容：' + text.slice(0, 300))
               return
             }
-            if (typeof choice.message?.reasoning_content === 'string') emit(choice.message.reasoning_content, 'reasoning')
+            if (typeof choice.message?.reasoning_content === 'string')
+              emit(choice.message.reasoning_content, 'reasoning')
             // 非流式时工具调用是完整给出的
             if (Array.isArray(choice.message?.tool_calls)) {
-              (choice.message.tool_calls as Record<string, any>[]).forEach((tc, i) => {
-                toolAcc.set(i, { id: String(tc?.id ?? ''), name: String(tc?.function?.name ?? ''), args: String(tc?.function?.arguments ?? '') })
+              ;(choice.message.tool_calls as Record<string, any>[]).forEach((tc, i) => {
+                toolAcc.set(i, {
+                  id: String(tc?.id ?? ''),
+                  name: String(tc?.function?.name ?? ''),
+                  args: String(tc?.function?.arguments ?? ''),
+                })
               })
             }
             const content = choice.message?.content ?? choice.text ?? ''

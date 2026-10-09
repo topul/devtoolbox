@@ -59,15 +59,27 @@ export function formatInTimezone(d: Date, timezone: string): ZonedTime {
   if (!isValidTimezone(timezone)) throw new Error('BAD_TIMEZONE:' + timezone)
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone: timezone,
-    year: 'numeric', month: '2-digit', day: '2-digit',
-    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
     hour12: false,
     weekday: 'short',
   }).formatToParts(d)
   const get = (type: string): string => parts.find((p) => p.type === type)?.value ?? ''
   // en-CA 的小时 24 点时可能输出 "24"，归一到 00
   const hour = get('hour') === '24' ? '00' : get('hour')
-  const weekdayMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 }
+  const weekdayMap: Record<string, number> = {
+    Sun: 0,
+    Mon: 1,
+    Tue: 2,
+    Wed: 3,
+    Thu: 4,
+    Fri: 5,
+    Sat: 6,
+  }
   return {
     timezone,
     datetime: `${get('year')}-${get('month')}-${get('day')} ${hour}:${get('minute')}:${get('second')}`,
@@ -87,12 +99,11 @@ export function convertToTimezones(d: Date, timezones: string[]): ZonedTime[] {
  * 实现方式：先按 UTC 猜解，再用 Intl 反推偏移差迭代校正（两次迭代足够收敛，
  * 因为偏移只能是 15 分钟整数倍）。
  */
-export function zonedTimeToUtc(
-  local: string,
-  timezone: string,
-): Date {
+export function zonedTimeToUtc(local: string, timezone: string): Date {
   if (!isValidTimezone(timezone)) throw new Error('BAD_TIMEZONE:' + timezone)
-  const m = local.trim().match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[ T](\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?$/)
+  const m = local
+    .trim()
+    .match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[ T](\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?$/)
   if (!m) throw new Error('BAD_DATETIME')
   const [, y, mo, d, h = '0', mi = '0', s = '0'] = m
   // 先当作 UTC 解析
@@ -111,13 +122,24 @@ export function offsetOf(d: Date, timezone: string): number {
   if (!isValidTimezone(timezone)) throw new Error('BAD_TIMEZONE:' + timezone)
   const dtf = new Intl.DateTimeFormat('en-US', {
     timeZone: timezone,
-    year: 'numeric', month: '2-digit', day: '2-digit',
-    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
     hour12: false,
   })
   const parts = dtf.formatToParts(d)
   const get = (t: string): number => Number(parts.find((p) => p.type === t)?.value ?? '0')
-  const asUtc = Date.UTC(get('year'), get('month') - 1, get('day'), get('hour') % 24, get('minute'), get('second'))
+  const asUtc = Date.UTC(
+    get('year'),
+    get('month') - 1,
+    get('day'),
+    get('hour') % 24,
+    get('minute'),
+    get('second'),
+  )
   // 墙上的时间 - 真实 UTC 时间 = 偏移（分钟）
   return Math.round((asUtc - d.getTime()) / 60000)
 }
@@ -146,7 +168,9 @@ export function isValidTimezone(id: string): boolean {
 /** 引擎支持的时区 ID 全集（时区选择器用） */
 export function availableTimezones(): string[] {
   try {
-    const list = (Intl as unknown as { supportedValuesOf?: (k: string) => string[] }).supportedValuesOf?.('timeZone')
+    const list = (
+      Intl as unknown as { supportedValuesOf?: (k: string) => string[] }
+    ).supportedValuesOf?.('timeZone')
     if (Array.isArray(list) && list.length) return list
   } catch {
     /* 老引擎不支持 supportedValuesOf，走 COMMON 兜底 */

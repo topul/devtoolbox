@@ -1,7 +1,16 @@
 import React, { useState, useMemo, useCallback } from 'react'
 import {
-  Btn, TA, ErrorNote, Panel, Collapse, KV, Stat, Select, ResultPanel,
-  usePersistedState, ToolGuide,
+  Btn,
+  TA,
+  ErrorNote,
+  Panel,
+  Collapse,
+  KV,
+  Stat,
+  Select,
+  ResultPanel,
+  usePersistedState,
+  ToolGuide,
 } from '../components/ui'
 import { useLocalized } from '../lib/i18n'
 import { harL } from '../lib/locales/har'
@@ -65,7 +74,10 @@ export function HarTool() {
 
   const run = useCallback(() => {
     setErr(null)
-    if (!raw.trim()) { setParsed(null); return }
+    if (!raw.trim()) {
+      setParsed(null)
+      return
+    }
     try {
       const har = JSON.parse(raw)
       setParsed({ har, sum: parseHar(har) })
@@ -90,7 +102,7 @@ export function HarTool() {
   const rows = useMemo(() => {
     if (!parsed) return []
     const all = buildWaterfall(parsed.sum.entries)
-    return filter === 'failed' ? all.filter(r => r.isFailed) : all
+    return filter === 'failed' ? all.filter((r) => r.isFailed) : all
   }, [parsed, filter])
 
   const hosts = useMemo(() => (parsed ? summarizeByHost(parsed.sum.entries) : []), [parsed])
@@ -100,7 +112,7 @@ export function HarTool() {
     const es = parsed.sum.entries
     return {
       total: es.length,
-      failed: es.filter(e => e.isFailed).length,
+      failed: es.filter((e) => e.isFailed).length,
       bytes: es.reduce((n, e) => n + (e.transferSize > 0 ? e.transferSize : 0), 0),
     }
   }, [parsed])
@@ -118,8 +130,25 @@ export function HarTool() {
         title={l.input}
         right={
           <div className="flex gap-1.5">
-            <Btn variant="ghost" onClick={() => { setRaw(SAMPLE); setErr(null) }}>{l.loadSample}</Btn>
-            <Btn variant="ghost" onClick={() => { setRaw(''); setParsed(null); setErr(null) }}>{l.clear}</Btn>
+            <Btn
+              variant="ghost"
+              onClick={() => {
+                setRaw(SAMPLE)
+                setErr(null)
+              }}
+            >
+              {l.loadSample}
+            </Btn>
+            <Btn
+              variant="ghost"
+              onClick={() => {
+                setRaw('')
+                setParsed(null)
+                setErr(null)
+              }}
+            >
+              {l.clear}
+            </Btn>
           </div>
         }
       >
@@ -128,12 +157,14 @@ export function HarTool() {
       </Panel>
 
       <div className="flex gap-2">
-        <Btn variant="primary" onClick={run} disabled={!raw.trim()}>{l.parse}</Btn>
+        <Btn variant="primary" onClick={run} disabled={!raw.trim()}>
+          {l.parse}
+        </Btn>
         {parsed && (
           <div className="w-32">
             <Select
               value={filter}
-              onChange={v => setFilter(v as 'all' | 'failed')}
+              onChange={(v) => setFilter(v as 'all' | 'failed')}
               label={l.filterAll}
               options={[
                 { value: 'all', label: l.filterAll },
@@ -150,10 +181,17 @@ export function HarTool() {
         <>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
             <Stat label={l.entries} value={<span className="text-sm">{stats.total}</span>} />
-            <Stat label={l.totalBytes} value={<span className="text-sm">{formatBytes(stats.bytes)}</span>} />
+            <Stat
+              label={l.totalBytes}
+              value={<span className="text-sm">{formatBytes(stats.bytes)}</span>}
+            />
             <Stat
               label={l.failed}
-              value={<span className={`text-sm ${stats.failed ? 'text-danger' : 'text-phosphor'}`}>{stats.failed}</span>}
+              value={
+                <span className={`text-sm ${stats.failed ? 'text-danger' : 'text-phosphor'}`}>
+                  {stats.failed}
+                </span>
+              }
             />
             <Stat
               label={l.withBody}
@@ -166,7 +204,12 @@ export function HarTool() {
               <KV k={l.version} v={parsed.sum.version || '—'} />
               <KV k={l.creator} v={parsed.sum.creator || '—'} />
               <KV k={l.pages} v={String(parsed.sum.pageCount)} />
-              <KV k={l.filtered.replace('{n}', String(rows.length)).replace('{total}', String(stats.total))} v="" />
+              <KV
+                k={l.filtered
+                  .replace('{n}', String(rows.length))
+                  .replace('{total}', String(stats.total))}
+                v=""
+              />
             </div>
           </Panel>
         </>
@@ -181,43 +224,43 @@ export function HarTool() {
       {hosts.length > 0 && (
         <Panel title={l.byHost}>
           <div className="space-y-1">
-            {hosts.map(h => (
+            {hosts.map((h) => (
               <div key={h.host} className="flex items-baseline gap-3 text-[12px]">
                 <span className="text-bright break-all flex-1 min-w-0">{h.host}</span>
                 <span className="text-muted shrink-0">{h.count}</span>
-                <span className="text-phosphor shrink-0 w-20 text-right">{formatBytes(h.bytes)}</span>
-                {h.failed > 0 && <span className="text-danger shrink-0 w-14 text-right">{h.failed} ✗</span>}
+                <span className="text-phosphor shrink-0 w-20 text-right">
+                  {formatBytes(h.bytes)}
+                </span>
+                {h.failed > 0 && (
+                  <span className="text-danger shrink-0 w-14 text-right">{h.failed} ✗</span>
+                )}
               </div>
             ))}
           </div>
         </Panel>
       )}
 
-      {parsed && picked !== null && (
-        <EntryDetail
-          parsed={parsed}
-          index={picked}
-          detail={detail}
-        />
-      )}
+      {parsed && picked !== null && <EntryDetail parsed={parsed} index={picked} detail={detail} />}
 
-      {!parsed && !err && (
-        <p className="text-[12px] text-muted">{l.detailPh}</p>
-      )}
+      {!parsed && !err && <p className="text-[12px] text-muted">{l.detailPh}</p>}
     </div>
   )
 }
 
 /** 瀑布图：左侧列表 + 右侧按耗时比例画的条 */
-function WaterfallView({ rows, picked, onPick }: {
+function WaterfallView({
+  rows,
+  picked,
+  onPick,
+}: {
   rows: WaterfallRow[]
   picked: number | null
   onPick: (i: number) => void
 }) {
-  const max = Math.max(WATERFALL_SPAN, ...rows.map(r => r.offset + r.time))
+  const max = Math.max(WATERFALL_SPAN, ...rows.map((r) => r.offset + r.time))
   return (
     <div className="space-y-0.5">
-      {rows.map(r => {
+      {rows.map((r) => {
         const left = (r.offset / max) * 100
         const width = Math.max((r.time / max) * 100, 0.6)
         return (
@@ -231,7 +274,9 @@ function WaterfallView({ rows, picked, onPick }: {
             <div className="flex items-baseline gap-2 text-[11.5px]">
               <span className="text-muted w-10 shrink-0">{r.method}</span>
               <span className="text-bright break-all flex-1 min-w-0">{r.url}</span>
-              <span className={`shrink-0 w-10 text-right ${r.isFailed ? 'text-danger' : 'text-phosphor'}`}>
+              <span
+                className={`shrink-0 w-10 text-right ${r.isFailed ? 'text-danger' : 'text-phosphor'}`}
+              >
                 {r.status || 'ERR'}
               </span>
               <span className="text-muted shrink-0 w-14 text-right tabular-nums">{r.time}ms</span>
@@ -250,20 +295,31 @@ function WaterfallView({ rows, picked, onPick }: {
 }
 
 /** 单条请求详情 */
-function EntryDetail({ parsed, index, detail }: {
+function EntryDetail({
+  parsed,
+  index,
+  detail,
+}: {
   parsed: { har: unknown; sum: HarSummary }
   index: number
   detail: ReturnType<typeof extractEntryDetail>
 }) {
   const l = useLocalized(harL)
-  const e = parsed.sum.entries.find(x => x.index === index)
+  const e = parsed.sum.entries.find((x) => x.index === index)
   if (!e) return null
   return (
     <div className="space-y-3">
       <Panel title={`${l.detail} — ${e.method} ${e.path}`}>
         <div className="space-y-0.5">
           <KV k={l.url} v={e.url} />
-          <KV k={l.status} v={<span className={e.isFailed ? 'text-danger' : 'text-phosphor'}>{e.status || 'ERR'} {e.statusText}</span>} />
+          <KV
+            k={l.status}
+            v={
+              <span className={e.isFailed ? 'text-danger' : 'text-phosphor'}>
+                {e.status || 'ERR'} {e.statusText}
+              </span>
+            }
+          />
           <KV k={l.mime} v={e.mimeType || '—'} />
           {e.resourceType && <KV k={l.resourceType} v={e.resourceType} />}
           {e.priority && <KV k={l.priority} v={e.priority} />}
@@ -279,10 +335,17 @@ function EntryDetail({ parsed, index, detail }: {
 
       <Collapse title={l.timings}>
         <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
-          {([
-            [l.blocked, e.blocked], [l.dns, e.dns], [l.connect, e.connect],
-            [l.ssl, e.ssl], [l.send, e.send], [l.wait, e.wait], [l.receive, e.receive],
-          ] as [string, number][]).map(([k, v]) => (
+          {(
+            [
+              [l.blocked, e.blocked],
+              [l.dns, e.dns],
+              [l.connect, e.connect],
+              [l.ssl, e.ssl],
+              [l.send, e.send],
+              [l.wait, e.wait],
+              [l.receive, e.receive],
+            ] as [string, number][]
+          ).map(([k, v]) => (
             <Stat key={k} label={k} value={<span className="text-sm tabular-nums">{v}ms</span>} />
           ))}
         </div>
@@ -310,7 +373,9 @@ function EntryDetail({ parsed, index, detail }: {
 
       {e.body !== null && e.body !== '' ? (
         <ResultPanel
-          title={e.bodyEncoding === 'base64' ? `${l.responseBody} (${l.base64Note})` : l.responseBody}
+          title={
+            e.bodyEncoding === 'base64' ? `${l.responseBody} (${l.base64Note})` : l.responseBody
+          }
           text={e.body}
           maxHeight={320}
         />

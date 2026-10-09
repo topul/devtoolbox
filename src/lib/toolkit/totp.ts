@@ -34,17 +34,16 @@ export function decodeSecret(secret: string): Uint8Array {
   // 先按原样试一次（绝大多数密钥没有笔误）
   try {
     return decodeBase32(cleaned)
-  } catch { /* 落到下面的笔误修正 */ }
-  const fixed = cleaned
-    .replace(/0/g, 'O')
-    .replace(/[1IL]/g, 'L')
+  } catch {
+    /* 落到下面的笔误修正 */
+  }
+  const fixed = cleaned.replace(/0/g, 'O').replace(/[1IL]/g, 'L')
   try {
     return decodeBase32(fixed)
   } catch {
     throw new Error('BAD_BASE32')
   }
 }
-
 
 /** 动态截断：取 HMAC 末字节的低 4 位作为偏移 */
 /**
@@ -56,10 +55,11 @@ export function decodeSecret(secret: string): Uint8Array {
  */
 function dynamicTruncate(hash: Uint8Array): number {
   const offset = hash[hash.length - 1] & 0x0f
-  const value = ((hash[offset] & 0x7f) << 24)
-    | ((hash[offset + 1] & 0xff) << 16)
-    | ((hash[offset + 2] & 0xff) << 8)
-    | (hash[offset + 3] & 0xff)
+  const value =
+    ((hash[offset] & 0x7f) << 24) |
+    ((hash[offset + 1] & 0xff) << 16) |
+    ((hash[offset + 2] & 0xff) << 8) |
+    (hash[offset + 3] & 0xff)
   return value >>> 0
 }
 
@@ -109,7 +109,11 @@ const WEBCRYPTO_HASH = {
   SHA512: 'SHA-512',
 } as const
 
-async function hmacFor(key: Uint8Array, msg: Uint8Array, algo: 'SHA1' | 'SHA256' | 'SHA512'): Promise<Uint8Array> {
+async function hmacFor(
+  key: Uint8Array,
+  msg: Uint8Array,
+  algo: 'SHA1' | 'SHA256' | 'SHA512',
+): Promise<Uint8Array> {
   const cryptoKey = await crypto.subtle.importKey(
     'raw',
     key as unknown as ArrayBuffer,
@@ -146,7 +150,8 @@ export async function totpVerify(
     // 定长比较
     if (expected.length === target.length) {
       let diff = 0
-      for (let i = 0; i < expected.length; i++) diff |= expected.charCodeAt(i) ^ target.charCodeAt(i)
+      for (let i = 0; i < expected.length; i++)
+        diff |= expected.charCodeAt(i) ^ target.charCodeAt(i)
       if (diff === 0) return { valid: true, window }
     }
   }

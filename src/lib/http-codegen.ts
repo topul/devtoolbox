@@ -29,7 +29,15 @@ export interface RequestDoc {
 }
 
 export function emptyDoc(): RequestDoc {
-  return { method: 'GET', url: '', headers: [], body: { kind: 'none' }, followRedirects: false, verifyTls: true, proxy: null }
+  return {
+    method: 'GET',
+    url: '',
+    headers: [],
+    body: { kind: 'none' },
+    followRedirects: false,
+    verifyTls: true,
+    proxy: null,
+  }
 }
 
 export function headerValue(headers: [string, string][], name: string): string | null {
@@ -61,7 +69,10 @@ export function docFromRequestSpec(spec: RequestSpecLike, fallbackUrl = ''): Req
 }
 
 /** 正文落成实际要发的字节与 Content-Type（生成代码与回填表单共用，避免两套编码规则） */
-export function materializeBody(doc: RequestDoc): { text: string | null; contentType: string | null } {
+export function materializeBody(doc: RequestDoc): {
+  text: string | null
+  contentType: string | null
+} {
   if (doc.body.kind === 'none') return { text: null, contentType: null }
   const declared = headerValue(doc.headers, 'content-type')
   if (doc.body.kind === 'text') {
@@ -74,9 +85,14 @@ export function materializeBody(doc: RequestDoc): { text: string | null; content
     }
     lines.push(`--${MULTIPART_BOUNDARY}--`, '')
     // boundary 是我们自己生成的，因此必须覆盖声明的 Content-Type，否则两边对不上
-    return { text: lines.join('\r\n'), contentType: `multipart/form-data; boundary=${MULTIPART_BOUNDARY}` }
+    return {
+      text: lines.join('\r\n'),
+      contentType: `multipart/form-data; boundary=${MULTIPART_BOUNDARY}`,
+    }
   }
-  const text = doc.body.fields.map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join('&')
+  const text = doc.body.fields
+    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+    .join('&')
   return { text: text || null, contentType: declared ?? 'application/x-www-form-urlencoded' }
 }
 
@@ -127,26 +143,111 @@ export interface ParseResult {
 
 /** 会消费下一个 token 的开关（自己处理的） */
 const OWN_VALUE_FLAGS = new Set([
-  '-X', '--request', '-H', '--header', '-d', '--data', '--data-raw', '--data-binary', '--data-ascii',
-  '--data-urlencode', '-F', '--form', '-u', '--user', '-b', '--cookie', '-A', '--user-agent',
-  '-e', '--referer', '-x', '--proxy', '--url',
+  '-X',
+  '--request',
+  '-H',
+  '--header',
+  '-d',
+  '--data',
+  '--data-raw',
+  '--data-binary',
+  '--data-ascii',
+  '--data-urlencode',
+  '-F',
+  '--form',
+  '-u',
+  '--user',
+  '-b',
+  '--cookie',
+  '-A',
+  '--user-agent',
+  '-e',
+  '--referer',
+  '-x',
+  '--proxy',
+  '--url',
 ])
 /** 会消费下一个 token、但我们不关心的开关（不放过的话，值会被误当成 URL） */
 const IGNORED_VALUE_FLAGS = new Set([
-  '-o', '--output', '-m', '--max-time', '--connect-timeout', '-w', '--write-out',
-  '--retry', '--retry-delay', '--retry-max-time', '-c', '--cookie-jar', '-U', '--proxy-user',
-  '-T', '--upload-file', '--cert', '--key', '--cacert', '-E', '--capath', '--resolve',
-  '--interface', '-r', '--range', '--limit-rate', '--max-redirs', '--host', '--unix-socket',
-  '-D', '--dump-header', '--trace', '--trace-ascii', '--output-dir', '--connect-to',
+  '-o',
+  '--output',
+  '-m',
+  '--max-time',
+  '--connect-timeout',
+  '-w',
+  '--write-out',
+  '--retry',
+  '--retry-delay',
+  '--retry-max-time',
+  '-c',
+  '--cookie-jar',
+  '-U',
+  '--proxy-user',
+  '-T',
+  '--upload-file',
+  '--cert',
+  '--key',
+  '--cacert',
+  '-E',
+  '--capath',
+  '--resolve',
+  '--interface',
+  '-r',
+  '--range',
+  '--limit-rate',
+  '--max-redirs',
+  '--host',
+  '--unix-socket',
+  '-D',
+  '--dump-header',
+  '--trace',
+  '--trace-ascii',
+  '--output-dir',
+  '--connect-to',
 ])
 /** 不消费值的开关 */
 const IGNORED_BARE_FLAGS = new Set([
-  '-s', '--silent', '-S', '--show-error', '-v', '--verbose', '-i', '--include', '-f', '--fail',
-  '-#', '--progress-bar', '-g', '--globoff', '-4', '-6', '--ipv4', '--ipv6', '--compressed',
-  '--no-buffer', '-N', '--raw', '--path-as-is', '--no-keepalive', '--http1.0', '--http1.1',
-  '--http2', '--http2-prior-knowledge', '--tlsv1.2', '--tlsv1.3', '--tcp-nodelay', '-q', '--disable',
-  '-j', '--junk-session-cookies', '--no-progress-meter', '--fail-with-body', '--retry-all-errors',
-  '--ssl-no-revoke', '--location-trusted', '--no-clobber',
+  '-s',
+  '--silent',
+  '-S',
+  '--show-error',
+  '-v',
+  '--verbose',
+  '-i',
+  '--include',
+  '-f',
+  '--fail',
+  '-#',
+  '--progress-bar',
+  '-g',
+  '--globoff',
+  '-4',
+  '-6',
+  '--ipv4',
+  '--ipv6',
+  '--compressed',
+  '--no-buffer',
+  '-N',
+  '--raw',
+  '--path-as-is',
+  '--no-keepalive',
+  '--http1.0',
+  '--http1.1',
+  '--http2',
+  '--http2-prior-knowledge',
+  '--tlsv1.2',
+  '--tlsv1.3',
+  '--tcp-nodelay',
+  '-q',
+  '--disable',
+  '-j',
+  '--junk-session-cookies',
+  '--no-progress-meter',
+  '--fail-with-body',
+  '--retry-all-errors',
+  '--ssl-no-revoke',
+  '--location-trusted',
+  '--no-clobber',
 ])
 
 /**
@@ -176,7 +277,11 @@ export function tokenizeCommand(input: string): string[] {
     const ch = s[i]
     if (quote === "'") {
       if (ch === "'") {
-        if (s[i + 1] === "'") { cur += "'"; i++; continue }
+        if (s[i + 1] === "'") {
+          cur += "'"
+          i++
+          continue
+        }
         quote = null
         continue
       }
@@ -186,21 +291,53 @@ export function tokenizeCommand(input: string): string[] {
     if (quote === '"') {
       if (ch === '\\' && i + 1 < s.length) {
         const nxt = s[i + 1]
-        if (nxt === '"' || nxt === '\\' || nxt === '$' || nxt === '`') { cur += nxt; i++; continue }
-        if (nxt === 'n') { cur += '\n'; i++; continue }
-        if (nxt === 't') { cur += '\t'; i++; continue }
-        if (nxt === 'r') { cur += '\r'; i++; continue }
+        if (nxt === '"' || nxt === '\\' || nxt === '$' || nxt === '`') {
+          cur += nxt
+          i++
+          continue
+        }
+        if (nxt === 'n') {
+          cur += '\n'
+          i++
+          continue
+        }
+        if (nxt === 't') {
+          cur += '\t'
+          i++
+          continue
+        }
+        if (nxt === 'r') {
+          cur += '\r'
+          i++
+          continue
+        }
         cur += ch
         continue
       }
-      if (ch === '"') { quote = null; continue }
+      if (ch === '"') {
+        quote = null
+        continue
+      }
       cur += ch
       continue
     }
-    if (ch === '"' || ch === "'") { quote = ch; started = true; continue }
-    if (ch === '\\' && i + 1 < s.length) { cur += s[i + 1]; i++; started = true; continue }
+    if (ch === '"' || ch === "'") {
+      quote = ch
+      started = true
+      continue
+    }
+    if (ch === '\\' && i + 1 < s.length) {
+      cur += s[i + 1]
+      i++
+      started = true
+      continue
+    }
     if (ch === ' ' || ch === '\t' || ch === '\n' || ch === '\r') {
-      if (started || cur) { out.push(cur); cur = ''; started = false }
+      if (started || cur) {
+        out.push(cur)
+        cur = ''
+        started = false
+      }
       continue
     }
     cur += ch
@@ -264,17 +401,29 @@ export function parseCurlCommand(input: string): ParseResult {
 
   for (; i < tokens.length; i++) {
     const t = tokens[i]
-    if (t !== '-' && !t.startsWith('-')) { positionals.push(t); continue }
+    if (t !== '-' && !t.startsWith('-')) {
+      positionals.push(t)
+      continue
+    }
 
     const value = (): string => {
       const v = tokens[i + 1]
-      if (v === undefined) { warnings.push({ code: 'UNKNOWN_FLAG', detail: t }); return '' }
+      if (v === undefined) {
+        warnings.push({ code: 'UNKNOWN_FLAG', detail: t })
+        return ''
+      }
       i++
       return v
     }
 
-    if (t === '-X' || t === '--request') { method = value().toUpperCase(); continue }
-    if (t === '-H' || t === '--header') { headers.push(parseHeader(warnings, value())); continue }
+    if (t === '-X' || t === '--request') {
+      method = value().toUpperCase()
+      continue
+    }
+    if (t === '-H' || t === '--header') {
+      headers.push(parseHeader(warnings, value()))
+      continue
+    }
     if (t === '-F' || t === '--form') {
       const f = value()
       multipart = true
@@ -283,7 +432,13 @@ export function parseCurlCommand(input: string): ParseResult {
       fields.push(at < 0 ? [f, ''] : [f.slice(0, at), f.slice(at + 1)])
       continue
     }
-    if (t === '-d' || t === '--data' || t === '--data-raw' || t === '--data-binary' || t === '--data-ascii') {
+    if (
+      t === '-d' ||
+      t === '--data' ||
+      t === '--data-raw' ||
+      t === '--data-binary' ||
+      t === '--data-ascii'
+    ) {
       const v = value()
       if (v.startsWith('@')) warnings.push({ code: 'FILE_BODY', detail: v })
       else data.push({ value: v, encode: false })
@@ -295,20 +450,53 @@ export function parseCurlCommand(input: string): ParseResult {
       data.push({ value: v, encode: true })
       continue
     }
-    if (t === '-u' || t === '--user') { headers.push(['Authorization', `Basic ${utf8ToBase64(value())}`]); continue }
-    if (t === '-b' || t === '--cookie') { headers.push(['Cookie', value()]); continue }
-    if (t === '-A' || t === '--user-agent') { headers.push(['User-Agent', value()]); continue }
-    if (t === '-e' || t === '--referer') { headers.push(['Referer', value()]); continue }
-    if (t === '-x' || t === '--proxy') { proxy = value(); continue }
-    if (t === '--url') { positionals.push(value()); continue }
+    if (t === '-u' || t === '--user') {
+      headers.push(['Authorization', `Basic ${utf8ToBase64(value())}`])
+      continue
+    }
+    if (t === '-b' || t === '--cookie') {
+      headers.push(['Cookie', value()])
+      continue
+    }
+    if (t === '-A' || t === '--user-agent') {
+      headers.push(['User-Agent', value()])
+      continue
+    }
+    if (t === '-e' || t === '--referer') {
+      headers.push(['Referer', value()])
+      continue
+    }
+    if (t === '-x' || t === '--proxy') {
+      proxy = value()
+      continue
+    }
+    if (t === '--url') {
+      positionals.push(value())
+      continue
+    }
 
-    if (t === '-k' || t === '--insecure') { verifyTls = false; continue }
-    if (t === '-L' || t === '--location' || t === '--location-trusted') { followRedirects = true; continue }
-    if (t === '-G' || t === '--get') { asQuery = true; continue }
-    if (t === '-I' || t === '--head') { headMode = true; continue }
+    if (t === '-k' || t === '--insecure') {
+      verifyTls = false
+      continue
+    }
+    if (t === '-L' || t === '--location' || t === '--location-trusted') {
+      followRedirects = true
+      continue
+    }
+    if (t === '-G' || t === '--get') {
+      asQuery = true
+      continue
+    }
+    if (t === '-I' || t === '--head') {
+      headMode = true
+      continue
+    }
 
     if (IGNORED_BARE_FLAGS.has(t)) continue
-    if (IGNORED_VALUE_FLAGS.has(t)) { i++; continue }
+    if (IGNORED_VALUE_FLAGS.has(t)) {
+      i++
+      continue
+    }
     if (!OWN_VALUE_FLAGS.has(t)) warnings.push({ code: 'UNKNOWN_FLAG', detail: t })
   }
 
@@ -316,18 +504,25 @@ export function parseCurlCommand(input: string): ParseResult {
   const url = positionals[0]
   if (positionals.length > 1) warnings.push({ code: 'MULTI_URL', detail: positionals[1] })
 
-  const encoded = data.map((d) => (d.encode ? encodeDataUrlencoded(d.value) : d.value)).filter(Boolean)
+  const encoded = data
+    .map((d) => (d.encode ? encodeDataUrlencoded(d.value) : d.value))
+    .filter(Boolean)
   let body: RequestBody = { kind: 'none' }
   let finalUrl = url
 
   if (asQuery && encoded.length) {
-    finalUrl = appendQuery(url, encoded
-      .flatMap((part) => part.split('&'))
-      .map((pair) => {
-        const at = pair.indexOf('=')
-        return at < 0 ? encodeURIComponent(pair) : `${encodeURIComponent(pair.slice(0, at))}=${encodeURIComponent(pair.slice(at + 1))}`
-      })
-      .join('&'))
+    finalUrl = appendQuery(
+      url,
+      encoded
+        .flatMap((part) => part.split('&'))
+        .map((pair) => {
+          const at = pair.indexOf('=')
+          return at < 0
+            ? encodeURIComponent(pair)
+            : `${encodeURIComponent(pair.slice(0, at))}=${encodeURIComponent(pair.slice(at + 1))}`
+        })
+        .join('&'),
+    )
   } else if (fields.length) {
     body = { kind: 'fields', fields, multipart }
   } else if (encoded.length) {
@@ -337,8 +532,10 @@ export function parseCurlCommand(input: string): ParseResult {
   const inferred = body.kind !== 'none'
   if (!method) {
     if (headMode) method = 'HEAD'
-    else if (inferred && !asQuery) { method = 'POST'; warnings.push({ code: 'METHOD_INFERRED' }) }
-    else method = 'GET'
+    else if (inferred && !asQuery) {
+      method = 'POST'
+      warnings.push({ code: 'METHOD_INFERRED' })
+    } else method = 'GET'
   }
 
   return {
@@ -350,7 +547,16 @@ export function parseCurlCommand(input: string): ParseResult {
 
 /* ================= 多语言代码生成 ================= */
 
-export const CODE_TARGETS = ['curl', 'fetch', 'axios', 'python', 'httpx', 'go', 'java', 'php'] as const
+export const CODE_TARGETS = [
+  'curl',
+  'fetch',
+  'axios',
+  'python',
+  'httpx',
+  'go',
+  'java',
+  'php',
+] as const
 export type CodeTarget = (typeof CODE_TARGETS)[number]
 
 /** OkHttp 要求这些方法的 body 不能为 null，生成代码时得给个空正文 */
@@ -376,7 +582,12 @@ function jsHeaders(headers: [string, string][], indent: number): string {
   return JSON.stringify(obj, null, 2).replace(/\n/g, `\n${pad}`)
 }
 
-function headerLines(headers: [string, string][], indent: string, quote: (v: string) => string, colons: boolean): string[] {
+function headerLines(
+  headers: [string, string][],
+  indent: string,
+  quote: (v: string) => string,
+  colons: boolean,
+): string[] {
   return headers.map(([k, v]) => `${indent}${quote(k)}${colons ? ': ' : ' => '}${quote(v)},`)
 }
 
@@ -384,14 +595,22 @@ export function generateCode(target: CodeTarget, doc: RequestDoc): string {
   const body = materializeBody(doc)
   const view: RequestDoc = { ...doc, headers: effectiveHeaders(doc) }
   switch (target) {
-    case 'curl': return genCurl(view, body.text)
-    case 'fetch': return genFetch(view, body.text)
-    case 'axios': return genAxios(view, body.text)
-    case 'python': return genPython(view, body)
-    case 'httpx': return genHttpx(view, body)
-    case 'go': return genGo(view, body.text)
-    case 'java': return genJava(view, body)
-    case 'php': return genPhp(view, body.text)
+    case 'curl':
+      return genCurl(view, body.text)
+    case 'fetch':
+      return genFetch(view, body.text)
+    case 'axios':
+      return genAxios(view, body.text)
+    case 'python':
+      return genPython(view, body)
+    case 'httpx':
+      return genHttpx(view, body)
+    case 'go':
+      return genGo(view, body.text)
+    case 'java':
+      return genJava(view, body)
+    case 'php':
+      return genPhp(view, body.text)
   }
 }
 
@@ -416,7 +635,12 @@ function genFetch(doc: RequestDoc, bodyText: string | null): string {
 function genAxios(doc: RequestDoc, bodyText: string | null): string {
   const lines: string[] = ['import axios from "axios"']
   if (!doc.verifyTls) lines.push('import https from "node:https"')
-  lines.push('', 'const res = await axios({', `  method: ${lit(doc.method.toLowerCase())},`, `  url: ${lit(doc.url)},`)
+  lines.push(
+    '',
+    'const res = await axios({',
+    `  method: ${lit(doc.method.toLowerCase())},`,
+    `  url: ${lit(doc.url)},`,
+  )
   if (doc.headers.length) lines.push(`  headers: ${jsHeaders(doc.headers, 2)},`)
   if (bodyText) lines.push(`  data: ${lit(bodyText)},`)
   if (!doc.verifyTls) lines.push('  httpsAgent: new https.Agent({ rejectUnauthorized: false }),')
@@ -425,35 +649,49 @@ function genAxios(doc: RequestDoc, bodyText: string | null): string {
 }
 
 /** requests / httpx 的公共形状：字段式正文落成 dict，文本正文落成字符串 */
-function pyBodyLiteral(doc: RequestDoc, body: { text: string | null; contentType: string | null }): string | null {
+function pyBodyLiteral(
+  doc: RequestDoc,
+  body: { text: string | null; contentType: string | null },
+): string | null {
   if (doc.body.kind === 'fields' && !doc.body.multipart) {
     return `{${doc.body.fields.map(([k, v]) => `${lit(k)}: ${lit(v)}`).join(', ')}}`
   }
   return body.text === null ? null : lit(body.text)
 }
 
-function genPython(doc: RequestDoc, body: { text: string | null; contentType: string | null }): string {
+function genPython(
+  doc: RequestDoc,
+  body: { text: string | null; contentType: string | null },
+): string {
   const data = pyBodyLiteral(doc, body)
   const lines = ['import requests', '', `url = ${lit(doc.url)}`]
-  if (doc.headers.length) lines.push('headers = {', ...headerLines(doc.headers, '    ', lit, true), '}')
+  if (doc.headers.length)
+    lines.push('headers = {', ...headerLines(doc.headers, '    ', lit, true), '}')
   if (data) lines.push(`data = ${data}`)
   const args = ['url']
   if (doc.headers.length) args.push('headers=headers')
   if (data) args.push('data=data')
-  if (doc.proxy) args.push(`proxies={${lit('http')}: ${lit(doc.proxy)}, ${lit('https')}: ${lit(doc.proxy)}}`)
+  if (doc.proxy)
+    args.push(`proxies={${lit('http')}: ${lit(doc.proxy)}, ${lit('https')}: ${lit(doc.proxy)}}`)
   if (!doc.verifyTls) args.push('verify=False')
   const verb = doc.method.toLowerCase()
-  lines.push(PY_VERBS.has(verb)
-    ? `r = requests.${verb}(${args.join(', ')})`
-    : `r = requests.request(${lit(doc.method)}, ${args.join(', ')})`)
+  lines.push(
+    PY_VERBS.has(verb)
+      ? `r = requests.${verb}(${args.join(', ')})`
+      : `r = requests.request(${lit(doc.method)}, ${args.join(', ')})`,
+  )
   lines.push('print(r.status_code, r.text)')
   return lines.join('\n')
 }
 
-function genHttpx(doc: RequestDoc, body: { text: string | null; contentType: string | null }): string {
+function genHttpx(
+  doc: RequestDoc,
+  body: { text: string | null; contentType: string | null },
+): string {
   const data = pyBodyLiteral(doc, body)
   const lines = ['import httpx', '', `url = ${lit(doc.url)}`]
-  if (doc.headers.length) lines.push('headers = {', ...headerLines(doc.headers, '    ', lit, true), '}')
+  if (doc.headers.length)
+    lines.push('headers = {', ...headerLines(doc.headers, '    ', lit, true), '}')
   if (data) lines.push(`data = ${data}`)
   const args = ['url']
   if (doc.headers.length) args.push('headers=headers')
@@ -461,30 +699,40 @@ function genHttpx(doc: RequestDoc, body: { text: string | null; contentType: str
   if (doc.proxy) args.push(`proxy=${lit(doc.proxy)}`)
   if (!doc.verifyTls) args.push('verify=False')
   const verb = doc.method.toLowerCase()
-  lines.push(PY_VERBS.has(verb)
-    ? `r = httpx.${verb}(${args.join(', ')})`
-    : `r = httpx.request(${lit(doc.method)}, ${args.join(', ')})`)
+  lines.push(
+    PY_VERBS.has(verb)
+      ? `r = httpx.${verb}(${args.join(', ')})`
+      : `r = httpx.request(${lit(doc.method)}, ${args.join(', ')})`,
+  )
   lines.push('print(r.status_code, r.text)')
   return lines.join('\n')
 }
 
 function genGo(doc: RequestDoc, bodyText: string | null): string {
-  const imports = ['"crypto/tls"', '"fmt"', '"io"', '"net/http"', '"net/url"', '"strings"'].filter((p) =>
-    p === '"crypto/tls"' ? !doc.verifyTls
-      : p === '"net/url"' ? !!doc.proxy
-        : p === '"strings"' ? !!bodyText
-          : true)
+  const imports = ['"crypto/tls"', '"fmt"', '"io"', '"net/http"', '"net/url"', '"strings"'].filter(
+    (p) =>
+      p === '"crypto/tls"'
+        ? !doc.verifyTls
+        : p === '"net/url"'
+          ? !!doc.proxy
+          : p === '"strings"'
+            ? !!bodyText
+            : true,
+  )
 
   const lines: string[] = ['package main', '', 'import (']
   for (const imp of imports) lines.push(`\t${imp}`)
   lines.push(')', '', 'func main() {')
   if (bodyText) lines.push(`\tpayload := strings.NewReader(${lit(bodyText)})`)
-  lines.push(`\treq, err := http.NewRequest(${lit(doc.method)}, ${lit(doc.url)}, ${bodyText ? 'payload' : 'nil'})`)
+  lines.push(
+    `\treq, err := http.NewRequest(${lit(doc.method)}, ${lit(doc.url)}, ${bodyText ? 'payload' : 'nil'})`,
+  )
   lines.push('\tif err != nil {', '\t\tpanic(err)', '\t}')
   for (const [k, v] of doc.headers) lines.push(`\treq.Header.Add(${lit(k)}, ${lit(v)})`)
   if (!doc.verifyTls || doc.proxy) {
     lines.push('\ttransport := &http.Transport{}')
-    if (!doc.verifyTls) lines.push('\ttransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}')
+    if (!doc.verifyTls)
+      lines.push('\ttransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}')
     if (doc.proxy) {
       lines.push(`\tif proxyURL, err := url.Parse(${lit(doc.proxy)}); err == nil {`)
       lines.push('\t\ttransport.Proxy = http.ProxyURL(proxyURL)')
@@ -495,11 +743,19 @@ function genGo(doc: RequestDoc, bodyText: string | null): string {
     lines.push('\tclient := &http.Client{}')
   }
   lines.push('\tres, err := client.Do(req)', '\tif err != nil {', '\t\tpanic(err)', '\t}')
-  lines.push('\tdefer res.Body.Close()', '\tb, _ := io.ReadAll(res.Body)', '\tfmt.Println(res.Status, string(b))', '}')
+  lines.push(
+    '\tdefer res.Body.Close()',
+    '\tb, _ := io.ReadAll(res.Body)',
+    '\tfmt.Println(res.Status, string(b))',
+    '}',
+  )
   return lines.join('\n')
 }
 
-function genJava(doc: RequestDoc, body: { text: string | null; contentType: string | null }): string {
+function genJava(
+  doc: RequestDoc,
+  body: { text: string | null; contentType: string | null },
+): string {
   const lines = [
     'import okhttp3.*;',
     '',
@@ -516,15 +772,30 @@ function genJava(doc: RequestDoc, body: { text: string | null; contentType: stri
   } else {
     lines.push('    RequestBody body = null;')
   }
-  lines.push('    Request request = new Request.Builder()', `        .url(${lit(doc.url)})`, `        .method(${lit(doc.method)}, body)`)
+  lines.push(
+    '    Request request = new Request.Builder()',
+    `        .url(${lit(doc.url)})`,
+    `        .method(${lit(doc.method)}, body)`,
+  )
   for (const [k, v] of doc.headers) lines.push(`        .addHeader(${lit(k)}, ${lit(v)})`)
   lines.push('        .build();')
-  lines.push('    try (Response response = client.newCall(request).execute()) {', '      System.out.println(response.code());', '      System.out.println(response.body().string());', '    }', '  }', '}')
+  lines.push(
+    '    try (Response response = client.newCall(request).execute()) {',
+    '      System.out.println(response.code());',
+    '      System.out.println(response.body().string());',
+    '    }',
+    '  }',
+    '}',
+  )
   return lines.join('\n')
 }
 
 function genPhp(doc: RequestDoc, bodyText: string | null): string {
-  const lines = ['<?php', '$ch = curl_init();', `curl_setopt($ch, CURLOPT_URL, ${phpLit(doc.url)});`]
+  const lines = [
+    '<?php',
+    '$ch = curl_init();',
+    `curl_setopt($ch, CURLOPT_URL, ${phpLit(doc.url)});`,
+  ]
   lines.push(`curl_setopt($ch, CURLOPT_CUSTOMREQUEST, ${phpLit(doc.method)});`)
   lines.push('curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);')
   if (doc.followRedirects) lines.push('curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);')
@@ -539,7 +810,12 @@ function genPhp(doc: RequestDoc, bodyText: string | null): string {
     lines.push(']);')
   }
   if (bodyText) lines.push(`curl_setopt($ch, CURLOPT_POSTFIELDS, ${phpLit(bodyText)});`)
-  lines.push('$response = curl_exec($ch);', 'echo curl_getinfo($ch, CURLINFO_HTTP_CODE) . "\\n";', 'echo $response;', 'curl_close($ch);')
+  lines.push(
+    '$response = curl_exec($ch);',
+    'echo curl_getinfo($ch, CURLINFO_HTTP_CODE) . "\\n";',
+    'echo $response;',
+    'curl_close($ch);',
+  )
   return lines.join('\n')
 }
 
@@ -564,7 +840,9 @@ export function buildWireRequest(doc: RequestDoc): string {
     const u = new URL(doc.url)
     const p = `${u.pathname}${u.search}`
     if (p) path = p
-  } catch { /* 非法 URL 原样展示，让用户自己看出问题 */ }
+  } catch {
+    /* 非法 URL 原样展示，让用户自己看出问题 */
+  }
   const lines = [`${doc.method.toUpperCase()} ${path} HTTP/1.1`]
   for (const [k, v] of doc.headers) lines.push(`${k}: ${v}`)
   const { text } = materializeBody(doc)
@@ -615,7 +893,8 @@ function normalizeHeaders(input: unknown): [string, string][] | null {
   if (Array.isArray(input)) {
     const out: [string, string][] = []
     for (const item of input) {
-      if (Array.isArray(item) && typeof item[0] === 'string' && typeof item[1] === 'string') out.push([item[0], item[1]])
+      if (Array.isArray(item) && typeof item[0] === 'string' && typeof item[1] === 'string')
+        out.push([item[0], item[1]])
       else if (item && typeof item === 'object') {
         const o = item as Record<string, unknown>
         if (typeof o.name === 'string' && typeof o.value === 'string') out.push([o.name, o.value])
@@ -699,7 +978,8 @@ export function parseRequestFile(text: string): ImportResult {
   } catch {
     return { ok: false, errorCode: 'BAD_JSON', requests: empty }
   }
-  if (!parsed || typeof parsed !== 'object') return { ok: false, errorCode: 'BAD_SHAPE', requests: empty }
+  if (!parsed || typeof parsed !== 'object')
+    return { ok: false, errorCode: 'BAD_SHAPE', requests: empty }
 
   const o = parsed as Record<string, unknown>
   const version = typeof o.version === 'number' ? o.version : undefined
@@ -711,8 +991,10 @@ export function parseRequestFile(text: string): ImportResult {
         ? [parsed]
         : null
   if (!list) return { ok: false, errorCode: 'BAD_SHAPE', version, requests: empty }
-  if (o.kind !== undefined && o.kind !== REQUEST_FILE_KIND) return { ok: false, errorCode: 'BAD_SHAPE', version, requests: empty }
-  if (version !== undefined && version !== REQUEST_FILE_VERSION) return { ok: false, errorCode: 'BAD_VERSION', version, requests: empty }
+  if (o.kind !== undefined && o.kind !== REQUEST_FILE_KIND)
+    return { ok: false, errorCode: 'BAD_SHAPE', version, requests: empty }
+  if (version !== undefined && version !== REQUEST_FILE_VERSION)
+    return { ok: false, errorCode: 'BAD_VERSION', version, requests: empty }
 
   const requests: RequestEntry[] = []
   for (const item of list) {
@@ -724,14 +1006,20 @@ export function parseRequestFile(text: string): ImportResult {
 }
 
 /** 导入时按「名称 + 方法 + URL」去重，不静默覆盖已有收藏 */
-export function mergeRequests(existing: RequestEntry[], incoming: RequestEntry[]): { merged: RequestEntry[]; added: number; skipped: number } {
+export function mergeRequests(
+  existing: RequestEntry[],
+  incoming: RequestEntry[],
+): { merged: RequestEntry[]; added: number; skipped: number } {
   const key = (e: RequestEntry): string => `${e.name}\u0000${e.doc.method}\u0000${e.doc.url}`
   const seen = new Set(existing.map(key))
   const fresh: RequestEntry[] = []
   let skipped = 0
   for (const e of incoming) {
     const k = key(e)
-    if (seen.has(k)) { skipped++; continue }
+    if (seen.has(k)) {
+      skipped++
+      continue
+    }
     seen.add(k)
     fresh.push(e)
   }

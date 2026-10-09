@@ -1,5 +1,16 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { Panel, Btn, TA, Input, ErrorNote, Stat, CopyBtn, KV, ToolGuide, Collapse } from '../components/ui'
+import {
+  Panel,
+  Btn,
+  TA,
+  Input,
+  ErrorNote,
+  Stat,
+  CopyBtn,
+  KV,
+  ToolGuide,
+  Collapse,
+} from '../components/ui'
 import { useLocalized } from '../lib/i18n'
 import { agentRulesL } from '../lib/locales/agentrules'
 import { generateRules } from '../lib/toolkit/agentrules'
@@ -84,7 +95,10 @@ export function AgentRulesTool(): React.ReactElement {
     void runScan(dir, depth)
   }
 
-  const output = useMemo(() => (facts ? generateRules(facts, target, l.rules) : ''), [facts, target, l])
+  const output = useMemo(
+    () => (facts ? generateRules(facts, target, l.rules) : ''),
+    [facts, target, l],
+  )
 
   const save = async (): Promise<void> => {
     if (!api || !facts || !output) return
@@ -109,7 +123,9 @@ export function AgentRulesTool(): React.ReactElement {
       <Panel title={l.rootLabel}>
         <div className="grid grid-cols-1 min-[1500px]:grid-cols-[minmax(0,1fr)_auto_auto_auto] gap-2 items-end">
           <Input value={root} onChange={setRoot} placeholder={l.rootPlaceholder} />
-          <Btn variant="ghost" onClick={pick} disabled={!api || busy}>{l.pick}</Btn>
+          <Btn variant="ghost" onClick={pick} disabled={!api || busy}>
+            {l.pick}
+          </Btn>
           <div>
             <div className="text-[11px] text-muted mb-1">{l.depthLabel}</div>
             <div className="flex gap-1">
@@ -141,7 +157,9 @@ export function AgentRulesTool(): React.ReactElement {
               right={
                 <div className="flex items-center gap-1.5">
                   <CopyBtn text={output} />
-                  <Btn variant="ghost" onClick={() => void save()} disabled={!api || busy}>{l.save}</Btn>
+                  <Btn variant="ghost" onClick={() => void save()} disabled={!api || busy}>
+                    {l.save}
+                  </Btn>
                 </div>
               }
             >
@@ -149,7 +167,10 @@ export function AgentRulesTool(): React.ReactElement {
                 {RULES_TARGETS.map((t) => (
                   <button
                     key={t}
-                    onClick={() => { setTarget(t); setSaveMsg('') }}
+                    onClick={() => {
+                      setTarget(t)
+                      setSaveMsg('')
+                    }}
                     className={`px-2.5 py-1 text-[11.5px] border font-mono ${target === t ? 'border-phosphor/50 text-phosphor bg-phosphor/5' : 'border-line-soft text-muted hover:text-bright'}`}
                   >
                     {l.targets[t]}
@@ -165,8 +186,14 @@ export function AgentRulesTool(): React.ReactElement {
 
           <div className="space-y-3">
             <Panel title={l.factsTitle}>
-              <KV k={l.languagesLabel} v={facts.languages.length ? facts.languages.join('、') : l.noneLabel} />
-              <KV k={l.frameworksLabel} v={facts.frameworks.length ? facts.frameworks.join('、') : l.noneLabel} />
+              <KV
+                k={l.languagesLabel}
+                v={facts.languages.length ? facts.languages.join('、') : l.noneLabel}
+              />
+              <KV
+                k={l.frameworksLabel}
+                v={facts.frameworks.length ? facts.frameworks.join('、') : l.noneLabel}
+              />
               <KV k={l.pkgLabel} v={facts.packageManager ?? l.noneLabel} />
               <div className="grid grid-cols-2 gap-2 mt-2">
                 <Stat label={l.filesLabel} value={String(facts.stats.files)} />
@@ -176,7 +203,9 @@ export function AgentRulesTool(): React.ReactElement {
             </Panel>
 
             <Panel title={l.commandsTitle}>
-              {facts.commands.length === 0 && <p className="text-[12px] text-muted">{l.commandsEmpty}</p>}
+              {facts.commands.length === 0 && (
+                <p className="text-[12px] text-muted">{l.commandsEmpty}</p>
+              )}
               {facts.commands.length > 0 && (
                 <div className="overflow-x-auto max-h-[320px] overflow-y-auto">
                   <table className="w-full text-[12px]">
@@ -190,9 +219,15 @@ export function AgentRulesTool(): React.ReactElement {
                     <tbody>
                       {facts.commands.map((c) => (
                         <tr key={`${c.command}-${c.source}`} className="border-t border-line-soft">
-                          <td className="py-1 pr-3 text-muted whitespace-nowrap">{l.commandKinds[c.kind] ?? c.kind}</td>
-                          <td className="py-1 pr-3 text-phosphor font-mono whitespace-nowrap">{c.command}</td>
-                          <td className="py-1 text-muted/80 font-mono whitespace-nowrap">{c.source}</td>
+                          <td className="py-1 pr-3 text-muted whitespace-nowrap">
+                            {l.commandKinds[c.kind] ?? c.kind}
+                          </td>
+                          <td className="py-1 pr-3 text-phosphor font-mono whitespace-nowrap">
+                            {c.command}
+                          </td>
+                          <td className="py-1 text-muted/80 font-mono whitespace-nowrap">
+                            {c.source}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -202,8 +237,12 @@ export function AgentRulesTool(): React.ReactElement {
             </Panel>
 
             <Collapse title={l.treeTitle} hint={l.treeHint}>
-              <pre className="codeblock text-[11.5px] text-bright overflow-auto max-h-[420px] leading-relaxed">{facts.tree}</pre>
-              {facts.stats.truncated && <p className="text-[11px] text-amber mt-2">{l.truncatedNote}</p>}
+              <pre className="codeblock text-[11.5px] text-bright overflow-auto max-h-[420px] leading-relaxed">
+                {facts.tree}
+              </pre>
+              {facts.stats.truncated && (
+                <p className="text-[11px] text-amber mt-2">{l.truncatedNote}</p>
+              )}
             </Collapse>
 
             {facts.signals.length > 0 && (

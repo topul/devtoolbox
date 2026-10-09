@@ -19,7 +19,9 @@ export function useSidebarCollapsed() {
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, collapsed ? '1' : '0')
-    } catch { /* 隐私模式忽略 */ }
+    } catch {
+      /* 隐私模式忽略 */
+    }
   }, [collapsed])
 
   const toggle = useCallback(() => setCollapsed((c) => !c), [])
@@ -50,14 +52,18 @@ export function useOpenSections() {
         const parsed: unknown = JSON.parse(raw)
         if (Array.isArray(parsed)) return parsed.filter((x): x is string => typeof x === 'string')
       }
-    } catch { /* 解析失败就回默认 */ }
+    } catch {
+      /* 解析失败就回默认 */
+    }
     return DEFAULT_OPEN
   })
 
   useEffect(() => {
     try {
       localStorage.setItem(SECTIONS_KEY, JSON.stringify(open))
-    } catch { /* 隐私模式忽略 */ }
+    } catch {
+      /* 隐私模式忽略 */
+    }
   }, [open])
 
   const isOpen = useCallback((id: string) => open.includes(id), [open])

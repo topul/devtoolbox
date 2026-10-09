@@ -178,7 +178,7 @@ export function parseHar(input: unknown): HarSummary {
     creator: str(creator.creator?.name),
     pageCount: arr((log as { pages?: unknown }).pages).length,
     entries,
-    hasBody: entries.some(e => e.body !== null && e.body !== ''),
+    hasBody: entries.some((e) => e.body !== null && e.body !== ''),
   }
 }
 
@@ -199,8 +199,12 @@ function normalizeEntry(raw: unknown, index: number): HarEntry {
 
   // 总耗时：优先用 entry.time；没有就用各阶段之和
   const phases =
-    t(timings.blocked) + t(timings.dns) + t(timings.connect) +
-    t(timings.send) + t(timings.wait) + t(timings.receive)
+    t(timings.blocked) +
+    t(timings.dns) +
+    t(timings.connect) +
+    t(timings.send) +
+    t(timings.wait) +
+    t(timings.receive)
   const time = num(e.time) > 0 ? num(e.time) : phases
 
   const error = str(e._error as string)
@@ -220,7 +224,8 @@ function normalizeEntry(raw: unknown, index: number): HarEntry {
     priority: str(e._priority as string),
     bodySize: num(res.bodySize),
     // _transferSize 才是「含协议开销的真实传输量」，没有则退回 bodySize
-    transferSize: typeof res._transferSize === 'number' ? num(res._transferSize) : num(res.bodySize),
+    transferSize:
+      typeof res._transferSize === 'number' ? num(res._transferSize) : num(res.bodySize),
     serverIP: str(e.serverIPAddress),
     connection: str(e.connection),
     headerCount: arr(req.headers).length,
@@ -256,7 +261,7 @@ function normalizeEntry(raw: unknown, index: number): HarEntry {
 export function buildWaterfall(entries: readonly HarEntry[]): WaterfallRow[] {
   const sorted = [...entries].sort((a, b) => a.startedMs - b.startedMs)
   const base = sorted.length ? sorted[0].startedMs : 0
-  return sorted.map(e => ({
+  return sorted.map((e) => ({
     index: e.index,
     offset: Math.max(0, e.startedMs - base),
     method: e.method,
@@ -325,7 +330,7 @@ export function extractEntryDetail(
   const req = (e.request ?? {}) as Record<string, unknown>
   const res = (e.response ?? {}) as Record<string, unknown>
   const nv = (list: unknown): NameValue[] =>
-    arr(list).map(x => {
+    arr(list).map((x) => {
       const o = (x ?? {}) as Record<string, unknown>
       return { name: str(o.name), value: str(o.value) }
     })

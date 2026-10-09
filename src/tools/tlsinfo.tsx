@@ -1,5 +1,14 @@
 import React, { useState } from 'react'
-import { Btn, Input, ErrorNote, Panel, KV, ResultPanel, useAsyncAction, ToolGuide } from '../components/ui'
+import {
+  Btn,
+  Input,
+  ErrorNote,
+  Panel,
+  KV,
+  ResultPanel,
+  useAsyncAction,
+  ToolGuide,
+} from '../components/ui'
 import { useLocalized } from '../lib/i18n'
 import { tlsInfoL } from '../lib/locales/tlsinfo'
 import type { TlsProbe } from '../lib/tls-types'
@@ -51,8 +60,8 @@ export function TlsInfoTool() {
       {result && !result.ok && (
         <ErrorNote
           msg={
-            l.errors[result.errorCode as keyof typeof l.errors]
-            ?? `${result.errorCode ?? ''} ${result.errorDetail ?? ''}`.trim()
+            l.errors[result.errorCode as keyof typeof l.errors] ??
+            `${result.errorCode ?? ''} ${result.errorDetail ?? ''}`.trim()
           }
         />
       )}
@@ -70,26 +79,36 @@ export function TlsInfoTool() {
               <KV
                 k={l.protocol}
                 v={
-                  <span className={WEAK_PROTOCOLS.has(result.protocol) ? 'text-amber' : 'text-phosphor'}>
+                  <span
+                    className={WEAK_PROTOCOLS.has(result.protocol) ? 'text-amber' : 'text-phosphor'}
+                  >
                     {result.protocol || '—'}
                     {WEAK_PROTOCOLS.has(result.protocol) && ` · ${l.weakProtocol}`}
                   </span>
                 }
               />
-              <KV k={l.cipher} v={<span className="text-phosphor break-all">{result.cipher || '—'}</span>} />
+              <KV
+                k={l.cipher}
+                v={<span className="text-phosphor break-all">{result.cipher || '—'}</span>}
+              />
               {result.cipherSuiteName && <KV k={l.cipherSuite} v={result.cipherSuiteName} />}
               <KV k={l.alpn} v={result.alpn || '—'} />
               <KV k={l.sni} v={result.sni || (result.isIpHost ? '—' : result.host)} />
               <KV
                 k={l.authorized}
                 v={
-                  result.authorized
-                    ? <span className="text-phosphor">{l.trusted}</span>
-                    : <span className="text-danger">{l.untrusted}</span>
+                  result.authorized ? (
+                    <span className="text-phosphor">{l.trusted}</span>
+                  ) : (
+                    <span className="text-danger">{l.untrusted}</span>
+                  )
                 }
               />
               {!result.authorized && result.authorizationError && (
-                <KV k={l.authError} v={<span className="text-danger break-all">{result.authorizationError}</span>} />
+                <KV
+                  k={l.authError}
+                  v={<span className="text-danger break-all">{result.authorizationError}</span>}
+                />
               )}
               <KV k={l.elapsed} v={`${result.elapsedMs} ms`} />
             </div>
@@ -131,7 +150,9 @@ function CertCard({ cert, role }: { cert: TlsProbe['certs'][number]; role: strin
     <Panel
       title={role}
       right={
-        <span className={`text-[11px] ${expired || today ? 'text-danger' : cert.daysLeft < 30 ? 'text-amber' : 'text-phosphor'}`}>
+        <span
+          className={`text-[11px] ${expired || today ? 'text-danger' : cert.daysLeft < 30 ? 'text-amber' : 'text-phosphor'}`}
+        >
           {daysText}
         </span>
       }
@@ -139,14 +160,22 @@ function CertCard({ cert, role }: { cert: TlsProbe['certs'][number]; role: strin
       <div className="space-y-0.5">
         <KV k={l.subject} v={<span className="text-bright break-all">{cert.subject}</span>} />
         <KV k={l.issuer} v={cert.issuer} />
-        <KV k={l.validity} v={`${cert.notBefore.slice(0, 10)} → ${cert.notAfter ? cert.notAfter.slice(0, 10) : '—'}`} />
+        <KV
+          k={l.validity}
+          v={`${cert.notBefore.slice(0, 10)} → ${cert.notAfter ? cert.notAfter.slice(0, 10) : '—'}`}
+        />
         {cert.domains.length > 0 && (
           <KV k={l.domains} v={<span className="break-all">{cert.domains.join(' · ')}</span>} />
         )}
         <KV k={cert.isCa ? l.isCa : l.notCa} v={cert.pubkeyAlg} />
         {cert.keyBits > 0 && <KV k={l.pubkey} v={l.keyBits.replace('{n}', String(cert.keyBits))} />}
         {cert.sigAlg && <KV k={l.sigAlg} v={cert.sigAlg} />}
-        {cert.serial && <KV k={l.serial} v={<span className="break-all font-mono text-[11px]">{cert.serial}</span>} />}
+        {cert.serial && (
+          <KV
+            k={l.serial}
+            v={<span className="break-all font-mono text-[11px]">{cert.serial}</span>}
+          />
+        )}
       </div>
       {cert.fingerprint256 && (
         <div className="mt-2">

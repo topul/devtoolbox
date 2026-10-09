@@ -64,7 +64,12 @@ export function buildWebSse(): SseAPI {
               emit({
                 id,
                 kind: 'frame',
-                frame: { event: frame.event, data: frame.data, ...(frame.id ? { id: frame.id } : {}), ...(frame.retry !== undefined ? { retry: frame.retry } : {}) },
+                frame: {
+                  event: frame.event,
+                  data: frame.data,
+                  ...(frame.id ? { id: frame.id } : {}),
+                  ...(frame.retry !== undefined ? { retry: frame.retry } : {}),
+                },
               })
             }
           }
@@ -72,7 +77,12 @@ export function buildWebSse(): SseAPI {
             emit({
               id,
               kind: 'frame',
-              frame: { event: frame.event, data: frame.data, ...(frame.id ? { id: frame.id } : {}), ...(frame.retry !== undefined ? { retry: frame.retry } : {}) },
+              frame: {
+                event: frame.event,
+                data: frame.data,
+                ...(frame.id ? { id: frame.id } : {}),
+                ...(frame.retry !== undefined ? { retry: frame.retry } : {}),
+              },
             })
           }
           conns.delete(id)

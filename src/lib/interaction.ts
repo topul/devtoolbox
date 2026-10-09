@@ -81,5 +81,8 @@ export function finishAsync(
   err?: unknown,
 ): void {
   setBusy(false)
-  if (setError) setError(err === undefined || err === null ? null : String(err instanceof Error ? err.message : err))
+  if (setError)
+    setError(
+      err === undefined || err === null ? null : String(err instanceof Error ? err.message : err),
+    )
 }

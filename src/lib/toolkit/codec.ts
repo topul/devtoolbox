@@ -104,14 +104,48 @@ export function htmlEntityEncodeNumeric(s: string): string {
 }
 
 const HTML_NAMED: Record<string, string> = {
-  amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: '\u00a0', copy: '\u00a9',
-  reg: '\u00ae', trade: '\u2122', hellip: '\u2026', mdash: '\u2014', ndash: '\u2013',
-  laquo: '\u00ab', raquo: '\u00bb', times: '\u00d7', divide: '\u00f7', plusmn: '\u00b1',
-  sect: '\u00a7', para: '\u00b6', deg: '\u00b0', euro: '\u20ac', pound: '\u00a3',
-  yen: '\u00a5', cent: '\u00a2', bull: '\u2022', middot: '\u00b7', dagger: '\u2020',
-  Dagger: '\u2021', larr: '\u2190', rarr: '\u2192', uarr: '\u2191', darr: '\u2193',
-  harr: '\u2194', check: '\u2713', cross: '\u2717', star: '\u2605', heart: '\u2665',
-  alpha: '\u03b1', beta: '\u03b2', gamma: '\u03b3', delta: '\u03b4', pi: '\u03c0',
+  amp: '&',
+  lt: '<',
+  gt: '>',
+  quot: '"',
+  apos: "'",
+  nbsp: '\u00a0',
+  copy: '\u00a9',
+  reg: '\u00ae',
+  trade: '\u2122',
+  hellip: '\u2026',
+  mdash: '\u2014',
+  ndash: '\u2013',
+  laquo: '\u00ab',
+  raquo: '\u00bb',
+  times: '\u00d7',
+  divide: '\u00f7',
+  plusmn: '\u00b1',
+  sect: '\u00a7',
+  para: '\u00b6',
+  deg: '\u00b0',
+  euro: '\u20ac',
+  pound: '\u00a3',
+  yen: '\u00a5',
+  cent: '\u00a2',
+  bull: '\u2022',
+  middot: '\u00b7',
+  dagger: '\u2020',
+  Dagger: '\u2021',
+  larr: '\u2190',
+  rarr: '\u2192',
+  uarr: '\u2191',
+  darr: '\u2193',
+  harr: '\u2194',
+  check: '\u2713',
+  cross: '\u2717',
+  star: '\u2605',
+  heart: '\u2665',
+  alpha: '\u03b1',
+  beta: '\u03b2',
+  gamma: '\u03b3',
+  delta: '\u03b4',
+  pi: '\u03c0',
 }
 
 /**
@@ -142,12 +176,48 @@ export function decodeHex(s: string): string {
 }
 
 const MORSE: Record<string, string> = {
-  A: '.-', B: '-...', C: '-.-.', D: '-..', E: '.', F: '..-.', G: '--.', H: '....',
-  I: '..', J: '.---', K: '-.-', L: '.-..', M: '--', N: '-.', O: '---', P: '.--.',
-  Q: '--.-', R: '.-.', S: '...', T: '-', U: '..-', V: '...-', W: '.--', X: '-..-',
-  Y: '-.--', Z: '--..', '0': '-----', '1': '.----', '2': '..---', '3': '...--',
-  '4': '....-', '5': '.....', '6': '-....', '7': '--...', '8': '---..', '9': '----.',
-  '.': '.-.-.-', ',': '--..--', '?': '..--..', '!': '-.-.--', '/': '-..-.', '@': '.--.-.',
+  A: '.-',
+  B: '-...',
+  C: '-.-.',
+  D: '-..',
+  E: '.',
+  F: '..-.',
+  G: '--.',
+  H: '....',
+  I: '..',
+  J: '.---',
+  K: '-.-',
+  L: '.-..',
+  M: '--',
+  N: '-.',
+  O: '---',
+  P: '.--.',
+  Q: '--.-',
+  R: '.-.',
+  S: '...',
+  T: '-',
+  U: '..-',
+  V: '...-',
+  W: '.--',
+  X: '-..-',
+  Y: '-.--',
+  Z: '--..',
+  '0': '-----',
+  '1': '.----',
+  '2': '..---',
+  '3': '...--',
+  '4': '....-',
+  '5': '.....',
+  '6': '-....',
+  '7': '--...',
+  '8': '---..',
+  '9': '----.',
+  '.': '.-.-.-',
+  ',': '--..--',
+  '?': '..--..',
+  '!': '-.-.--',
+  '/': '-..-.',
+  '@': '.--.-.',
 }
 
 const MORSE_REV: Record<string, string> = Object.fromEntries(
@@ -174,13 +244,19 @@ export function decodeMorse(s: string): string {
  * 任意进制互转。用 BigInt 实现，因此不会像 parseInt 那样在 2^53 之后丢精度
  * （Agent 经常要处理雪花 ID、64 位掩码这类大整数）。
  */
-export function radixConvert(input: string, from: number): {
+export function radixConvert(
+  input: string,
+  from: number,
+): {
   bin: string
   oct: string
   dec: string
   hex: string
 } {
-  const raw = input.trim().replace(/^0x/i, '').replace(/[\s_,]/g, '')
+  const raw = input
+    .trim()
+    .replace(/^0x/i, '')
+    .replace(/[\s_,]/g, '')
   if (!raw) throw new Error('EMPTY_INPUT')
   if (!Number.isInteger(from) || from < 2 || from > 36) throw new Error('BAD_RADIX')
   const negative = raw.startsWith('-')
@@ -208,22 +284,34 @@ export const CHAIN_CODECS: ChainCodec[] = ['url', 'doubleUrl', 'html', 'unicode'
 
 export function chainEncode(codec: ChainCodec, s: string): string {
   switch (codec) {
-    case 'url': return encodeURIComponent(s)
-    case 'doubleUrl': return encodeURIComponent(encodeURIComponent(s))
-    case 'html': return htmlEntityEncodeNumeric(s)
-    case 'unicode': return escapeUnicodeAll(s)
-    case 'hex': return encodeHex(s)
-    case 'base64': return utf8ToBase64(s)
+    case 'url':
+      return encodeURIComponent(s)
+    case 'doubleUrl':
+      return encodeURIComponent(encodeURIComponent(s))
+    case 'html':
+      return htmlEntityEncodeNumeric(s)
+    case 'unicode':
+      return escapeUnicodeAll(s)
+    case 'hex':
+      return encodeHex(s)
+    case 'base64':
+      return utf8ToBase64(s)
   }
 }
 
 export function chainDecode(codec: ChainCodec, s: string): string {
   switch (codec) {
-    case 'url': return decodeURIComponent(s)
-    case 'doubleUrl': return decodeURIComponent(decodeURIComponent(s))
-    case 'html': return htmlEntityDecode(s)
-    case 'unicode': return unescapeUnicode(s)
-    case 'hex': return decodeHex(s)
-    case 'base64': return base64ToUtf8(s)
+    case 'url':
+      return decodeURIComponent(s)
+    case 'doubleUrl':
+      return decodeURIComponent(decodeURIComponent(s))
+    case 'html':
+      return htmlEntityDecode(s)
+    case 'unicode':
+      return unescapeUnicode(s)
+    case 'hex':
+      return decodeHex(s)
+    case 'base64':
+      return base64ToUtf8(s)
   }
 }

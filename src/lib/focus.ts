@@ -39,7 +39,7 @@ export function collectFocusable(container: ParentNode | null): HTMLElement[] {
   if (!container || typeof container.querySelectorAll !== 'function') return []
   const out: HTMLElement[] = []
   const nodes = container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
-  nodes.forEach(el => {
+  nodes.forEach((el) => {
     // offsetParent 为 null 在固定定位元素上会误判，用 getClientRects 长度更准；
     // SSR 环境下两者都拿不到，此时不做可见性过滤（测试环境本来就都是可见的）
     const hidden = typeof el.getClientRects === 'function' && el.getClientRects().length === 0
@@ -63,7 +63,8 @@ export function trapTab(container: HTMLElement | null, dir: 'forward' | 'backwar
   if (!container) return false
   const items = collectFocusable(container)
   if (items.length === 0) return false
-  const active = typeof document !== 'undefined' ? (document.activeElement as HTMLElement | null) : null
+  const active =
+    typeof document !== 'undefined' ? (document.activeElement as HTMLElement | null) : null
   if (!active) return false
   // 焦点还在容器外（比如刚打开还没接管）：不拦，交给打开时的初始聚焦逻辑
   if (!container.contains(active)) return false

@@ -14,7 +14,9 @@ export function SecNote({ scene }: { scene: keyof typeof secnoteL.zh }) {
       <div className="space-y-2">
         <p className="text-[13px] text-bright leading-relaxed">{l.what}</p>
         <div>
-          <div className="text-[11px] uppercase tracking-[0.14em] text-muted mb-1">{l.scenesTitle}</div>
+          <div className="text-[11px] uppercase tracking-[0.14em] text-muted mb-1">
+            {l.scenesTitle}
+          </div>
           <ul className="space-y-1">
             {l.scenes.map((s, i) => (
               <li key={i} className="flex gap-2 text-[12.5px] text-bright leading-relaxed">
@@ -25,7 +27,8 @@ export function SecNote({ scene }: { scene: keyof typeof secnoteL.zh }) {
           </ul>
         </div>
         <p className="text-[12px] text-amber leading-relaxed">
-          <span aria-hidden>⚠ </span>{l.caution}
+          <span aria-hidden>⚠ </span>
+          {l.caution}
         </p>
       </div>
     </Collapse>

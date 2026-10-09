@@ -11,14 +11,22 @@ export interface HttpEnv {
   vars: Row[]
 }
 
-type L = typeof httpClientL['zh']
+type L = (typeof httpClientL)['zh']
 
 /**
  * 环境变量管理抽屉：上面选激活环境，下面管理环境列表。
  * 环境存的是「原文」，插值只发生在发送时——收藏与导出始终带 {{}} 占位符，
  * 避免把 token 等真实值泄漏进导出文件。
  */
-export function EnvPanel({ envs, activeId, onActivate, onAdd, onUpdate, onRemove, l }: {
+export function EnvPanel({
+  envs,
+  activeId,
+  onActivate,
+  onAdd,
+  onUpdate,
+  onRemove,
+  l,
+}: {
   envs: HttpEnv[]
   activeId: string | null
   onActivate: (id: string | null) => void
@@ -61,7 +69,9 @@ export function EnvPanel({ envs, activeId, onActivate, onAdd, onUpdate, onRemove
                 onClick={() => onRemove(env.id)}
                 className="shrink-0 text-muted hover:text-danger px-1 text-[13px]"
                 title={l.envs.remove}
-              >×</button>
+              >
+                ×
+              </button>
             </div>
             <KVEditor
               rows={env.vars}

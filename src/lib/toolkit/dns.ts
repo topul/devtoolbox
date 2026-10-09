@@ -6,7 +6,18 @@
  */
 
 /** DNS 记录类型 → 显示名（RFC 1035 及常见扩展） */
-export const DNS_RECORD_TYPES = ['A', 'AAAA', 'CNAME', 'MX', 'TXT', 'NS', 'SOA', 'PTR', 'SRV', 'CAA'] as const
+export const DNS_RECORD_TYPES = [
+  'A',
+  'AAAA',
+  'CNAME',
+  'MX',
+  'TXT',
+  'NS',
+  'SOA',
+  'PTR',
+  'SRV',
+  'CAA',
+] as const
 export type DnsRecordType = (typeof DNS_RECORD_TYPES)[number]
 
 export interface DohAnswer {
@@ -45,8 +56,16 @@ export const DNS_RCODES: Record<number, string> = {
 
 /** 记录类型编号 → 字母（只列常用的，其余原样给数字） */
 const TYPE_NUM_TO_NAME: Record<number, string> = {
-  1: 'A', 2: 'NS', 5: 'CNAME', 6: 'SOA', 12: 'PTR', 15: 'MX',
-  16: 'TXT', 28: 'AAAA', 33: 'SRV', 257: 'CAA',
+  1: 'A',
+  2: 'NS',
+  5: 'CNAME',
+  6: 'SOA',
+  12: 'PTR',
+  15: 'MX',
+  16: 'TXT',
+  28: 'AAAA',
+  33: 'SRV',
+  257: 'CAA',
 }
 
 /** 记录类型字母 → 编号 */
@@ -132,7 +151,9 @@ export const DOH_ENDPOINTS: DohEndpoint[] = [
 export function dohQueryUrl(endpoint: string, name: string, type: DnsRecordType): string {
   const tpl = DOH_ENDPOINTS.find((e) => e.id === endpoint)?.url
   if (!tpl) throw new Error('BAD_DOH_ENDPOINT')
-  return tpl.replace('{name}', encodeURIComponent(name.trim())).replace('{type}', encodeURIComponent(type))
+  return tpl
+    .replace('{name}', encodeURIComponent(name.trim()))
+    .replace('{type}', encodeURIComponent(type))
 }
 
 /** 裸域名合法性：字母数字连字符，点分，总长 ≤ 253 */

@@ -15,20 +15,43 @@ export function newRow(): Row {
 }
 
 const HEADER_NAMES = [
-  'Accept', 'Accept-Encoding', 'Accept-Language', 'Authorization', 'Cache-Control', 'Content-Type',
-  'Cookie', 'Origin', 'Referer', 'User-Agent', 'X-Requested-With', 'X-Forwarded-For', 'X-API-Key',
-  'If-None-Match', 'If-Modified-Since', 'Range',
+  'Accept',
+  'Accept-Encoding',
+  'Accept-Language',
+  'Authorization',
+  'Cache-Control',
+  'Content-Type',
+  'Cookie',
+  'Origin',
+  'Referer',
+  'User-Agent',
+  'X-Requested-With',
+  'X-Forwarded-For',
+  'X-API-Key',
+  'If-None-Match',
+  'If-Modified-Since',
+  'Range',
 ]
 
 function HeaderSuggestList() {
   return (
     <datalist id="http-header-names">
-      {HEADER_NAMES.map((h) => <option key={h} value={h} />)}
+      {HEADER_NAMES.map((h) => (
+        <option key={h} value={h} />
+      ))}
     </datalist>
   )
 }
 
-export function KVEditor({ rows, onChange, addLabel, nameLabel, valueLabel, removeLabel, headerSuggest }: {
+export function KVEditor({
+  rows,
+  onChange,
+  addLabel,
+  nameLabel,
+  valueLabel,
+  removeLabel,
+  headerSuggest,
+}: {
   rows: Row[]
   onChange: (rows: Row[]) => void
   addLabel: string
@@ -69,10 +92,14 @@ export function KVEditor({ rows, onChange, addLabel, nameLabel, valueLabel, remo
             onClick={() => onChange(rows.filter((x) => x.id !== r.id))}
             className="shrink-0 text-muted hover:text-danger px-1.5 text-[13px]"
             title={removeLabel}
-          >×</button>
+          >
+            ×
+          </button>
         </div>
       ))}
-      <Btn variant="ghost" onClick={() => onChange([...rows, newRow()])}>+ {addLabel}</Btn>
+      <Btn variant="ghost" onClick={() => onChange([...rows, newRow()])}>
+        + {addLabel}
+      </Btn>
       {headerSuggest && <HeaderSuggestList />}
     </div>
   )

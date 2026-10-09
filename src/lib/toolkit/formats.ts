@@ -9,7 +9,10 @@
 /* ================= TOML → JSON ================= */
 
 export class TomlError extends Error {
-  constructor(message: string, readonly line: number) {
+  constructor(
+    message: string,
+    readonly line: number,
+  ) {
     super(`${message} (第 ${line} 行)`)
     this.name = 'TomlError'
   }
@@ -58,7 +61,10 @@ function stripComment(s: string): string {
   let inLiteral = false
   for (let i = 0; i < s.length; i++) {
     const ch = s[i]
-    if (ch === '\\' && inBasic) { i++; continue }
+    if (ch === '\\' && inBasic) {
+      i++
+      continue
+    }
     if (ch === '"' && !inLiteral) inBasic = !inBasic
     else if (ch === "'" && !inBasic) inLiteral = !inLiteral
     else if (ch === '#' && !inBasic && !inLiteral) return s.slice(0, i)
@@ -86,7 +92,11 @@ function scanLines(src: string): TomlLine[] {
     let section: string[] | null = null
     let append = false
     if (text.startsWith('[')) {
-      const close = text.endsWith(']]') ? text.length - 2 : text.endsWith(']') ? text.length - 1 : -1
+      const close = text.endsWith(']]')
+        ? text.length - 2
+        : text.endsWith(']')
+          ? text.length - 1
+          : -1
       if (close < 0) throw new TomlError('段头未闭合', lineNo)
       append = text.startsWith('[[')
       section = splitDottedKey(text.slice(append ? 2 : 1, close).trim(), lineNo)
@@ -109,14 +119,50 @@ function needsMore(text: string): boolean {
   let inMlLiteral = false
   for (let i = 0; i < text.length; i++) {
     const three = text.slice(i, i + 3)
-    if (inMlBasic) { if (three === '"""') { inMlBasic = false; i += 2 } continue }
-    if (inMlLiteral) { if (three === "'''") { inMlLiteral = false; i += 2 } continue }
-    if (inBasic) { if (text[i] === '\\') { i++; continue }; if (text[i] === '"') inBasic = false; continue }
-    if (inLiteral) { if (text[i] === "'") inLiteral = false; continue }
-    if (three === '"""') { inMlBasic = true; i += 2; continue }
-    if (three === "'''") { inMlLiteral = true; i += 2; continue }
-    if (text[i] === '"') { inBasic = true; continue }
-    if (text[i] === "'") { inLiteral = true; continue }
+    if (inMlBasic) {
+      if (three === '"""') {
+        inMlBasic = false
+        i += 2
+      }
+      continue
+    }
+    if (inMlLiteral) {
+      if (three === "'''") {
+        inMlLiteral = false
+        i += 2
+      }
+      continue
+    }
+    if (inBasic) {
+      if (text[i] === '\\') {
+        i++
+        continue
+      }
+      if (text[i] === '"') inBasic = false
+      continue
+    }
+    if (inLiteral) {
+      if (text[i] === "'") inLiteral = false
+      continue
+    }
+    if (three === '"""') {
+      inMlBasic = true
+      i += 2
+      continue
+    }
+    if (three === "'''") {
+      inMlLiteral = true
+      i += 2
+      continue
+    }
+    if (text[i] === '"') {
+      inBasic = true
+      continue
+    }
+    if (text[i] === "'") {
+      inLiteral = true
+      continue
+    }
   }
   // 引号全部闭合后，还要看数组括号是否配平（行内数组允许跨行）
   if (inBasic || inLiteral || inMlBasic || inMlLiteral) return true
@@ -129,8 +175,15 @@ function bracketDepth(text: string): number {
   let inLiteral = false
   for (let i = 0; i < text.length; i++) {
     const ch = text[i]
-    if (inBasic) { if (ch === '\\') i++; else if (ch === '"') inBasic = false; continue }
-    if (inLiteral) { if (ch === "'") inLiteral = false; continue }
+    if (inBasic) {
+      if (ch === '\\') i++
+      else if (ch === '"') inBasic = false
+      continue
+    }
+    if (inLiteral) {
+      if (ch === "'") inLiteral = false
+      continue
+    }
     if (ch === '"') inBasic = true
     else if (ch === "'") inLiteral = true
     else if (ch === '[') depth++
@@ -144,10 +197,23 @@ function findAssign(text: string): number {
   let inLiteral = false
   for (let i = 0; i < text.length; i++) {
     const ch = text[i]
-    if (inBasic) { if (ch === '\\') i++; else if (ch === '"') inBasic = false; continue }
-    if (inLiteral) { if (ch === "'") inLiteral = false; continue }
-    if (ch === '"') { inBasic = true; continue }
-    if (ch === "'") { inLiteral = true; continue }
+    if (inBasic) {
+      if (ch === '\\') i++
+      else if (ch === '"') inBasic = false
+      continue
+    }
+    if (inLiteral) {
+      if (ch === "'") inLiteral = false
+      continue
+    }
+    if (ch === '"') {
+      inBasic = true
+      continue
+    }
+    if (ch === "'") {
+      inLiteral = true
+      continue
+    }
     if (ch === '=') return i
   }
   return -1
@@ -167,14 +233,16 @@ function parseValue(raw: string, line: number): unknown {
 
   if (s === 'true') return true
   if (s === 'false') return false
-  if (/^[+-]?(inf|nan)$/.test(s)) return s.includes('nan') ? NaN : s[0] === '-' ? -Infinity : Infinity
+  if (/^[+-]?(inf|nan)$/.test(s))
+    return s.includes('nan') ? NaN : s[0] === '-' ? -Infinity : Infinity
   if (/^0x[0-9a-fA-F_]+$/.test(s)) return parseInt(s.slice(2).replace(/_/g, ''), 16)
   if (/^0o[0-7_]+$/.test(s)) return parseInt(s.slice(2).replace(/_/g, ''), 8)
   if (/^0b[01_]+$/.test(s)) return parseInt(s.slice(2).replace(/_/g, ''), 2)
   if (/^[+-]?\d[\d_]*$/.test(s)) return parseInt(s.replace(/_/g, ''), 10)
   if (/^[+-]?\d[\d_]*(\.[\d_]*)?([eE][+-]?\d+)?$/.test(s)) return parseFloat(s.replace(/_/g, ''))
   // 日期时间：TOML 有独立类型，JSON 没有 —— 统一转 ISO 字符串保留信息
-  if (/^\d{4}-\d{2}-\d{2}([Tt ]\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})?)?$/.test(s)) return normalizeDate(s)
+  if (/^\d{4}-\d{2}-\d{2}([Tt ]\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})?)?$/.test(s))
+    return normalizeDate(s)
   if (/^\d{2}:\d{2}:\d{2}(\.\d+)?$/.test(s)) return s
   throw new TomlError(`无法解析的值 "${s.slice(0, 40)}"`, line)
 }
@@ -189,19 +257,43 @@ function unescapeBasic(s: string, line: number): string {
   let out = ''
   for (let i = 0; i < s.length; i++) {
     const ch = s[i]
-    if (ch !== '\\') { out += ch; continue }
+    if (ch !== '\\') {
+      out += ch
+      continue
+    }
     const n = s[++i]
     switch (n) {
-      case 'n': out += '\n'; break
-      case 't': out += '\t'; break
-      case 'r': out += '\r'; break
-      case '"': out += '"'; break
-      case '\\': out += '\\'; break
-      case 'b': out += '\b'; break
-      case 'f': out += '\f'; break
-      case 'u': out += String.fromCharCode(parseInt(s.slice(i + 1, i + 5), 16)); i += 4; break
-      case 'U': out += String.fromCodePoint(parseInt(s.slice(i + 1, i + 9), 16)); i += 8; break
-      default: throw new TomlError(`不认识的转义 \\${n ?? ''}`, line)
+      case 'n':
+        out += '\n'
+        break
+      case 't':
+        out += '\t'
+        break
+      case 'r':
+        out += '\r'
+        break
+      case '"':
+        out += '"'
+        break
+      case '\\':
+        out += '\\'
+        break
+      case 'b':
+        out += '\b'
+        break
+      case 'f':
+        out += '\f'
+        break
+      case 'u':
+        out += String.fromCharCode(parseInt(s.slice(i + 1, i + 5), 16))
+        i += 4
+        break
+      case 'U':
+        out += String.fromCodePoint(parseInt(s.slice(i + 1, i + 9), 16))
+        i += 8
+        break
+      default:
+        throw new TomlError(`不认识的转义 \\${n ?? ''}`, line)
     }
   }
   return out
@@ -214,7 +306,12 @@ function readQuoted(s: string, q: string, line: number): string {
   return s.slice(1, end)
 }
 
-function parseMultiline(s: string, delim: string, line: number, unescape: (x: string, l: number) => string): string {
+function parseMultiline(
+  s: string,
+  delim: string,
+  line: number,
+  unescape: (x: string, l: number) => string,
+): string {
   const end = s.indexOf(delim, 3)
   if (end < 0) throw new TomlError('多行字符串未闭合', line)
   let body = s.slice(3, end)
@@ -235,10 +332,23 @@ function splitTopLevel(s: string, open: string, close: string, line: number): st
   let start = 0
   for (let i = 0; i < body.length; i++) {
     const ch = body[i]
-    if (inBasic) { if (ch === '\\') i++; else if (ch === '"') inBasic = false; continue }
-    if (inLiteral) { if (ch === "'") inLiteral = false; continue }
-    if (ch === '"') { inBasic = true; continue }
-    if (ch === "'") { inLiteral = true; continue }
+    if (inBasic) {
+      if (ch === '\\') i++
+      else if (ch === '"') inBasic = false
+      continue
+    }
+    if (inLiteral) {
+      if (ch === "'") inLiteral = false
+      continue
+    }
+    if (ch === '"') {
+      inBasic = true
+      continue
+    }
+    if (ch === "'") {
+      inLiteral = true
+      continue
+    }
     if (ch === '[' || ch === '{') depth++
     else if (ch === ']' || ch === '}') depth--
     else if (ch === ',' && depth === 0) {
@@ -267,7 +377,12 @@ function parseInlineTable(s: string, line: number): Record<string, unknown> {
 }
 
 /** 按点分键写入；已存在的标量被覆盖，中间节点自动建表 */
-function setPath(root: Record<string, unknown>, path: string[], value: unknown, line: number): void {
+function setPath(
+  root: Record<string, unknown>,
+  path: string[],
+  value: unknown,
+  line: number,
+): void {
   let node = root
   for (let i = 0; i < path.length - 1; i++) {
     const k = path[i]
@@ -288,7 +403,11 @@ function setPath(root: Record<string, unknown>, path: string[], value: unknown, 
   node[path[path.length - 1]] = value
 }
 
-function descend(root: Record<string, unknown>, path: string[], line: number): Record<string, unknown> {
+function descend(
+  root: Record<string, unknown>,
+  path: string[],
+  line: number,
+): Record<string, unknown> {
   let node = root
   for (const k of path) {
     const next = node[k]
@@ -313,7 +432,9 @@ export function tomlToJson(src: string): unknown {
   let current = root
   for (const tl of lines) {
     if (tl.section) {
-      current = tl.append ? appendArrayTable(root, tl.section, tl.line) : descend(root, tl.section, tl.line)
+      current = tl.append
+        ? appendArrayTable(root, tl.section, tl.line)
+        : descend(root, tl.section, tl.line)
       continue
     }
     setPath(current, tl.key, parseValue(tl.raw, tl.line), tl.line)
@@ -321,7 +442,11 @@ export function tomlToJson(src: string): unknown {
   return root
 }
 
-function appendArrayTable(root: Record<string, unknown>, path: string[], line: number): Record<string, unknown> {
+function appendArrayTable(
+  root: Record<string, unknown>,
+  path: string[],
+  line: number,
+): Record<string, unknown> {
   const parent = descend(root, path.slice(0, -1), line)
   const last = path[path.length - 1]
   const arr = parent[last]
@@ -351,7 +476,8 @@ function tomlString(s: string): string {
 function tomlScalar(v: unknown): string {
   if (v === null) return '""'
   if (typeof v === 'string') return tomlString(v)
-  if (typeof v === 'number') return Number.isFinite(v) ? String(v) : v > 0 ? 'inf' : v < 0 ? '-inf' : 'nan'
+  if (typeof v === 'number')
+    return Number.isFinite(v) ? String(v) : v > 0 ? 'inf' : v < 0 ? '-inf' : 'nan'
   if (typeof v === 'boolean') return String(v)
   if (v instanceof Date) return v.toISOString()
   return JSON.stringify(v)
@@ -366,7 +492,10 @@ function isInlineValue(v: unknown): boolean {
 
 function tomlInline(v: unknown): string {
   if (Array.isArray(v)) return `[${v.map(tomlInline).join(', ')}]`
-  if (isPlainObject(v)) return `{ ${Object.entries(v).map(([k, x]) => `${tomlKey(k)} = ${tomlInline(x)}`).join(', ')} }`
+  if (isPlainObject(v))
+    return `{ ${Object.entries(v)
+      .map(([k, x]) => `${tomlKey(k)} = ${tomlInline(x)}`)
+      .join(', ')} }`
   return tomlScalar(v)
 }
 
@@ -377,16 +506,31 @@ export function jsonToToml(value: unknown): string {
   return lines.join('\n') + '\n'
 }
 
-function writeTable(obj: Record<string, unknown>, path: string[], lines: string[], headerWritten: boolean): void {
-  const scalars = Object.entries(obj).filter(([, v]) => !isPlainObject(v) && !(Array.isArray(v) && v.some(isPlainObject)))
-  const tables = Object.entries(obj).filter(([, v]) =>
-    (isPlainObject(v) && Object.keys(v).length > 0) ||
-    (Array.isArray(v) && v.some(isPlainObject)))
-  const emptyTables = Object.entries(obj).filter(([, v]) =>
-    (isPlainObject(v) && Object.keys(v).length === 0) ||
-    (Array.isArray(v) && !v.some(isPlainObject) && v.length === 0))
+function writeTable(
+  obj: Record<string, unknown>,
+  path: string[],
+  lines: string[],
+  headerWritten: boolean,
+): void {
+  const scalars = Object.entries(obj).filter(
+    ([, v]) => !isPlainObject(v) && !(Array.isArray(v) && v.some(isPlainObject)),
+  )
+  const tables = Object.entries(obj).filter(
+    ([, v]) =>
+      (isPlainObject(v) && Object.keys(v).length > 0) ||
+      (Array.isArray(v) && v.some(isPlainObject)),
+  )
+  const emptyTables = Object.entries(obj).filter(
+    ([, v]) =>
+      (isPlainObject(v) && Object.keys(v).length === 0) ||
+      (Array.isArray(v) && !v.some(isPlainObject) && v.length === 0),
+  )
 
-  if (path.length > 0 && !headerWritten && (scalars.length > 0 || emptyTables.length > 0 || tables.length > 0)) {
+  if (
+    path.length > 0 &&
+    !headerWritten &&
+    (scalars.length > 0 || emptyTables.length > 0 || tables.length > 0)
+  ) {
     lines.push(`[${path.map(tomlKey).join('.')}]`)
   }
   for (const [k, v] of scalars) {
@@ -439,7 +583,11 @@ export function csvParse(text: string, opts: CsvOptions = {}): string[][] {
     const ch = src[i]
     if (inQuotes) {
       if (ch === '"') {
-        if (src[i + 1] === '"') { field += '"'; i += 2; continue }
+        if (src[i + 1] === '"') {
+          field += '"'
+          i += 2
+          continue
+        }
         inQuotes = false
         i++
         continue
@@ -448,14 +596,36 @@ export function csvParse(text: string, opts: CsvOptions = {}): string[][] {
       i++
       continue
     }
-    if (ch === '"' && field === '') { inQuotes = true; i++; continue }
-    if (ch === delim) { row.push(field); field = ''; i++; continue }
-    if (ch === '\r') { i++; continue }
-    if (ch === '\n') { row.push(field); rows.push(row); row = []; field = ''; i++; continue }
+    if (ch === '"' && field === '') {
+      inQuotes = true
+      i++
+      continue
+    }
+    if (ch === delim) {
+      row.push(field)
+      field = ''
+      i++
+      continue
+    }
+    if (ch === '\r') {
+      i++
+      continue
+    }
+    if (ch === '\n') {
+      row.push(field)
+      rows.push(row)
+      row = []
+      field = ''
+      i++
+      continue
+    }
     field += ch
     i++
   }
-  if (field !== '' || row.length > 0) { row.push(field); rows.push(row) }
+  if (field !== '' || row.length > 0) {
+    row.push(field)
+    rows.push(row)
+  }
   return rows.filter((r) => !(r.length === 1 && r[0] === ''))
 }
 
@@ -467,7 +637,9 @@ export function csvToJson(text: string, opts: CsvOptions = {}): CsvTable {
   const body = opts.header === false ? grid : grid.slice(1)
   const rows = body.map((r) => {
     const obj: Record<string, string> = {}
-    columns.forEach((c, i) => { obj[c] = r[i] ?? '' })
+    columns.forEach((c, i) => {
+      obj[c] = r[i] ?? ''
+    })
     return obj
   })
   return { columns, rows }

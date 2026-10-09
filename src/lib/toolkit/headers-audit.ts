@@ -40,13 +40,27 @@ function headerMap(headers: [string, string][]): Map<string, string> {
 function auditHsts(h: Map<string, string>, isHttps: boolean): HeaderFinding[] {
   const raw = h.get('strict-transport-security')
   if (!raw) {
-    return [{ id: isHttps ? 'hsts.missing' : 'hsts.absent', level: isHttps ? 'missing' : 'ok', value: null, detail: null }]
+    return [
+      {
+        id: isHttps ? 'hsts.missing' : 'hsts.absent',
+        level: isHttps ? 'missing' : 'ok',
+        value: null,
+        detail: null,
+      },
+    ]
   }
   const m = raw.match(/max-age\s*=\s*(\d+)/i)
   if (!m) return [{ id: 'hsts.noMaxAge', level: 'bad', value: raw, detail: null }]
   const maxAge = parseInt(m[1])
   const level = maxAge >= 15552000 ? 'ok' : 'warn'
-  return [{ id: level === 'ok' ? 'hsts.ok' : 'hsts.weakMaxAge', level, value: raw, detail: String(maxAge) }]
+  return [
+    {
+      id: level === 'ok' ? 'hsts.ok' : 'hsts.weakMaxAge',
+      level,
+      value: raw,
+      detail: String(maxAge),
+    },
+  ]
 }
 
 /** CSP：缺失或含 unsafe-inline / unsafe-eval / 通配 * 都要提示 */
@@ -95,7 +109,8 @@ function auditContentTypeOptions(h: Map<string, string>): HeaderFinding[] {
 function auditReferrerPolicy(h: Map<string, string>): HeaderFinding[] {
   const raw = h.get('referrer-policy')
   if (!raw) return [{ id: 'referrer.missing', level: 'warn', value: null, detail: null }]
-  if (/unsafe-url/i.test(raw)) return [{ id: 'referrer.unsafe', level: 'warn', value: raw, detail: null }]
+  if (/unsafe-url/i.test(raw))
+    return [{ id: 'referrer.unsafe', level: 'warn', value: raw, detail: null }]
   return [{ id: 'referrer.ok', level: 'ok', value: raw, detail: null }]
 }
 
@@ -140,7 +155,12 @@ function auditCookies(headers: [string, string][]): HeaderFinding[] {
     else if (!lower.includes('httponly')) insecure++
   }
   if (insecure > 0) {
-    out.push({ id: 'cookie.weak', level: 'warn', value: String(insecure), detail: String(cookies.length) })
+    out.push({
+      id: 'cookie.weak',
+      level: 'warn',
+      value: String(insecure),
+      detail: String(cookies.length),
+    })
   } else {
     out.push({ id: 'cookie.ok', level: 'ok', value: null, detail: String(cookies.length) })
   }
@@ -151,10 +171,7 @@ function auditCookies(headers: [string, string][]): HeaderFinding[] {
  * 审计入口。headers 为主进程 HTTP 内核返回的原始 `[name, value][]`；
  * isHttps 决定 HSTS 缺失算不算问题（http 站点上 HSTS 本来就不该有）。
  */
-export function auditSecurityHeaders(
-  headers: [string, string][],
-  isHttps: boolean,
-): AuditResult {
+export function auditSecurityHeaders(headers: [string, string][], isHttps: boolean): AuditResult {
   const h = headerMap(headers)
   const findings: HeaderFinding[] = [
     ...auditHsts(h, isHttps),
@@ -169,6 +186,7 @@ export function auditSecurityHeaders(
   ]
   return {
     findings,
-    issues: findings.filter((f) => f.level === 'warn' || f.level === 'bad' || f.level === 'missing').length,
+    issues: findings.filter((f) => f.level === 'warn' || f.level === 'bad' || f.level === 'missing')
+      .length,
   }
 }

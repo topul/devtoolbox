@@ -18,7 +18,9 @@ export const HASH_LABELS: Record<HashAlgo, string> = {
 }
 
 export function digest(algo: HashAlgo, text: string): string {
-  const fn = (CryptoJS as unknown as Record<string, ((s: string) => CryptoJS.lib.WordArray) | undefined>)[algo]
+  const fn = (
+    CryptoJS as unknown as Record<string, ((s: string) => CryptoJS.lib.WordArray) | undefined>
+  )[algo]
   if (!fn) throw new Error('BAD_ALGO:' + algo)
   return fn(text).toString()
 }
@@ -32,7 +34,12 @@ export const HMAC_ALGOS = ['MD5', 'SHA1', 'SHA256', 'SHA512'] as const
 export type HmacAlgo = (typeof HMAC_ALGOS)[number]
 
 export function hmacDigest(algo: HmacAlgo, text: string, key: string): string {
-  const fn = (CryptoJS as unknown as Record<string, ((m: string, k: string) => CryptoJS.lib.WordArray) | undefined>)['Hmac' + algo]
+  const fn = (
+    CryptoJS as unknown as Record<
+      string,
+      ((m: string, k: string) => CryptoJS.lib.WordArray) | undefined
+    >
+  )['Hmac' + algo]
   if (!fn) throw new Error('BAD_ALGO:' + algo)
   return fn(text, key).toString()
 }
@@ -52,16 +59,24 @@ function aesIv(key: string): CryptoJS.lib.WordArray {
 
 export function aesEncrypt(plain: string, key: string, mode: AesMode): string {
   if (!key) throw new Error('NEED_KEY')
-  const cfg: Record<string, unknown> = { mode: (CryptoJS.mode as unknown as Record<string, unknown>)[mode], padding: CryptoJS.pad.Pkcs7 }
+  const cfg: Record<string, unknown> = {
+    mode: (CryptoJS.mode as unknown as Record<string, unknown>)[mode],
+    padding: CryptoJS.pad.Pkcs7,
+  }
   if (mode !== 'ECB') cfg.iv = aesIv(key)
   return CryptoJS.AES.encrypt(plain, aesKey(key), cfg as never).toString()
 }
 
 export function aesDecrypt(cipher: string, key: string, mode: AesMode): string {
   if (!key) throw new Error('NEED_KEY')
-  const cfg: Record<string, unknown> = { mode: (CryptoJS.mode as unknown as Record<string, unknown>)[mode], padding: CryptoJS.pad.Pkcs7 }
+  const cfg: Record<string, unknown> = {
+    mode: (CryptoJS.mode as unknown as Record<string, unknown>)[mode],
+    padding: CryptoJS.pad.Pkcs7,
+  }
   if (mode !== 'ECB') cfg.iv = aesIv(key)
-  const out = CryptoJS.AES.decrypt(cipher.trim(), aesKey(key), cfg as never).toString(CryptoJS.enc.Utf8)
+  const out = CryptoJS.AES.decrypt(cipher.trim(), aesKey(key), cfg as never).toString(
+    CryptoJS.enc.Utf8,
+  )
   if (!out) throw new Error('DECRYPT_EMPTY')
   return out
 }

@@ -1,6 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react'
 import QRCode from 'qrcode'
-import { Btn, TA, Input, Select, Stat, ErrorNote, CopyBtn, usePersistedState } from '../components/ui'
+import {
+  Btn,
+  TA,
+  Input,
+  Select,
+  Stat,
+  ErrorNote,
+  CopyBtn,
+  usePersistedState,
+} from '../components/ui'
 import { useLocalized, useI18n } from '../lib/i18n'
 import { genL } from '../lib/locales/generators'
 import { fakeRowsToCsv, generateFakeRows, generatePassword, generateUuids } from '../lib/toolkit'
@@ -25,14 +34,33 @@ export function UuidTool() {
       <div className="flex items-end gap-3 flex-wrap">
         <Input value={count} onChange={setCount} label={l.count} type="number" className="w-32" />
         <label className="flex items-center gap-2 text-[12px] text-muted cursor-pointer pb-1.5">
-          <input type="checkbox" checked={upper} onChange={e => setUpper(e.target.checked)} className="accent-phosphor" /> {l.upper}
+          <input
+            type="checkbox"
+            checked={upper}
+            onChange={(e) => setUpper(e.target.checked)}
+            className="accent-phosphor"
+          />{' '}
+          {l.upper}
         </label>
         <label className="flex items-center gap-2 text-[12px] text-muted cursor-pointer pb-1.5">
-          <input type="checkbox" checked={noDash} onChange={e => setNoDash(e.target.checked)} className="accent-phosphor" /> {l.noDash}
+          <input
+            type="checkbox"
+            checked={noDash}
+            onChange={(e) => setNoDash(e.target.checked)}
+            className="accent-phosphor"
+          />{' '}
+          {l.noDash}
         </label>
-        <Btn variant="primary" onClick={gen}>{l.gen}</Btn>
+        <Btn variant="primary" onClick={gen}>
+          {l.gen}
+        </Btn>
       </div>
-      <TA value={list.join('\n')} readOnly label={l.generated(list.length)} rows={Math.min(list.length + 1, 14)} />
+      <TA
+        value={list.join('\n')}
+        readOnly
+        label={l.generated(list.length)}
+        rows={Math.min(list.length + 1, 14)}
+      />
     </div>
   )
 }
@@ -79,22 +107,41 @@ export function PasswordTool() {
         <div className="md:col-span-2 flex flex-col gap-1">
           <span className="text-[11px] text-muted uppercase tracking-wider">{l.charset}</span>
           <div className="flex gap-4 flex-wrap pt-1">
-            {l.sets.map(s => (
-              <label key={s.key} className="flex items-center gap-2 text-[12px] text-muted cursor-pointer">
-                <input type="checkbox" checked={use[s.key]} onChange={e => setUse({ ...use, [s.key]: e.target.checked })} className="accent-phosphor" /> {s.label}
+            {l.sets.map((s) => (
+              <label
+                key={s.key}
+                className="flex items-center gap-2 text-[12px] text-muted cursor-pointer"
+              >
+                <input
+                  type="checkbox"
+                  checked={use[s.key]}
+                  onChange={(e) => setUse({ ...use, [s.key]: e.target.checked })}
+                  className="accent-phosphor"
+                />{' '}
+                {s.label}
               </label>
             ))}
             <label className="flex items-center gap-2 text-[12px] text-muted cursor-pointer">
-              <input type="checkbox" checked={noAmb} onChange={e => setNoAmb(e.target.checked)} className="accent-phosphor" /> {l.noAmb}
+              <input
+                type="checkbox"
+                checked={noAmb}
+                onChange={(e) => setNoAmb(e.target.checked)}
+                className="accent-phosphor"
+              />{' '}
+              {l.noAmb}
             </label>
           </div>
         </div>
       </div>
-      <Btn variant="primary" onClick={gen}>{l.gen}</Btn>
+      <Btn variant="primary" onClick={gen}>
+        {l.gen}
+      </Btn>
       {pw && (
         <div className="space-y-3">
           <div className="flex items-center gap-3 border border-line bg-panel-2 px-4 py-3">
-            <span className="text-lg md:text-xl text-phosphor glow break-all flex-1 select-all">{pw}</span>
+            <span className="text-lg md:text-xl text-phosphor glow break-all flex-1 select-all">
+              {pw}
+            </span>
             <CopyBtn text={pw} />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -102,7 +149,9 @@ export function PasswordTool() {
             <Stat label={l.length} value={pw.length} />
             <div className="border border-line-soft bg-panel-2 px-3 py-2">
               <div className="text-[10px] uppercase tracking-[0.15em] text-muted">{l.strength}</div>
-              <div className="text-lg leading-tight" style={{ color: s.color }}>{l.strengthLabels[s.key]}</div>
+              <div className="text-lg leading-tight" style={{ color: s.color }}>
+                {l.strengthLabels[s.key]}
+              </div>
             </div>
           </div>
         </div>
@@ -127,11 +176,16 @@ export function QrTool() {
       ctx?.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height)
       return
     }
-    QRCode.toCanvas(canvasRef.current, text, {
-      width: parseInt(size),
-      margin: 2,
-      color: { dark: '#00F48E', light: '#000000' },
-    }, e => setErr(e ? l.genFail : null))
+    QRCode.toCanvas(
+      canvasRef.current,
+      text,
+      {
+        width: parseInt(size),
+        margin: 2,
+        color: { dark: '#00F48E', light: '#000000' },
+      },
+      (e) => setErr(e ? l.genFail : null),
+    )
   }, [text, size, l])
 
   const download = () => {
@@ -145,10 +199,17 @@ export function QrTool() {
     <div className="space-y-3">
       <TA value={text} onChange={setText} label={l.content} placeholder={l.contentPh} rows={4} />
       <div className="flex items-end gap-3">
-        <Select value={size} onChange={setSize} label={l.size} options={[
-          { value: '128', label: '128 px' }, { value: '256', label: '256 px' },
-          { value: '512', label: '512 px' }, { value: '1024', label: '1024 px' },
-        ]} />
+        <Select
+          value={size}
+          onChange={setSize}
+          label={l.size}
+          options={[
+            { value: '128', label: '128 px' },
+            { value: '256', label: '256 px' },
+            { value: '512', label: '512 px' },
+            { value: '1024', label: '1024 px' },
+          ]}
+        />
         {text.trim() && <Btn onClick={download}>{l.download}</Btn>}
       </div>
       <ErrorNote msg={err} />
@@ -168,16 +229,22 @@ export function FakeDataTool() {
   const [rows, setRows] = useState<ReturnType<typeof generateFakeRows>>([])
 
   const gen = () => {
-    setRows(generateFakeRows(locale, {
-      surnames: l.surnames,
-      givens: l.givens,
-      phonePrefixes: l.phonePrefixes,
-      domains: l.domains,
-      areas: l.areas,
-      firstNames: l.firstNames,
-      lastNames: l.lastNames,
-      enDomains: l.enDomains,
-    }, parseInt(count) || 10))
+    setRows(
+      generateFakeRows(
+        locale,
+        {
+          surnames: l.surnames,
+          givens: l.givens,
+          phonePrefixes: l.phonePrefixes,
+          domains: l.domains,
+          areas: l.areas,
+          firstNames: l.firstNames,
+          lastNames: l.lastNames,
+          enDomains: l.enDomains,
+        },
+        parseInt(count) || 10,
+      ),
+    )
   }
   // 同上：挂载即生成一批，之后只走按钮触发，避免输入 count 时反复重建行
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -190,7 +257,9 @@ export function FakeDataTool() {
     <div className="space-y-3">
       <div className="flex items-end gap-2 flex-wrap">
         <Input value={count} onChange={setCount} label={l.count} type="number" className="w-32" />
-        <Btn variant="primary" onClick={gen}>{l.gen}</Btn>
+        <Btn variant="primary" onClick={gen}>
+          {l.gen}
+        </Btn>
         <CopyBtn text={asJson} /> <span className="text-[11px] text-muted">{l.json}</span>
         <CopyBtn text={asCsv} /> <span className="text-[11px] text-muted">{l.csv}</span>
       </div>
@@ -198,13 +267,15 @@ export function FakeDataTool() {
         <table className="w-full text-[12px]">
           <thead>
             <tr className="bg-panel-2 text-muted text-left">
-              {l.headers.map(h => (
-                <th key={h} className="px-3 py-2 font-normal uppercase tracking-wider">{h}</th>
+              {l.headers.map((h) => (
+                <th key={h} className="px-3 py-2 font-normal uppercase tracking-wider">
+                  {h}
+                </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {rows.map(r => (
+            {rows.map((r) => (
               <tr key={r.id} className="border-t border-line-soft hover:bg-phosphor-faint">
                 <td className="px-3 py-1.5 text-muted">{r.id}</td>
                 <td className="px-3 py-1.5 text-bright">{r.name}</td>

@@ -1,7 +1,14 @@
 import React, { useState, useMemo } from 'react'
 import {
-  Btn, TA, Select, Panel, Collapse, ResultPanel, ErrorNote,
-  usePersistedState, ToolGuide,
+  Btn,
+  TA,
+  Select,
+  Panel,
+  Collapse,
+  ResultPanel,
+  ErrorNote,
+  usePersistedState,
+  ToolGuide,
 } from '../components/ui'
 import { useLocalized } from '../lib/i18n'
 import { sqlCheckL } from '../lib/locales/sqlcheck'
@@ -51,12 +58,14 @@ export function SqlCheckTool() {
       <ToolGuide title={l.title} steps={[l.sub, l.check, l.explainInput]} note={l.localOnly} />
 
       <div className="flex gap-1.5">
-        {(['lint', 'explain'] as const).map(k => (
+        {(['lint', 'explain'] as const).map((k) => (
           <button
             key={k}
             onClick={() => setTab(k)}
             className={`px-2.5 py-1 text-[12px] border transition-colors ${
-              tab === k ? 'border-phosphor text-phosphor' : 'border-line-soft text-muted hover:text-bright'
+              tab === k
+                ? 'border-phosphor text-phosphor'
+                : 'border-line-soft text-muted hover:text-bright'
             }`}
           >
             {k === 'lint' ? l.tabLint : l.tabExplain}
@@ -95,8 +104,12 @@ function LintTab() {
         title={l.sql}
         right={
           <div className="flex gap-1.5">
-            <Btn variant="ghost" onClick={() => setSql(SAMPLE_SQL)}>{l.loadSample}</Btn>
-            <Btn variant="ghost" onClick={clear}>{l.clear}</Btn>
+            <Btn variant="ghost" onClick={() => setSql(SAMPLE_SQL)}>
+              {l.loadSample}
+            </Btn>
+            <Btn variant="ghost" onClick={clear}>
+              {l.clear}
+            </Btn>
           </div>
         }
       >
@@ -112,17 +125,20 @@ function LintTab() {
         ) : null
       ) : (
         <>
-          <div className="text-[12px] text-muted">{l.issueCount.replace('{n}', String(issues.length))}</div>
+          <div className="text-[12px] text-muted">
+            {l.issueCount.replace('{n}', String(issues.length))}
+          </div>
           {issues.map((i, idx) => (
-            <div key={`${i.line}-${i.rule}-${idx}`} className={`border-l-2 bg-panel-2 px-3 py-2 ${SEV_CLS[i.severity]}`}>
+            <div
+              key={`${i.line}-${i.rule}-${idx}`}
+              className={`border-l-2 bg-panel-2 px-3 py-2 ${SEV_CLS[i.severity]}`}
+            >
               <div className="flex items-baseline gap-2">
                 <span className="text-[12.5px] font-medium">
                   {l.rules[i.message as keyof typeof l.rules] ?? i.message}
                 </span>
                 <span className="text-[11px] opacity-70">L{i.line}</span>
-                <span className="text-[10.5px] opacity-60 ml-auto">
-                  {l.severity[i.severity]}
-                </span>
+                <span className="text-[10.5px] opacity-60 ml-auto">{l.severity[i.severity]}</span>
               </div>
               <div className="text-[11.5px] opacity-85 mt-0.5">
                 {l.hints[i.message as keyof typeof l.hints] ?? i.hint}
@@ -138,7 +154,7 @@ function LintTab() {
       {suggestions.length > 0 && (
         <Panel title={l.indexSuggest}>
           <div className="space-y-2">
-            {suggestions.map(s => (
+            {suggestions.map((s) => (
               <div key={s.name}>
                 <p className="text-[11.5px] text-muted mb-1">{s.reason}</p>
                 <ResultPanel title={s.name} text={s.sql} maxHeight={80} />
@@ -158,7 +174,11 @@ function LintTab() {
 function ExplainTab() {
   const l = useLocalized(sqlCheckL)
   const [input, setInput, { clear }] = usePersistedState('sql-check', 'explain', '')
-  const [dialect, setDialect] = usePersistedState<'mysql' | 'postgres'>('sql-check', 'dialect', 'mysql')
+  const [dialect, setDialect] = usePersistedState<'mysql' | 'postgres'>(
+    'sql-check',
+    'dialect',
+    'mysql',
+  )
 
   const result = useMemo(() => {
     if (!input.trim()) return null
@@ -175,15 +195,19 @@ function ExplainTab() {
         title={l.explainInput}
         right={
           <div className="flex gap-1.5">
-            <Btn variant="ghost" onClick={() => setInput(SAMPLE_EXPLAIN)}>{l.loadSample}</Btn>
-            <Btn variant="ghost" onClick={clear}>{l.clear}</Btn>
+            <Btn variant="ghost" onClick={() => setInput(SAMPLE_EXPLAIN)}>
+              {l.loadSample}
+            </Btn>
+            <Btn variant="ghost" onClick={clear}>
+              {l.clear}
+            </Btn>
           </div>
         }
       >
         <div className="w-32 mb-2">
           <Select
             value={dialect}
-            onChange={v => setDialect(v as 'mysql' | 'postgres')}
+            onChange={(v) => setDialect(v as 'mysql' | 'postgres')}
             label={l.dialect}
             options={[
               { value: 'mysql', label: 'MySQL' },
@@ -204,21 +228,30 @@ function ExplainTab() {
             <div
               key={`${t.name}-${i}`}
               className={`border-l-2 bg-panel-2 px-3 py-2 ${
-                t.risk === 'high' ? 'border-danger' : t.risk === 'mid' ? 'border-amber' : 'border-phosphor/40'
+                t.risk === 'high'
+                  ? 'border-danger'
+                  : t.risk === 'mid'
+                    ? 'border-amber'
+                    : 'border-phosphor/40'
               }`}
             >
               <div className="flex items-baseline gap-2 text-[12.5px]">
                 <span className="text-bright font-medium break-all">{t.name}</span>
                 <span className="text-muted">{t.type || '—'}</span>
                 <span className="text-muted ml-auto">
-                  {t.risk === 'high' ? <span className="text-danger">{l.risk.high}</span>
-                    : t.risk === 'mid' ? <span className="text-amber">{l.risk.mid}</span>
-                    : <span className="text-phosphor">{l.risk.low}</span>}
+                  {t.risk === 'high' ? (
+                    <span className="text-danger">{l.risk.high}</span>
+                  ) : t.risk === 'mid' ? (
+                    <span className="text-amber">{l.risk.mid}</span>
+                  ) : (
+                    <span className="text-phosphor">{l.risk.low}</span>
+                  )}
                 </span>
               </div>
               <div className="text-[11.5px] text-muted mt-0.5">
                 {l.rows}: {t.rows.toLocaleString('en-US')}
-                {' · '}{l.key}: {t.key || l.noKey}
+                {' · '}
+                {l.key}: {t.key || l.noKey}
                 {!t.key && t.possibleKeys && ` · ${l.possibleKeys}: ${t.possibleKeys}`}
                 {t.filtered > 0 && ` · ${l.filtered}: ${t.filtered}%`}
                 {t.extra && ` · ${t.extra}`}

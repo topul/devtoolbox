@@ -7,13 +7,7 @@
  * 物理差异：浏览器拿不到逐字节的 TTFB 之前的 TCP/TLS 细分（无此概念），
  * 且不能关 TLS 校验、不能走上游代理 —— 这两项在 spec 里被忽略前会先被 agent 侧处理。
  */
-import type {
-  ChatDeltaKind,
-  ChatMeta,
-  ChatSendSpec,
-  ChatToolCall,
-  ChatUsage,
-} from '../chat-types'
+import type { ChatDeltaKind, ChatMeta, ChatSendSpec, ChatToolCall, ChatUsage } from '../chat-types'
 
 export interface OpenAiToolDef {
   type: 'function'
@@ -156,7 +150,8 @@ export function chatStream(cfg: ChatStreamConfig, hooks: ChatHooks): { abort: ()
           const idx = typeof part?.index === 'number' ? part.index : 0
           const slot = toolAcc.get(idx) ?? { id: '', name: '', args: '' }
           if (typeof part?.id === 'string' && part.id) slot.id = part.id
-          if (typeof part?.function?.name === 'string' && part.function.name) slot.name += part.function.name
+          if (typeof part?.function?.name === 'string' && part.function.name)
+            slot.name += part.function.name
           if (typeof part?.function?.arguments === 'string') slot.args += part.function.arguments
           toolAcc.set(idx, slot)
         }
@@ -238,10 +233,15 @@ export function chatStream(cfg: ChatStreamConfig, hooks: ChatHooks): { abort: ()
             fail('响应里没有 choices，返回内容：' + text.slice(0, 300))
             return
           }
-          if (typeof choice.message?.reasoning_content === 'string') emit(choice.message.reasoning_content, 'reasoning')
+          if (typeof choice.message?.reasoning_content === 'string')
+            emit(choice.message.reasoning_content, 'reasoning')
           if (Array.isArray(choice.message?.tool_calls)) {
-            (choice.message.tool_calls as Record<string, any>[]).forEach((tc, i) => {
-              toolAcc.set(i, { id: String(tc?.id ?? ''), name: String(tc?.function?.name ?? ''), args: String(tc?.function?.arguments ?? '') })
+            ;(choice.message.tool_calls as Record<string, any>[]).forEach((tc, i) => {
+              toolAcc.set(i, {
+                id: String(tc?.id ?? ''),
+                name: String(tc?.function?.name ?? ''),
+                args: String(tc?.function?.arguments ?? ''),
+              })
             })
           }
           const content = choice.message?.content ?? choice.text ?? ''

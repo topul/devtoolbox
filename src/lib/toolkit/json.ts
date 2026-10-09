@@ -48,7 +48,8 @@ export function evalJsonPath(obj: unknown, path: string): unknown[] {
   p = p.slice(1)
 
   const tokens: ({ key: string } | { idx: number } | { recursive: string })[] = []
-  const re = /(?:\.\.([A-Za-z_$][\w$-]*))|(?:\.([A-Za-z_$][\w$-]*))|(?:\['([^']+)'\])|(?:\[(\d+)\])|(?:\[\*\])/g
+  const re =
+    /(?:\.\.([A-Za-z_$][\w$-]*))|(?:\.([A-Za-z_$][\w$-]*))|(?:\['([^']+)'\])|(?:\[(\d+)\])|(?:\[\*\])/g
   let m: RegExpExecArray | null
   let consumed = ''
   while ((m = re.exec(p))) {
@@ -81,7 +82,12 @@ export function evalJsonPath(obj: unknown, path: string): unknown[] {
         if (t.key === '*') {
           if (Array.isArray(node)) next.push(...node)
           else if (typeof node === 'object' && node !== null) next.push(...Object.values(node))
-        } else if (typeof node === 'object' && node !== null && !Array.isArray(node) && t.key in (node as object)) {
+        } else if (
+          typeof node === 'object' &&
+          node !== null &&
+          !Array.isArray(node) &&
+          t.key in (node as object)
+        ) {
           next.push((node as Record<string, unknown>)[t.key])
         }
       } else {
