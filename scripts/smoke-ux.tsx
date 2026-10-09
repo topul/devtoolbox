@@ -31,7 +31,14 @@ import {
   clearPersisted,
 } from '../src/lib/persist'
 import * as ui from '../src/components/ui'
-import { Collapse, ToolGuide, CopyBtn, ErrorNote, ExampleBar, ToolShell } from '../src/components/ui'
+import {
+  Collapse,
+  ToolGuide,
+  CopyBtn,
+  ErrorNote,
+  ExampleBar,
+  ToolShell,
+} from '../src/components/ui'
 import { I18nProvider } from '../src/lib/i18n'
 import { searchTools, visibleTools, TOOLS, HOT_TOOL_LIMIT } from '../src/lib/registry'
 import { PALETTE_COMMANDS } from '../src/lib/palette'
@@ -45,7 +52,10 @@ import { dirname, join } from 'node:path'
 let pass = 0
 const fails: string[] = []
 function ok(cond: boolean, label: string): void {
-  if (cond) { pass++; return }
+  if (cond) {
+    pass++
+    return
+  }
   fails.push(label)
   console.error(`  ✗ ${label}`)
 }
@@ -64,25 +74,49 @@ const localStorageStub = {
     if (throwOnWrite) throw new Error('QUOTA_EXCEEDED')
     store.set(k, v)
   },
-  removeItem: (k: string) => { store.delete(k) },
-  clear: () => { store.clear() },
+  removeItem: (k: string) => {
+    store.delete(k)
+  },
+  clear: () => {
+    store.clear()
+  },
   // 真实 Storage 有 key(i)/length，遍历式清理（purgeSensitiveSession）依赖它们。
   // 桩缺了这两个会让「实现有 bug」和「桩不完整」分不开
   key: (i: number) => [...store.keys()][i] ?? null,
-  get length() { return store.size },
+  get length() {
+    return store.size
+  },
 }
 /** 假 DOM 元素：只需要 lib/focus 用到的那几个方法 */
 type FakeEl = HTMLElement & { tagName: string }
 const doc = {
   activeElement: null as FakeEl | null,
-  documentElement: { classList: { add() {}, remove() {}, contains: () => false }, style: { setProperty() {}, removeProperty() {} }, lang: 'zh-CN' },
+  documentElement: {
+    classList: { add() {}, remove() {}, contains: () => false },
+    style: { setProperty() {}, removeProperty() {} },
+    lang: 'zh-CN',
+  },
   createElement: (tag: string) => ({
-    tagName: tag.toUpperCase(), value: '', innerHTML: '', style: { setProperty() {} },
-    select() {}, setAttribute() {}, focus() {}, click() {}, appendChild() {}, removeChild() {},
-    set textContent(v: string) { this.innerHTML = v }, get textContent() { return this.innerHTML },
+    tagName: tag.toUpperCase(),
+    value: '',
+    innerHTML: '',
+    style: { setProperty() {} },
+    select() {},
+    setAttribute() {},
+    focus() {},
+    click() {},
+    appendChild() {},
+    removeChild() {},
+    set textContent(v: string) {
+      this.innerHTML = v
+    },
+    get textContent() {
+      return this.innerHTML
+    },
   }),
   body: {
-    appendChild() {}, removeChild() {},
+    appendChild() {},
+    removeChild() {},
     style: { overflow: '' },
     querySelectorAll: () => [],
   },
@@ -95,11 +129,13 @@ const doc = {
   matchMedia: () => ({ matches: false, addEventListener() {}, removeEventListener() {} }),
   addEventListener() {},
   removeEventListener() {},
-  requestAnimationFrame: (fn: () => void) => { fn(); return 0 },
+  requestAnimationFrame: (fn: () => void) => {
+    fn()
+    return 0
+  },
 }
 ;(globalThis as unknown as { localStorage: unknown }).localStorage = localStorageStub
 ;(globalThis as unknown as { document: unknown }).document = doc
-
 
 /**
  * 剥掉注释，只留真实代码。
@@ -113,12 +149,11 @@ function codeOnly(src: string): string {
     .replace(/\/\*[\s\S]*?\*\//g, '')
     .replace(/\{\/\*[\s\S]*?\*\/\}/g, '')
     .split('\n')
-    .filter(l => !l.trimStart().startsWith('//'))
+    .filter((l) => !l.trimStart().startsWith('//'))
     .join('\n')
 }
 
-const withI18n = (node: React.ReactNode): React.ReactElement =>
-  <I18nProvider>{node}</I18nProvider>
+const withI18n = (node: React.ReactNode): React.ReactElement => <I18nProvider>{node}</I18nProvider>
 
 /** registry 里全部工具 id（后面多处断言要用：映射校验、示例表校验） */
 const TOOL_IDS = TOOLS.map((t) => t.id)
@@ -165,15 +200,29 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
 {
   // Collapse 折叠时（open=false）内部按钮不该能被 Tab 命中。
   // aria-hidden 挡不住键盘焦点，inert 才行 —— 这是评审里的 P0。
-  const collapsed = renderToStaticMarkup(withI18n(<Collapse title="参考"><button>内部按钮</button></Collapse>))
+  const collapsed = renderToStaticMarkup(
+    withI18n(
+      <Collapse title="参考">
+        <button>内部按钮</button>
+      </Collapse>,
+    ),
+  )
   ok(collapsed.includes('aria-hidden="true"'), '折叠态带 aria-hidden')
   ok(/inert/.test(collapsed), '折叠态带 inert（键盘 Tab 不该落进看不见的内容）')
 
-  const expanded = renderToStaticMarkup(withI18n(<Collapse title="参考" defaultOpen><button>内部按钮</button></Collapse>))
+  const expanded = renderToStaticMarkup(
+    withI18n(
+      <Collapse title="参考" defaultOpen>
+        <button>内部按钮</button>
+      </Collapse>,
+    ),
+  )
   ok(expanded.includes('aria-hidden="false"'), '展开态 aria-hidden=false')
   ok(!/inert/.test(expanded), '展开态不加 inert（加了内容就点不到了）')
 
-  const guide = renderToStaticMarkup(withI18n(<ToolGuide title="怎么用" steps={['第一步', '第二步']} />))
+  const guide = renderToStaticMarkup(
+    withI18n(<ToolGuide title="怎么用" steps={['第一步', '第二步']} />),
+  )
   ok(/inert/.test(guide), 'ToolGuide 折叠态同样带 inert')
 }
 
@@ -185,7 +234,10 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
   // 这样测的是真正被组件调用的那份代码，不是复刻品。
   const { trapTab, collectFocusable, FOCUSABLE_SELECTOR } = await import('../src/lib/focus')
   ok(FOCUSABLE_SELECTOR.includes('button:not([disabled])'), '可聚焦选择器排除了 disabled 按钮')
-  ok(FOCUSABLE_SELECTOR.includes('[tabindex]:not([tabindex="-1"])'), '可聚焦选择器排除了 tabindex=-1')
+  ok(
+    FOCUSABLE_SELECTOR.includes('[tabindex]:not([tabindex="-1"])'),
+    '可聚焦选择器排除了 tabindex=-1',
+  )
 
   /* --- 真实 DOM 顺序收集（本轮修掉的 P0） ---
    *
@@ -195,14 +247,19 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
    * 下面的假元素刻意**不带** data-focus-id，如实反映生产 DOM：收集必须按真实
    * 可聚焦性 + DOM 顺序工作，与有没有自定义 id 无关。
    */
-  const mkEl = (tag: string, opts: { visible?: boolean; disabled?: boolean; label?: string } = {}): FakeEl => {
+  const mkEl = (
+    tag: string,
+    opts: { visible?: boolean; disabled?: boolean; label?: string } = {},
+  ): FakeEl => {
     const el: Record<string, unknown> = {
       tagName: tag.toUpperCase(),
       disabled: opts.disabled === true,
       label: opts.label,
       getAttribute: () => null, // 关键：生产 DOM 里没有 data-focus-id
-      focus: () => { doc.activeElement = el as unknown as FakeEl },
-      getClientRects: () => (opts.visible === false ? [] : [{}] as unknown as DOMRectList),
+      focus: () => {
+        doc.activeElement = el as unknown as FakeEl
+      },
+      getClientRects: () => (opts.visible === false ? [] : ([{}] as unknown as DOMRectList)),
       contains: (n: unknown) => n === el,
     }
     return el as unknown as FakeEl
@@ -218,14 +275,14 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
   const panel = {
     contains: (n: unknown) => panelKids.includes(n as FakeEl),
     querySelectorAll: (sel: string) =>
-      panelKids.filter(el => matchFocusable(el, sel)) as unknown as NodeListOf<HTMLElement>,
+      panelKids.filter((el) => matchFocusable(el, sel)) as unknown as NodeListOf<HTMLElement>,
     querySelector: () => null,
   } as unknown as HTMLElement
 
   const found = collectFocusable(panel)
   eq(found.length, 5, '收集到抽屉里全部 5 个可聚焦元素（不再只认 data-focus-id）')
   eq(
-    found.map(el => (el as unknown as { label?: string }).label ?? '?').join(','),
+    found.map((el) => (el as unknown as { label?: string }).label ?? '?').join(','),
     '×,模型名,Base URL,API Key,提交',
     '按真实 DOM 顺序收集：关闭按钮 → 三个输入框 → 提交',
   )
@@ -234,13 +291,21 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
   const off = mkEl('button', { disabled: true })
   const negative = mkEl('input')
   ;(negative as unknown as { tabIndex: number }).tabIndex = -1
-  eq(collectFocusable({ querySelectorAll: (s: string) => [off, negative].filter(e => matchFocusable(e, s)) } as unknown as HTMLElement).length, 0,
-    'disabled 与 tabindex=-1 元素不进焦点序列')
+  eq(
+    collectFocusable({
+      querySelectorAll: (s: string) => [off, negative].filter((e) => matchFocusable(e, s)),
+    } as unknown as HTMLElement).length,
+    0,
+    'disabled 与 tabindex=-1 元素不进焦点序列',
+  )
 
   // 不可见元素由 collectFocusable 自己过滤（选择器管不到可见性）
   const invisible = mkEl('input', { visible: false })
-  eq(collectFocusable({ querySelectorAll: () => [invisible] } as unknown as HTMLElement).length, 0,
-    '不可见元素不进焦点序列')
+  eq(
+    collectFocusable({ querySelectorAll: () => [invisible] } as unknown as HTMLElement).length,
+    0,
+    '不可见元素不进焦点序列',
+  )
 
   /* --- trapTab 改为直接吃元素列表，不再需要 firstId/lastId --- */
   // 焦点在最后一个元素上按 Tab → 必须环绕回第一个，否则焦点跑出抽屉
@@ -274,7 +339,7 @@ function matchFocusable(el: FakeEl, sel: string): boolean {
   const meta = el as unknown as { disabled?: boolean; tabIndex?: number }
   if (meta.disabled === true) return false
   if (meta.tabIndex === -1) return false
-  return sel.split(',').some(part => {
+  return sel.split(',').some((part) => {
     const p = part.trim()
     if (p.startsWith('[')) return true // [tabindex]:not([tabindex="-1"]) —— 上面的 tabIndex 检查已覆盖
     if (p.startsWith('a[')) return tag === 'a'
@@ -294,7 +359,9 @@ function matchFocusable(el: FakeEl, sel: string): boolean {
   // 多词 AND：评审里点名的问题——整串 includes 导致「time json」永远零结果
   const multi = searchTools('json')
   ok(multi.length > 0, '单词查询有结果')
-  const jsonZh = multi.filter(t => t.id.includes('json') || t.keywords.some(k => k.includes('json')))
+  const jsonZh = multi.filter(
+    (t) => t.id.includes('json') || t.keywords.some((k) => k.includes('json')),
+  )
   ok(jsonZh.length > 0, '查 json 能查到 JSON 相关工具')
 
   const twoWords = searchTools('json format')
@@ -322,11 +389,11 @@ function matchFocusable(el: FakeEl, sel: string): boolean {
 /* ================= 5. HOT 标记阈值 ================= */
 
 {
-  const hot = TOOLS.filter(t => t.hot)
+  const hot = TOOLS.filter((t) => t.hot)
   ok(hot.length > 0, '存在 HOT 工具（不能一个都没有）')
   ok(
     hot.length <= HOT_TOOL_LIMIT,
-    `HOT 标记数被限制在 ${HOT_TOOL_LIMIT} 以内（实际 ${hot.length}）——超过阈值等于没标记`
+    `HOT 标记数被限制在 ${HOT_TOOL_LIMIT} 以内（实际 ${hot.length}）——超过阈值等于没标记`,
   )
   ok(hot.length <= TOOLS.length * 0.2, 'HOT 占比不超过两成')
 }
@@ -336,17 +403,26 @@ function matchFocusable(el: FakeEl, sel: string): boolean {
 {
   const cmds = PALETTE_COMMANDS
   ok(cmds.length >= 4, `命令面板提供命令型条目（实际 ${cmds.length} 条，至少 4）`)
-  ok(cmds.every(c => typeof c.id === 'string' && c.id.length > 0), '每条命令有稳定 id')
-  ok(cmds.every(c => typeof c.icon === 'string' && c.icon.length > 0), '每条命令有图标')
+  ok(
+    cmds.every((c) => typeof c.id === 'string' && c.id.length > 0),
+    '每条命令有稳定 id',
+  )
+  ok(
+    cmds.every((c) => typeof c.icon === 'string' && c.icon.length > 0),
+    '每条命令有图标',
+  )
 
   // 命令 id必须语言中立（label 才走 i18n）—— 沿用工具 id 的既有约定
-  ok(cmds.every(c => /^[\x20-\x7e]+$/.test(c.id)), '命令 id 是 ASCII（语言中立，可做存储键）')
+  ok(
+    cmds.every((c) => /^[\x20-\x7e]+$/.test(c.id)),
+    '命令 id 是 ASCII（语言中立，可做存储键）',
+  )
 
-  const kinds = new Set(cmds.map(c => c.kind))
+  const kinds = new Set(cmds.map((c) => c.kind))
   ok(kinds.has('theme'), '含切主题命令')
   ok(kinds.has('locale'), '含切语言命令')
   ok(kinds.has('zoom'), '含界面缩放命令')
-  ok(new Set(cmds.map(c => c.id)).size === cmds.length, '命令 id 不重复')
+  ok(new Set(cmds.map((c) => c.id)).size === cmds.length, '命令 id 不重复')
 
   // 标签走双语字典（按 kind 取），两个分支都不能缺
   for (const locale of ['zh', 'en'] as const) {
@@ -367,7 +443,9 @@ function matchFocusable(el: FakeEl, sel: string): boolean {
   ok(err.includes('role="alert"'), 'ErrorNote 带 role=alert（错误要立刻播报）')
 
   // 无文本的错误提示也必须能被读屏读到
-  const bar = renderToStaticMarkup(withI18n(<ExampleBar sample="abc" label="示例：" onPick={() => {}} />))
+  const bar = renderToStaticMarkup(
+    withI18n(<ExampleBar sample="abc" label="示例：" onPick={() => {}} />),
+  )
   ok(bar.includes('<button'), 'ExampleBar 渲染可点击的示例按钮')
   // 示例值本身要能让读屏用户知道「点了会发生什么」，光有按钮不够
   ok(bar.includes('abc'), '示例按钮把示例值渲染出来（不只在 title 里）')
@@ -382,22 +460,36 @@ function matchFocusable(el: FakeEl, sel: string): boolean {
   ok(okCase === '', '持久化正常时不渲染任何提示（不制造噪音）')
 
   // ToolShell 是三件事（引导/示例/⌘↵）的统一落点，必须能渲染
-  const shell = renderToStaticMarkup(withI18n(
-    <ToolShell toolId="base64" guide="base64" onSubmit={() => {}}>
-      <span>内容</span>
-    </ToolShell>
-  ))
+  const shell = renderToStaticMarkup(
+    withI18n(
+      <ToolShell toolId="base64" guide="base64" onSubmit={() => {}}>
+        <span>内容</span>
+      </ToolShell>,
+    ),
+  )
   ok(/怎么用/.test(shell), 'ToolShell 渲染引导条')
   ok(/示例/.test(shell), 'ToolShell 渲染示例条')
   ok(/⌘↵|Ctrl ↵/.test(shell), 'ToolShell 渲染 ⌘↵ 提示')
   ok(shell.includes('内容'), 'ToolShell 渲染传入的子内容')
 
   // 没有示例的工具不该硬塞一个不相关的示例
-  const noEx = renderToStaticMarkup(withI18n(<ToolShell toolId="not-a-tool"><span>x</span></ToolShell>))
+  const noEx = renderToStaticMarkup(
+    withI18n(
+      <ToolShell toolId="not-a-tool">
+        <span>x</span>
+      </ToolShell>,
+    ),
+  )
   ok(!/示例/.test(noEx), '示例表里没有的工具不显示示例条')
   ok(!/怎么用/.test(noEx), '没有映射的工具不渲染引导条（不会凭空编一段引导）')
   // toolId 已在映射表里 → 不传 guide 也会自动出引导（少写一处，漏一处的机会就少一处）
-  const auto = renderToStaticMarkup(withI18n(<ToolShell toolId="base64"><span>x</span></ToolShell>))
+  const auto = renderToStaticMarkup(
+    withI18n(
+      <ToolShell toolId="base64">
+        <span>x</span>
+      </ToolShell>,
+    ),
+  )
   ok(/怎么用/.test(auto), 'toolId 在映射表里时自动渲染引导条')
   ok(!/↵/.test(auto), '没传 onSubmit 就不渲染快捷键提示（引导条仍显示）')
 }
@@ -407,7 +499,11 @@ function matchFocusable(el: FakeEl, sel: string): boolean {
   // （原来逐页硬编码中文引导，英文界面下会直接漏中文 —— smoke:render 抓到过这个）
   const { guideL } = await import('../src/lib/locales/guide')
   const keys = Object.keys(guideL.zh).filter((k) => k !== 'shell')
-  eq(keys.length, Object.keys(guideL.en).filter((k) => k !== 'shell').length, '引导词条两个分支键数一致')
+  eq(
+    keys.length,
+    Object.keys(guideL.en).filter((k) => k !== 'shell').length,
+    '引导词条两个分支键数一致',
+  )
   const HAN = /[\u4e00-\u9fff]/
   for (const k of keys) {
     const zh = guideL.zh[k] as { steps: string[]; submit?: string; note?: string }
@@ -416,7 +512,10 @@ function matchFocusable(el: FakeEl, sel: string): boolean {
     ok(zh.steps.length === en.steps.length, `${k} 的引导步数两语言一致（结构对不上是漏翻）`)
     const leaked = en.steps.find((s) => HAN.test(s))
     ok(!leaked, `${k} 的英文引导不含中文${leaked ? `：${leaked}` : ''}`)
-    ok(zh.steps.every((s) => s.length > 0), `${k} 的中文引导每步非空`)
+    ok(
+      zh.steps.every((s) => s.length > 0),
+      `${k} 的中文引导每步非空`,
+    )
     if (zh.submit) ok(!!en.submit, `${k} 有 ⌘↵ 动作名的英文翻译`)
   }
   ok(!HAN.test(guideL.en.shell.title), '英文引导条标题不含中文')
@@ -446,9 +545,15 @@ function matchFocusable(el: FakeEl, sel: string): boolean {
   // 样式层：动效必须能被系统偏好关掉（评审 P2）
   // esbuild 打包后 import.meta.url 指向 .cache 目录，所以按包.json 上溯定位仓库根
   const css = readFileSync(join(root, 'src/index.css'), 'utf8')
-  ok(/@media\s*\(prefers-reduced-motion:\s*reduce\)/.test(css), 'index.css 有 prefers-reduced-motion 降级块')
+  ok(
+    /@media\s*\(prefers-reduced-motion:\s*reduce\)/.test(css),
+    'index.css 有 prefers-reduced-motion 降级块',
+  )
   ok(/animation-duration:\s*0\.01ms/.test(css), '降级块里把动画时长压到接近 0')
-  ok(/transition-duration:\s*0\.01ms/.test(css), '降级块也压transition（折叠区是纯 transition，只关 animation 不够）')
+  ok(
+    /transition-duration:\s*0\.01ms/.test(css),
+    '降级块也压transition（折叠区是纯 transition，只关 animation 不够）',
+  )
 }
 
 /* ================= 8. 示例数据本身合法 ================= */
@@ -456,10 +561,13 @@ function matchFocusable(el: FakeEl, sel: string): boolean {
 {
   // 示例数据的意义是「一键就能看到结果」，示例本身不合法就是负优化
   const { EXAMPLES, exampleFor } = await import('../src/lib/examples')
-    for (const key of Object.keys(EXAMPLES)) {
+  for (const key of Object.keys(EXAMPLES)) {
     ok(TOOL_IDS.includes(key), `示例表里的 ${key} 是真实存在的工具`)
   }
-  ok(Object.keys(EXAMPLES).length >= 20, `示例表覆盖足够多工具（实际 ${Object.keys(EXAMPLES).length} 个）`)
+  ok(
+    Object.keys(EXAMPLES).length >= 20,
+    `示例表覆盖足够多工具（实际 ${Object.keys(EXAMPLES).length} 个）`,
+  )
 
   // 「示例」标签走 i18n（各工具页传label），示例表只放纯数据 —— 所以这里只查数据本身
   for (const [id, s] of Object.entries(EXAMPLES)) {
@@ -487,7 +595,10 @@ function matchFocusable(el: FakeEl, sel: string): boolean {
   for (const id of ['csv-json', 'fake-data']) {
     const lines = EXAMPLES[id].sample.split('\n').filter(Boolean)
     const cols = lines[0].split(',').length
-    ok(lines.length >= 2 && lines.every((l) => l.split(',').length === cols), `${id} 的示例是列数一致的 CSV`)
+    ok(
+      lines.length >= 2 && lines.every((l) => l.split(',').length === cols),
+      `${id} 的示例是列数一致的 CSV`,
+    )
   }
 
   // 正则示例必须真能编译 —— 写错的正则会让「示例」变成「报错演示」
@@ -510,13 +621,17 @@ function matchFocusable(el: FakeEl, sel: string): boolean {
    * crypt_blowfish 对齐，bcryptHash 的输出与 `htpasswd -nbB` 不一致。
    * 与其把算错的哈希塞给用户，不如先不上线。
    */
-  ok(!TOOL_IDS.includes('bcrypt-hash' as never), 'bcrypt 未注册为用户可见工具（算法未对齐前不上线）')
+  ok(
+    !TOOL_IDS.includes('bcrypt-hash' as never),
+    'bcrypt 未注册为用户可见工具（算法未对齐前不上线）',
+  )
 }
 
 {
   // TOTP：用 RFC 6238 官方测试向量
   // RFC 6238 附录 B 的种子是 ASCII "12345678901234567890"，对应 Base32 GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ
-  const { totp, totpVerify, totpRemaining, decodeSecret, encodeSecret, parseOtpauth } = await import('../src/lib/toolkit/totp')
+  const { totp, totpVerify, totpRemaining, decodeSecret, encodeSecret, parseOtpauth } =
+    await import('../src/lib/toolkit/totp')
   const RFC_SEED = 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ'
   const RFC_VECTORS: [number, string][] = [
     [59, '287082'],
@@ -538,8 +653,16 @@ function matchFocusable(el: FakeEl, sel: string): boolean {
   eq((await totpVerify(RFC_SEED, '000000', now)).valid, false, 'TOTP 校验：错误码被拒')
   // 漂移窗口：±1 步内应通过
   const prev = await totp(RFC_SEED, now - 30)
-  eq((await totpVerify(RFC_SEED, prev, now, { window: 1 })).valid, true, 'TOTP 校验：允许 -1 步漂移')
-  eq((await totpVerify(RFC_SEED, prev, now, { window: 0 })).valid, false, 'TOTP 校验：窗口为 0 时拒绝漂移')
+  eq(
+    (await totpVerify(RFC_SEED, prev, now, { window: 1 })).valid,
+    true,
+    'TOTP 校验：允许 -1 步漂移',
+  )
+  eq(
+    (await totpVerify(RFC_SEED, prev, now, { window: 0 })).valid,
+    false,
+    'TOTP 校验：窗口为 0 时拒绝漂移',
+  )
 
   // 剩余秒数
   eq(totpRemaining(59), 1, '剩余秒数：t=59 时剩 1 秒')
@@ -567,7 +690,9 @@ function matchFocusable(el: FakeEl, sel: string): boolean {
 
   // otpauth 链接解析
   const RFC_SECRET = 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ'
-  const meta = parseOtpauth(`otpauth://totp/Example:alice@example.com?secret=${RFC_SECRET}&issuer=Example&digits=8&period=60&algorithm=SHA256`)
+  const meta = parseOtpauth(
+    `otpauth://totp/Example:alice@example.com?secret=${RFC_SECRET}&issuer=Example&digits=8&period=60&algorithm=SHA256`,
+  )
   eq(meta.account, 'alice@example.com', 'otpauth 解析出账号')
   eq(meta.issuer, 'Example', 'otpauth 解析出issuer')
   eq(meta.digits, 8, 'otpauth 解析出位数')
@@ -588,7 +713,8 @@ function matchFocusable(el: FakeEl, sel: string): boolean {
 
 {
   // JWT 签名：签-验往返 + 篡改检测 + 算法混淆检测
-  const { jwtSign, jwtVerify, jwtExpIn, JWT_SIGN_ALGOS } = await import('../src/lib/toolkit/jwt-sign')
+  const { jwtSign, jwtVerify, jwtExpIn, JWT_SIGN_ALGOS } =
+    await import('../src/lib/toolkit/jwt-sign')
   const { jwtDecode, jwtIsExpired } = await import('../src/lib/toolkit/jwt')
 
   for (const algo of JWT_SIGN_ALGOS) {
@@ -600,7 +726,11 @@ function matchFocusable(el: FakeEl, sel: string): boolean {
 
     if (algo === 'none') {
       eq(r.signature, '', 'none 的签名段为空')
-      eq((await jwtVerify(r.token, 'x', 'HS256')).reason, 'NO_SIG', 'none token 被判为无签名（算法混淆防护）')
+      eq(
+        (await jwtVerify(r.token, 'x', 'HS256')).reason,
+        'NO_SIG',
+        'none token 被判为无签名（算法混淆防护）',
+      )
     } else {
       eq((await jwtVerify(r.token, 'secret', algo)).valid, true, `${algo} 用正确密钥验签通过`)
       eq((await jwtVerify(r.token, 'wrong', algo)).valid, false, `${algo} 用错误密钥验签失败`)
@@ -611,7 +741,11 @@ function matchFocusable(el: FakeEl, sel: string): boolean {
       eq((await jwtVerify(forged, 'secret', algo)).valid, false, `${algo} 篡改 payload 后验签失败`)
       // 算法不符
       const other = algo === 'HS256' ? 'HS384' : 'HS256'
-      eq((await jwtVerify(r.token, 'secret', other)).reason, 'ALG_MISMATCH', `${algo} 声明算法不符时报 ALG_MISMATCH`)
+      eq(
+        (await jwtVerify(r.token, 'secret', other)).reason,
+        'ALG_MISMATCH',
+        `${algo} 声明算法不符时报 ALG_MISMATCH`,
+      )
     }
   }
 
@@ -625,7 +759,11 @@ function matchFocusable(el: FakeEl, sel: string): boolean {
   // 空 token 验签不抛
   eq((await jwtVerify('', 'k', 'HS256')).reason, 'BAD_FORMAT', '空token 验签报 BAD_FORMAT（不抛）')
   eq((await jwtVerify('a.b', 'k', 'HS256')).reason, 'NO_SIG', '两段 token 没有签名段，报 NO_SIG')
-  eq((await jwtVerify('a.b.c', 'k', 'HS256')).reason, 'BAD_FORMAT', 'header 不是合法 JSON 时报 BAD_FORMAT')
+  eq(
+    (await jwtVerify('a.b.c', 'k', 'HS256')).reason,
+    'BAD_FORMAT',
+    'header 不是合法 JSON 时报 BAD_FORMAT',
+  )
 }
 
 /* ================= 9. 表单 label 必须与控件编程关联 ================= */
@@ -636,7 +774,9 @@ function matchFocusable(el: FakeEl, sel: string): boolean {
  * 结果是全项目 144 个字段在读屏下都只是一声「编辑框」。这里锁死契约。
  */
 {
-  const inputHtml = renderToStaticMarkup(withI18n(<ui.Input value="" onChange={() => {}} label="模型名" />))
+  const inputHtml = renderToStaticMarkup(
+    withI18n(<ui.Input value="" onChange={() => {}} label="模型名" />),
+  )
   ok(/<label[^>]*for="/.test(inputHtml), 'Input 的 label 渲染成 <label for>（可编程关联）')
   ok(/<input[^>]*id="/.test(inputHtml), 'Input 有 id 供 label 指向')
   const forId = inputHtml.match(/<label[^>]*for="([^"]+)"/)?.[1]
@@ -649,26 +789,38 @@ function matchFocusable(el: FakeEl, sel: string): boolean {
   const taId = taHtml.match(/<textarea[^>]*id="([^"]+)"/)?.[1]
   ok(!!taFor && taFor === taId, 'TA 的 label for 与 textarea id 一致')
 
-  const selHtml = renderToStaticMarkup(withI18n(
-    <ui.Select value="a" onChange={() => {}} label="请求方法" options={[{ value: 'a', label: 'GET' }]} />,
-  ))
+  const selHtml = renderToStaticMarkup(
+    withI18n(
+      <ui.Select
+        value="a"
+        onChange={() => {}}
+        label="请求方法"
+        options={[{ value: 'a', label: 'GET' }]}
+      />,
+    ),
+  )
   ok(/<label[^>]*for="/.test(selHtml), 'Select 的 label 是 <label for>')
   const selFor = selHtml.match(/<label[^>]*for="([^"]+)"/)?.[1]
   const selId = selHtml.match(/<select[^>]*id="([^"]+)"/)?.[1]
   ok(!!selFor && selFor === selId, 'Select 的 label for 与 select id 一致')
 
   // 同页多个同类控件：id 必须互不相同，否则 label 会指向错误的字段
-  const two = renderToStaticMarkup(withI18n(
-    <div><ui.Input value="" onChange={() => {}} label="甲" /><ui.Input value="" onChange={() => {}} label="乙" /></div>,
-  ))
-  const ids = [...two.matchAll(/<input[^>]*id="([^"]+)"/g)].map(m => m[1])
+  const two = renderToStaticMarkup(
+    withI18n(
+      <div>
+        <ui.Input value="" onChange={() => {}} label="甲" />
+        <ui.Input value="" onChange={() => {}} label="乙" />
+      </div>,
+    ),
+  )
+  const ids = [...two.matchAll(/<input[^>]*id="([^"]+)"/g)].map((m) => m[1])
   eq(ids.length, 2, '两个 Input 都有 id')
   ok(ids[0] !== ids[1], '同页两个 Input 的 id 不重复（label 不会指错字段）')
 
   // 调用方可以显式补 aria-label（透传口）
-  const ariaHtml = renderToStaticMarkup(withI18n(
-    <ui.Input value="" onChange={() => {}} aria-label="API Key" />,
-  ))
+  const ariaHtml = renderToStaticMarkup(
+    withI18n(<ui.Input value="" onChange={() => {}} aria-label="API Key" />),
+  )
   ok(ariaHtml.includes('aria-label="API Key"'), 'Input 透传 aria-label 给调用方')
 
   // 没传 label 时不该渲染出空 label 标签（有 aria-label 兜底）
@@ -717,7 +869,7 @@ function matchFocusable(el: FakeEl, sel: string): boolean {
   }
   /** 把半透明色合成到不透明底色上（亮色焦点环是 40% 透明度，必须合成后才算对比度） */
   const over = (fg: RGB, bg: RGB, a: number): RGB =>
-    [0, 1, 2].map(i => Math.round(fg[i] * a + bg[i] * (1 - a))) as RGB
+    [0, 1, 2].map((i) => Math.round(fg[i] * a + bg[i] * (1 - a))) as RGB
   const lum = (c: RGB): number => {
     const f = (v: number): number => {
       const x = v / 255
@@ -793,8 +945,10 @@ function matchFocusable(el: FakeEl, sel: string): boolean {
   //只查 className里的 text-[#xxxxxx] 形式，避免命中注释里提到色值的地方
   for (const f of ['src/components/chat/MessageView.tsx', 'src/components/chat/TraceView.tsx']) {
     const src = readFileSync(join(root, f), 'utf8')
-    ok(!/text-\[#[0-9a-f]{3,8}\]/i.test(src),
-      `${f} 不再硬编码 text-[#...] 颜色（亮色下不可读），改走主题变量`)
+    ok(
+      !/text-\[#[0-9a-f]{3,8}\]/i.test(src),
+      `${f} 不再硬编码 text-[#...] 颜色（亮色下不可读），改走主题变量`,
+    )
   }
   ok(/--c-hl-fn:/.test(css), 'index.css 定义了 --c-hl-fn（函数/工具名的语义色）')
 }
@@ -822,9 +976,7 @@ function matchFocusable(el: FakeEl, sel: string): boolean {
   eq(shouldConfirm('armed', false), false, '待确认状态下取消不执行')
 
   /* --- ResultPanel：复制入口 + 高度上限 + 空状态 --- */
-  const one = renderToStaticMarkup(withI18n(
-    <ui.ResultPanel title="结果" text="abc" />,
-  ))
+  const one = renderToStaticMarkup(withI18n(<ui.ResultPanel title="结果" text="abc" />))
   ok(/max-height:\s*\d+px/.test(one), 'ResultPanel 自带高度上限（大结果不会把页面撑到几千像素）')
   ok(/overflow-auto/.test(one), 'ResultPanel 内容区可滚动')
   ok(one.includes('aria-label='), 'ResultPanel 的复制按钮有可读名称')
@@ -835,20 +987,22 @@ function matchFocusable(el: FakeEl, sel: string): boolean {
   ok(one.includes('复制') || one.includes('Copy'), 'ResultPanel 带复制入口')
 
   // 空状态：不能是空白，得有引导
-  const empty = renderToStaticMarkup(withI18n(<ui.ResultPanel title="结果" text="" emptyHint="粘点什么" />))
+  const empty = renderToStaticMarkup(
+    withI18n(<ui.ResultPanel title="结果" text="" emptyHint="粘点什么" />),
+  )
   ok(empty.includes('粘点什么'), 'ResultPanel 空状态显示引导文案')
   ok(!empty.includes('max-h-'), '空状态不套滚动容器（没有内容可滚）')
 
   // 截断时必须显示提示
-  const cut = renderToStaticMarkup(withI18n(
-    <ui.ResultPanel title="结果" rows={['a', 'b']} total={500} />,
-  ))
+  const cut = renderToStaticMarkup(
+    withI18n(<ui.ResultPanel title="结果" rows={['a', 'b']} total={500} />),
+  )
   ok(cut.includes('500'), 'ResultPanel 截断时告知真实总行数')
 
   /* --- ConfirmButton：行内二次确认，不用 window.confirm --- */
-  const cb = renderToStaticMarkup(withI18n(
-    <ui.ConfirmButton label="清空" confirmLabel="确认清空" onConfirm={() => {}} />,
-  ))
+  const cb = renderToStaticMarkup(
+    withI18n(<ui.ConfirmButton label="清空" confirmLabel="确认清空" onConfirm={() => {}} />),
+  )
   ok(!/window\.confirm/.test(cb), 'ConfirmButton 不用原生 window.confirm（与整体风格割裂）')
   ok(cb.includes('清空'), 'ConfirmButton 有可读标签')
 
@@ -874,14 +1028,17 @@ function matchFocusable(el: FakeEl, sel: string): boolean {
  */
 {
   const ids = ['base64', 'json', 'hash', 'regex', 'jwt', 'dns-lookup']
-  const tools = TOOLS.filter(t => ids.includes(t.id as string))
+  const tools = TOOLS.filter((t) => ids.includes(t.id as string))
   eq(tools.length, 6, '首批覆盖 6 个高频工具')
   // 文件归属从 registry 的 load 工厂反推（工具 id 与文件名不是一一对应：
   // base64 在 encoding.tsx、json 在 format.tsx、hash/jwt 都在 crypto.tsx）
   const toolFile = (id: string): string => {
     const src = readFileSync(join(root, 'src/lib/registry.ts'), 'utf8')
-    const line = src.split('\n').find(l => l.includes(`id: '${id}'`)) ?? ''
-    const m = line.match(/import\('\.\.\/tools\/([a-z]+)'\)/)
+    // id 与 import 可能同属一行（压缩格式），也可能被 Prettier 拆成多行 ——
+    // 用有界跨行匹配兼容两种格式；上限 400 字符防止 id 不存在时跨进下一个条目
+    const m = src.match(
+      new RegExp(`id: '${id}',[\\s\\S]{0,400}?import\\('\\.\\./tools/([a-z]+)'\\)`),
+    )
     return m ? `${m[1]}.tsx` : ''
   }
   const files = new Set(ids.map(toolFile))
@@ -894,11 +1051,19 @@ function matchFocusable(el: FakeEl, sel: string): boolean {
   // 静默失败：catch { return '' } 会让用户以为工具没生效
   // （只看真正的代码，注释里提到这个模式是解释它的，不该命中）
   const cryptoSrc = readFileSync(join(root, 'src/tools/crypto.tsx'), 'utf8')
-  const cryptoCode = cryptoSrc.split('\n')
-    .filter(l => !l.trimStart().startsWith('//') && !l.trimStart().startsWith('*') && !l.trimStart().startsWith('/*'))
+  const cryptoCode = cryptoSrc
+    .split('\n')
+    .filter(
+      (l) =>
+        !l.trimStart().startsWith('//') &&
+        !l.trimStart().startsWith('*') &&
+        !l.trimStart().startsWith('/*'),
+    )
     .join('\n')
-  ok(!/catch\s*\{\s*return\s+''\s*\}/.test(cryptoCode),
-    'crypto.tsx 不再用 catch{return \'\'} 静默吞掉错误（用户看不出发生了什么）')
+  ok(
+    !/catch\s*\{\s*return\s+''\s*\}/.test(cryptoCode),
+    "crypto.tsx 不再用 catch{return ''} 静默吞掉错误（用户看不出发生了什么）",
+  )
 
   // window.confirm 只允许存在于「确实需要强阻断」的场合，逐个点名核对
   const confirmFiles = ['crypto.tsx', 'format.tsx', 'encoding.tsx', 'dns.tsx', 'text.tsx']
@@ -919,9 +1084,15 @@ function matchFocusable(el: FakeEl, sel: string): boolean {
   const sessionStore = new Map<string, string>()
   const sessionStub = {
     getItem: (k: string) => sessionStore.get(k) ?? null,
-    setItem: (k: string, v: string) => { sessionStore.set(k, v) },
-    removeItem: (k: string) => { sessionStore.delete(k) },
-    clear: () => { sessionStore.clear() },
+    setItem: (k: string, v: string) => {
+      sessionStore.set(k, v)
+    },
+    removeItem: (k: string) => {
+      sessionStore.delete(k)
+    },
+    clear: () => {
+      sessionStore.clear()
+    },
   }
   ;(globalThis as unknown as { sessionStorage: unknown }).sessionStorage = sessionStub
 
@@ -929,7 +1100,8 @@ function matchFocusable(el: FakeEl, sel: string): boolean {
   // 敏感字段清单：token / 密钥 / 密码 / 口令 一律不进localStorage
   ok(persist.SENSITIVE_FIELDS.length > 0, '定义了敏感字段清单')
 
-  const isSensitive = (tool: string, field: string): boolean => persist.isSensitiveField(tool, field)
+  const isSensitive = (tool: string, field: string): boolean =>
+    persist.isSensitiveField(tool, field)
 
   ok(isSensitive('jwt', 'token'), 'jwt/token 判定为敏感')
   ok(isSensitive('hmac', 'key'), 'hmac/key 判定为敏感')
@@ -943,10 +1115,18 @@ function matchFocusable(el: FakeEl, sel: string): boolean {
   store.clear()
   sessionStore.clear()
   const key = persist.toolStateKey('jwt', 'token')
-  eq(persist.savePersisted(key, 'eyJhbGciOi.super-secret', { sensitive: true }), true, '敏感字段写入成功')
+  eq(
+    persist.savePersisted(key, 'eyJhbGciOi.super-secret', { sensitive: true }),
+    true,
+    '敏感字段写入成功',
+  )
   eq(store.size, 0, 'localStorage 完全没被写入（token 不落盘）')
   ok(sessionStore.size === 1, '敏感字段写进了 sessionStorage')
-  eq(persist.loadPersisted<string>(key, '', { sensitive: true }), 'eyJhbGciOi.super-secret', '敏感字段能原样读回')
+  eq(
+    persist.loadPersisted<string>(key, '', { sensitive: true }),
+    'eyJhbGciOi.super-secret',
+    '敏感字段能原样读回',
+  )
 
   // 非敏感字段仍然走 localStorage（切页保留的体验不能丢）
   store.clear()
@@ -976,25 +1156,35 @@ function matchFocusable(el: FakeEl, sel: string): boolean {
   store.clear()
   sessionStore.clear()
   persist.savePersisted(key, 'secret', { sensitive: true })
-  ok(persist.hasPersisted(key, { sensitive: true }), 'hasPersisted 能看到 sessionStorage 里的敏感字段')
+  ok(
+    persist.hasPersisted(key, { sensitive: true }),
+    'hasPersisted 能看到 sessionStorage 里的敏感字段',
+  )
   ok(!persist.hasPersisted(key, { sensitive: false }), 'hasPersisted 不会误报 localStorage')
 
   // 持久化层绝不能因为敏感就走 localStorage 兜底 —— 宁可没存储也不能落盘
   ;(globalThis as unknown as { sessionStorage: unknown }).sessionStorage = {
-    getItem: () => { throw new Error('blocked') },
-    setItem: () => { throw new Error('blocked') },
+    getItem: () => {
+      throw new Error('blocked')
+    },
+    setItem: () => {
+      throw new Error('blocked')
+    },
     removeItem: () => {},
     clear: () => {},
   }
-  eq(persist.savePersisted(key, 'must-not-persist', { sensitive: true }), false,
-    'sessionStorage 不可用时敏感字段写入失败（绝不降级到 localStorage）')
+  eq(
+    persist.savePersisted(key, 'must-not-persist', { sensitive: true }),
+    false,
+    'sessionStorage 不可用时敏感字段写入失败（绝不降级到 localStorage）',
+  )
   eq(store.size, 0, 'sessionStorage 挂了也不会把 token 写进 localStorage')
 
   /* --- 覆盖面：项目里所有 usePersistedState 调用，敏感字段必须被自动识别 --- *
    * 起因：jwt-sign/secret 与 totp/secret 从第一批就落 localStorage 了，
    * 加了SENSITIVE_FIELDS 之后它们应当自动改成 session 级。 */
   ;(globalThis as unknown as { sessionStorage: unknown }).sessionStorage = sessionStub
-  const toolFiles = readdirSync(join(root, 'src/tools')).filter(f => f.endsWith('.tsx'))
+  const toolFiles = readdirSync(join(root, 'src/tools')).filter((f) => f.endsWith('.tsx'))
   const fieldRe = /usePersistedState\(\s*'([^']+)'\s*,\s*'([^']+)'/g
   let checked = 0
   const leaks: string[] = []
@@ -1058,11 +1248,19 @@ function matchFocusable(el: FakeEl, sel: string): boolean {
   sessionStore.set('devtoolbox-unrelated', 'keep-too')
   ;(globalThis as unknown as { sessionStorage: unknown }).sessionStorage = {
     getItem: (k: string) => sessionStore.get(k) ?? null,
-    setItem: (k: string, v: string) => { sessionStore.set(k, v) },
-    removeItem: (k: string) => { sessionStore.delete(k) },
-    clear: () => { sessionStore.clear() },
+    setItem: (k: string, v: string) => {
+      sessionStore.set(k, v)
+    },
+    removeItem: (k: string) => {
+      sessionStore.delete(k)
+    },
+    clear: () => {
+      sessionStore.clear()
+    },
     key: (i: number) => [...sessionStore.keys()][i] ?? null,
-    get length() { return sessionStore.size },
+    get length() {
+      return sessionStore.size
+    },
   }
   store.clear()
   store.set('devtoolbox-tool-base64-input', 'old-plain-value')
@@ -1078,7 +1276,10 @@ function matchFocusable(el: FakeEl, sel: string): boolean {
   ok(sessionStore.has('devtoolbox-unrelated'), '不相关的键不误删')
   // localStorage 里的敏感残留也要清 —— 那是上一版落盘留下的，最该清
   ok(!store.has('devtoolbox-tool-jwt-token'), 'localStorage 里历史遗留的敏感键被清')
-  ok(store.get('devtoolbox-tool-base64-input') === 'old-plain-value', 'localStorage 的非敏感内容保留（这是持久化的意义）')
+  ok(
+    store.get('devtoolbox-tool-base64-input') === 'old-plain-value',
+    'localStorage 的非敏感内容保留（这是持久化的意义）',
+  )
 
   // 幂等：重复调用不报错
   persist.purgeSensitiveSession()
@@ -1104,16 +1305,39 @@ function matchFocusable(el: FakeEl, sel: string): boolean {
 {
   /** 输入类字段名：这些必须是持久化的 */
   const INPUT_FIELDS = new Set([
-    'input', 'text', 'a', 'b', 'q', 'query', 'pattern', 'flags', 'data',
-    'value', 'str', 'content', 'raw', 'payload', 'plain', 'cipher',
+    'input',
+    'text',
+    'a',
+    'b',
+    'q',
+    'query',
+    'pattern',
+    'flags',
+    'data',
+    'value',
+    'str',
+    'content',
+    'raw',
+    'payload',
+    'plain',
+    'cipher',
   ])
   /** 派生结果类字段名：这些必须 NOT 持久化 */
   const DERIVED_FIELDS = new Set([
-    'output', 'err', 'error', 'result', 'results', 'stats', 'out',
-    'matches', 'decoded', 'parsed', 'showing',
+    'output',
+    'err',
+    'error',
+    'result',
+    'results',
+    'stats',
+    'out',
+    'matches',
+    'decoded',
+    'parsed',
+    'showing',
   ])
 
-  const files = readdirSync(join(root, 'src/tools')).filter(f => f.endsWith('.tsx'))
+  const files = readdirSync(join(root, 'src/tools')).filter((f) => f.endsWith('.tsx'))
   const inputCalls: string[] = []
   const derivedCalls: string[] = []
   for (const f of files) {
@@ -1124,16 +1348,29 @@ function matchFocusable(el: FakeEl, sel: string): boolean {
       if (INPUT_FIELDS.has(field)) inputCalls.push(`${f}:${field}`)
     }
   }
-  ok(derivedCalls.length === 0,
-    `派生结果字段没有被持久化（否则会显示过期结果）：${derivedCalls.join(', ') || '（无）'}`)
-  ok(inputCalls.length >= 30,
-    `输入类字段已铺开持久化（当前 ${inputCalls.length} 处）`)
+  ok(
+    derivedCalls.length === 0,
+    `派生结果字段没有被持久化（否则会显示过期结果）：${derivedCalls.join(', ') || '（无）'}`,
+  )
+  ok(inputCalls.length >= 30, `输入类字段已铺开持久化（当前 ${inputCalls.length} 处）`)
 
   // 覆盖率：纯计算类工具（无网络/无文件）应该全部铺开了。
   // 这些工具的输入就是用户手打的一串文本，切页丢失最影响体验
-  const MUST_HAVE = ['codecs.tsx', 'dataformats.tsx', 'formats.tsx', 'generators.tsx',
-    'offsec.tsx', 'security.tsx', 'time.tsx', 'jwtcrack.tsx', 'x509.tsx',
-    'network.tsx', 'schema.tsx', 'chatcompare.tsx', 'timezone.tsx']
+  const MUST_HAVE = [
+    'codecs.tsx',
+    'dataformats.tsx',
+    'formats.tsx',
+    'generators.tsx',
+    'offsec.tsx',
+    'security.tsx',
+    'time.tsx',
+    'jwtcrack.tsx',
+    'x509.tsx',
+    'network.tsx',
+    'schema.tsx',
+    'chatcompare.tsx',
+    'timezone.tsx',
+  ]
   const missing: string[] = []
   for (const f of MUST_HAVE) {
     const code = codeOnly(readFileSync(join(root, 'src/tools', f), 'utf8'))
@@ -1159,20 +1396,35 @@ function matchFocusable(el: FakeEl, sel: string): boolean {
   const regSrc = readFileSync(join(root, 'src/lib/registry.ts'), 'utf8')
   // 键是 `toolId/field`，但 toolId 本身可能含连字符（har-analyze）——
   // 按 / 截断会得到 'har' 这种不存在的 id。改成判断前缀是否命中 registry 里的任一 id。
-  const registryIds = new Set([...regSrc.matchAll(/id: '([a-z0-9-]+)'/g)].map(m => m[1]))
-  const unknown = [...new Set([...seen.keys()].map(k => k.split('/')[0]))]
-    .filter(id => !registryIds.has(id))
-  eq(unknown.length, 0, 'toolId 都在 registry 里存在（不存在：' + (unknown.join(', ') || '无') + '）')
+  const registryIds = new Set([...regSrc.matchAll(/id: '([a-z0-9-]+)'/g)].map((m) => m[1]))
+  const unknown = [...new Set([...seen.keys()].map((k) => k.split('/')[0]))].filter(
+    (id) => !registryIds.has(id),
+  )
+  eq(
+    unknown.length,
+    0,
+    'toolId 都在 registry 里存在（不存在：' + (unknown.join(', ') || '无') + '）',
+  )
 
   // 不该铺开的：这些是有网络/文件/会话依赖的，持久化它们会引入过期状态
-  const SHOULD_NOT = ['httpclient.tsx', 'proxy.tsx', 'chat.tsx', 'mcpclient.tsx', 'sse.tsx', 'ws.tsx']
+  const SHOULD_NOT = [
+    'httpclient.tsx',
+    'proxy.tsx',
+    'chat.tsx',
+    'mcpclient.tsx',
+    'sse.tsx',
+    'ws.tsx',
+  ]
   const overreach: string[] = []
   for (const f of SHOULD_NOT) {
     const code = codeOnly(readFileSync(join(root, 'src/tools', f), 'utf8'))
     if (/usePersistedState/.test(code)) overreach.push(f)
   }
-  eq(overreach.length, 0,
-    `有网络/会话依赖的工具未盲目持久化（避免过期状态）：${overreach.join(', ') || '无'}`)
+  eq(
+    overreach.length,
+    0,
+    `有网络/会话依赖的工具未盲目持久化（避免过期状态）：${overreach.join(', ') || '无'}`,
+  )
 }
 
 /* ================= 结果 ================= */

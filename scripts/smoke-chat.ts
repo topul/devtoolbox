@@ -13,7 +13,12 @@
  * 只依赖 node 内置模块与 electron/main/chat.ts，不需要 electron，可在 CI 直接跑。
  */
 import http from 'node:http'
-import { chatStream, type ChatConfig, type ChatDeltaKind, type ChatMeta } from '../electron/main/chat'
+import {
+  chatStream,
+  type ChatConfig,
+  type ChatDeltaKind,
+  type ChatMeta,
+} from '../electron/main/chat'
 import { createChatController } from '../electron/main/chat-ipc'
 import type { ChatEvent, ChatSendSpec } from '../src/lib/chat-types'
 
@@ -43,11 +48,19 @@ function ok(name: string, cond: boolean, detail = ''): void {
 }
 
 function eq(name: string, actual: unknown, expected: unknown): void {
-  ok(name, Object.is(actual, expected), `期望 ${JSON.stringify(expected)}，实际 ${JSON.stringify(actual)}`)
+  ok(
+    name,
+    Object.is(actual, expected),
+    `期望 ${JSON.stringify(expected)}，实际 ${JSON.stringify(actual)}`,
+  )
 }
 
 function includes(name: string, haystack: string, needle: string): void {
-  ok(name, haystack.includes(needle), `未在「${haystack.slice(0, 160)}」中找到 ${JSON.stringify(needle)}`)
+  ok(
+    name,
+    haystack.includes(needle),
+    `未在「${haystack.slice(0, 160)}」中找到 ${JSON.stringify(needle)}`,
+  )
 }
 
 /* ================= 假服务端 ================= */
@@ -92,11 +105,15 @@ function startUpstream() {
       if (mode === 'plain') {
         // 网关不支持流式：忽略 stream:true，直接回整段 JSON
         res.writeHead(200, { 'Content-Type': 'application/json' })
-        res.end(JSON.stringify({
-          model: 'fallback-model',
-          choices: [{ message: { role: 'assistant', content: '整段返回的内容' }, finish_reason: 'stop' }],
-          usage: { prompt_tokens: 7, completion_tokens: 9, total_tokens: 16 },
-        }))
+        res.end(
+          JSON.stringify({
+            model: 'fallback-model',
+            choices: [
+              { message: { role: 'assistant', content: '整段返回的内容' }, finish_reason: 'stop' },
+            ],
+            usage: { prompt_tokens: 7, completion_tokens: 9, total_tokens: 16 },
+          }),
+        )
         return
       }
 
@@ -119,7 +136,10 @@ function startUpstream() {
       if (mode === 'crlf') {
         // 有的服务端用 \r\n 分行，解析器必须容错
         for (const t of DELTA_TEXT) frame({ content: t }, true)
-        send({ model: 'mock-model', choices: [{ index: 0, delta: {}, finish_reason: 'stop' }] }, true)
+        send(
+          { model: 'mock-model', choices: [{ index: 0, delta: {}, finish_reason: 'stop' }] },
+          true,
+        )
         res.write('data: [DONE]\r\n\r\n')
         res.end()
         return
@@ -202,7 +222,9 @@ function startProxy() {
     req.pipe(upstream)
   })
   return new Promise<{ server: http.Server; port: number; seen: string[] }>((resolve) => {
-    server.listen(0, '127.0.0.1', () => resolve({ server, port: (server.address() as any).port, seen }))
+    server.listen(0, '127.0.0.1', () =>
+      resolve({ server, port: (server.address() as any).port, seen }),
+    )
   })
 }
 
@@ -242,7 +264,8 @@ function callChat(
             }
           },
           onDone: (meta) => resolve({ text, reasoning, meta, error: null, deltaCalls, deltaTimes }),
-          onError: (message) => resolve({ text, reasoning, meta: null, error: message, deltaCalls, deltaTimes }),
+          onError: (message) =>
+            resolve({ text, reasoning, meta: null, error: message, deltaCalls, deltaTimes }),
         },
       )
     } catch (e) {
@@ -273,12 +296,24 @@ async function main(): Promise<void> {
     const basic = await callChat({ baseUrl, model: 'stream' })
     eq('无错误', basic.error, null)
     eq('拼接出完整正文', basic.text, DELTA_TEXT.join(''))
-    ok('是逐帧到达而非一次性收完', basic.deltaCalls === DELTA_TEXT.length, `实际 ${basic.deltaCalls} 帧`)
-    ok('末帧 finish_reason 被记录', basic.meta?.finishReason === 'stop', String(basic.meta?.finishReason))
+    ok(
+      '是逐帧到达而非一次性收完',
+      basic.deltaCalls === DELTA_TEXT.length,
+      `实际 ${basic.deltaCalls} 帧`,
+    )
+    ok(
+      '末帧 finish_reason 被记录',
+      basic.meta?.finishReason === 'stop',
+      String(basic.meta?.finishReason),
+    )
     ok('TTFB 有值', (basic.meta?.ttfbMs ?? 0) > 0, String(basic.meta?.ttfbMs))
     ok('首字延迟有值', (basic.meta?.firstTokenMs ?? -1) >= 0, String(basic.meta?.firstTokenMs))
     ok('首字不晚于总时长', (basic.meta?.firstTokenMs ?? 0) <= (basic.meta?.totalMs ?? 0))
-    ok('累计字符数正确', basic.meta?.chars === DELTA_TEXT.join('').length, String(basic.meta?.chars))
+    ok(
+      '累计字符数正确',
+      basic.meta?.chars === DELTA_TEXT.join('').length,
+      String(basic.meta?.chars),
+    )
     ok('服务端返回的模型名被记录', basic.meta?.model === 'mock-model', String(basic.meta?.model))
     ok('请求带上了 stream 标记', lastUpstream?.sawStreamFlag === true)
     ok('请求带上了 stream_options.include_usage', lastUpstream?.sawUsageFlag === true)
@@ -289,7 +324,11 @@ async function main(): Promise<void> {
     eq('prompt tokens', withUsage.meta?.usage?.promptTokens, 11)
     eq('completion tokens', withUsage.meta?.usage?.completionTokens, 22)
     eq('total tokens', withUsage.meta?.usage?.totalTokens, 33)
-    ok('usage 帧不污染正文字符数', withUsage.meta?.chars === DELTA_TEXT.join('').length, String(withUsage.meta?.chars))
+    ok(
+      'usage 帧不污染正文字符数',
+      withUsage.meta?.chars === DELTA_TEXT.join('').length,
+      String(withUsage.meta?.chars),
+    )
 
     /* ---------- 推理模型 ---------- */
     const reasoning = await callChat({ baseUrl, model: 'reasoning' })
@@ -328,25 +367,47 @@ async function main(): Promise<void> {
     ok('取消不会把已收到的内容丢掉', aborted.text.length > 0, aborted.text)
 
     /* ---------- 经代理流式 ---------- */
-    const viaProxy = await callChat({ baseUrl, model: 'stream', proxy: `http://127.0.0.1:${proxyPort}` })
+    const viaProxy = await callChat({
+      baseUrl,
+      model: 'stream',
+      proxy: `http://127.0.0.1:${proxyPort}`,
+    })
     eq('经代理流式同样得到完整正文', viaProxy.text, DELTA_TEXT.join(''))
-    ok('请求确实走了代理（绝对 URI）', proxySeen.some((u) => u.startsWith('http://127.0.0.1:')), proxySeen.join(' | ').slice(0, 120))
+    ok(
+      '请求确实走了代理（绝对 URI）',
+      proxySeen.some((u) => u.startsWith('http://127.0.0.1:')),
+      proxySeen.join(' | ').slice(0, 120),
+    )
     ok('经代理同样逐帧到达', viaProxy.deltaCalls === DELTA_TEXT.length, String(viaProxy.deltaCalls))
 
     /* ---------- 自定义请求头 ---------- */
-    const custom = await callChat({ baseUrl, model: 'stream', extraHeaders: [['api-key', 'custom-value']] })
+    const custom = await callChat({
+      baseUrl,
+      model: 'stream',
+      extraHeaders: [['api-key', 'custom-value']],
+    })
     eq('自定义请求头不影响流式', custom.text, DELTA_TEXT.join(''))
 
     /* ---------- IPC 编排（createChatController） ---------- */
     const events: ChatEvent[] = []
     const ctl = createChatController({ emit: (e) => events.push(e) })
 
-    const r1 = ctl.send({ requestId: 'req-a', baseUrl, apiKey: 'k', model: 'usage', messages: [{ role: 'user', content: 'hi' }] } as ChatSendSpec)
+    const r1 = ctl.send({
+      requestId: 'req-a',
+      baseUrl,
+      apiKey: 'k',
+      model: 'usage',
+      messages: [{ role: 'user', content: 'hi' }],
+    } as ChatSendSpec)
     eq('send 返回调用方给的 requestId', r1.requestId, 'req-a')
     eq('send 报告成功', r1.ok, true)
     ok('有流在跑时 isActive 为真', ctl.isActive())
     eq('start 事件先于任何 delta', events[0]?.type, 'start')
-    ok('事件都带同一个 requestId', events.every((e) => e.requestId === 'req-a'), events.map((e) => e.requestId).join(','))
+    ok(
+      '事件都带同一个 requestId',
+      events.every((e) => e.requestId === 'req-a'),
+      events.map((e) => e.requestId).join(','),
+    )
 
     await waitFor(() => events.some((e) => e.type === 'done'), 5000)
     const doneEvt = events.find((e) => e.type === 'done') as Extract<ChatEvent, { type: 'done' }>
@@ -354,57 +415,130 @@ async function main(): Promise<void> {
     eq('done 之后不再有活跃流', ctl.isActive(), false)
     eq('abort 在无流时返回 false', ctl.abort(), false)
 
-    const deltaEvts = events.filter((e) => e.type === 'delta') as Extract<ChatEvent, { type: 'delta' }>[]
-    ok('delta 事件按到达顺序累积成完整正文', deltaEvts.map((d) => d.text).join('') === DELTA_TEXT.join(''))
-    ok('delta 事件带时间戳', deltaEvts.every((d) => typeof d.atMs === 'number' && d.atMs >= 0))
+    const deltaEvts = events.filter((e) => e.type === 'delta') as Extract<
+      ChatEvent,
+      { type: 'delta' }
+    >[]
+    ok(
+      'delta 事件按到达顺序累积成完整正文',
+      deltaEvts.map((d) => d.text).join('') === DELTA_TEXT.join(''),
+    )
+    ok(
+      'delta 事件带时间戳',
+      deltaEvts.every((d) => typeof d.atMs === 'number' && d.atMs >= 0),
+    )
 
     // 多路复用：不同 requestId 并行，事件按 id 归组互不干扰；同 id 重发才顶掉旧流
     events.length = 0
-    ctl.send({ requestId: 'req-b', baseUrl, apiKey: 'k', model: 'slow', messages: [{ role: 'user', content: 'hi' }] } as ChatSendSpec)
-    const second = ctl.send({ requestId: 'req-c', baseUrl, apiKey: 'k', model: 'stream', messages: [{ role: 'user', content: 'hi' }] } as ChatSendSpec)
+    ctl.send({
+      requestId: 'req-b',
+      baseUrl,
+      apiKey: 'k',
+      model: 'slow',
+      messages: [{ role: 'user', content: 'hi' }],
+    } as ChatSendSpec)
+    const second = ctl.send({
+      requestId: 'req-c',
+      baseUrl,
+      apiKey: 'k',
+      model: 'stream',
+      messages: [{ role: 'user', content: 'hi' }],
+    } as ChatSendSpec)
     eq('第二条请求用的是自己的 id', second.requestId, 'req-c')
     ok('两条流同时活跃（并行）', ctl.activeCount() === 2, String(ctl.activeCount()))
     await waitFor(() => events.some((e) => e.type === 'done' && e.requestId === 'req-c'), 5000)
     ok('快的先完成，慢的还在跑', ctl.isActive())
-    ok('两条流的事件都到了且 id 各自归组', events.some((e) => e.type === 'delta' && e.requestId === 'req-b') && events.some((e) => e.type === 'delta' && e.requestId === 'req-c'))
+    ok(
+      '两条流的事件都到了且 id 各自归组',
+      events.some((e) => e.type === 'delta' && e.requestId === 'req-b') &&
+        events.some((e) => e.type === 'delta' && e.requestId === 'req-c'),
+    )
 
     // 定向取消：只停 req-b，req-c 继续到 done
     eq('定向取消命中', ctl.abort('req-b'), true)
     await waitFor(() => events.some((e) => e.type === 'error' && e.requestId === 'req-b'), 5000)
-    const abortedB = events.find((e) => e.type === 'error' && e.requestId === 'req-b') as Extract<ChatEvent, { type: 'error' }> | undefined
-    ok('被取消的请求收到取消事件', !!abortedB, events.map((e) => `${e.type}:${e.requestId}`).join(' '))
+    const abortedB = events.find((e) => e.type === 'error' && e.requestId === 'req-b') as
+      Extract<ChatEvent, { type: 'error' }> | undefined
+    ok(
+      '被取消的请求收到取消事件',
+      !!abortedB,
+      events.map((e) => `${e.type}:${e.requestId}`).join(' '),
+    )
     eq('取消事件的错误码可识别', abortedB?.code, 'ABORTED')
-    ok('定向取消后 req-c 正常完成', events.some((e) => e.type === 'done' && e.requestId === 'req-c'))
+    ok(
+      '定向取消后 req-c 正常完成',
+      events.some((e) => e.type === 'done' && e.requestId === 'req-c'),
+    )
     eq('全部结束后不再有活跃流', ctl.activeCount(), 0)
     eq('abort 不存在的 id 返回 false', ctl.abort('req-b'), false)
 
     // 同 id 重发：顶掉旧流（防重复），界面不会出现两份同 id 的活流
     events.length = 0
-    ctl.send({ requestId: 'req-x', baseUrl, apiKey: 'k', model: 'slow', messages: [{ role: 'user', content: 'hi' }] } as ChatSendSpec)
-    const dup = ctl.send({ requestId: 'req-x', baseUrl, apiKey: 'k', model: 'stream', messages: [{ role: 'user', content: 'hi' }] } as ChatSendSpec)
+    ctl.send({
+      requestId: 'req-x',
+      baseUrl,
+      apiKey: 'k',
+      model: 'slow',
+      messages: [{ role: 'user', content: 'hi' }],
+    } as ChatSendSpec)
+    const dup = ctl.send({
+      requestId: 'req-x',
+      baseUrl,
+      apiKey: 'k',
+      model: 'stream',
+      messages: [{ role: 'user', content: 'hi' }],
+    } as ChatSendSpec)
     eq('重发返回同一 requestId', dup.requestId, 'req-x')
     await waitFor(() => events.some((e) => e.type === 'error' && e.requestId === 'req-x'), 5000)
     const dupX = events.filter((e) => e.type === 'start' && e.requestId === 'req-x')
     ok('同 id 两次发送都发出了 start', dupX.length === 2, String(dupX.length))
-    eq('被顶掉者收到 ABORTED', (events.find((e) => e.type === 'error' && e.requestId === 'req-x') as Extract<ChatEvent, { type: 'error' }> | undefined)?.code, 'ABORTED')
+    eq(
+      '被顶掉者收到 ABORTED',
+      (
+        events.find((e) => e.type === 'error' && e.requestId === 'req-x') as
+          Extract<ChatEvent, { type: 'error' }> | undefined
+      )?.code,
+      'ABORTED',
+    )
     await waitFor(() => events.some((e) => e.type === 'done' && e.requestId === 'req-x'), 5000)
     eq('新流完成后活跃数归零', ctl.activeCount(), 0)
     ctl.abort()
 
     // 参数不合法：要能同步给出错误事件，而不是让界面永远转圈
     events.length = 0
-    const badReq = ctl.send({ requestId: 'req-d', baseUrl: '', apiKey: 'k', model: 'stream', messages: [] } as ChatSendSpec)
+    const badReq = ctl.send({
+      requestId: 'req-d',
+      baseUrl: '',
+      apiKey: 'k',
+      model: 'stream',
+      messages: [],
+    } as ChatSendSpec)
     eq('空地址时 send 不算成功', badReq.ok, false)
     eq('空地址时仍先给出 start', events[0]?.type, 'start')
-    const errD = events.find((e) => e.type === 'error') as Extract<ChatEvent, { type: 'error' }> | undefined
+    const errD = events.find((e) => e.type === 'error') as
+      Extract<ChatEvent, { type: 'error' }> | undefined
     ok('空地址给出错误事件', !!errD)
     includes('空地址错误信息可读', errD?.message ?? '', '接口地址')
     eq('失败后不再有活跃流', ctl.isActive(), false)
 
     // 自动生成 id 时不能重复
-    const auto1 = ctl.send({ baseUrl: '', apiKey: 'k', model: 'stream', messages: [] } as ChatSendSpec)
-    const auto2 = ctl.send({ baseUrl: '', apiKey: 'k', model: 'stream', messages: [] } as ChatSendSpec)
-    ok('未给 id 时自动生成且不重复', !!auto1.requestId && auto1.requestId !== auto2.requestId, `${auto1.requestId} vs ${auto2.requestId}`)
+    const auto1 = ctl.send({
+      baseUrl: '',
+      apiKey: 'k',
+      model: 'stream',
+      messages: [],
+    } as ChatSendSpec)
+    const auto2 = ctl.send({
+      baseUrl: '',
+      apiKey: 'k',
+      model: 'stream',
+      messages: [],
+    } as ChatSendSpec)
+    ok(
+      '未给 id 时自动生成且不重复',
+      !!auto1.requestId && auto1.requestId !== auto2.requestId,
+      `${auto1.requestId} vs ${auto2.requestId}`,
+    )
   } finally {
     upstream.close()
     proxy.close()

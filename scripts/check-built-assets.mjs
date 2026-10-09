@@ -34,7 +34,8 @@ if (!fs.existsSync(indexPath)) {
   fail('缺少 out/renderer/index.html')
 } else {
   const html = fs.readFileSync(indexPath, 'utf8')
-  if (!html.includes('Content-Security-Policy')) fail('index.html 缺少 Content-Security-Policy（生产构建应当注入）')
+  if (!html.includes('Content-Security-Policy'))
+    fail('index.html 缺少 Content-Security-Policy（生产构建应当注入）')
   if (/frame-ancestors/i.test(html)) {
     // 该指令只能通过 HTTP 头传递；写进 meta 会被忽略并产生控制台告警
     fail('CSP 里含 frame-ancestors —— 它只能走 HTTP 头，写在 meta 里会被忽略并告警')
@@ -44,7 +45,7 @@ if (!fs.existsSync(indexPath)) {
 /* ---------- 2. HTML / CSS 里不能有外链资源 ---------- */
 const EXTERNAL = [
   [/<script[^>]+src=["']https?:/i, 'HTML 里有外部 script'],
-  [/<link[^>]+href=["']https?:/i, "HTML 里有外部 link（样式/字体/图标）"],
+  [/<link[^>]+href=["']https?:/i, 'HTML 里有外部 link（样式/字体/图标）'],
   [/<img[^>]+src=["']https?:/i, 'HTML 里有外部 img'],
   [/@import\s+(?:url\()?["']?https?:/i, 'CSS 里有外部 @import'],
   [/url\(\s*["']?https?:/i, 'CSS 里有外部 url()'],
@@ -81,7 +82,9 @@ const fontCount = fs.existsSync(assetsDir)
   : 0
 
 if (failures === 0) {
-  console.log(`✔ 产物自检通过（${targets.length} 个文件，无外链资源；字体文件 ${fontCount} 个，CSP 已注入）`)
+  console.log(
+    `✔ 产物自检通过（${targets.length} 个文件，无外链资源；字体文件 ${fontCount} 个，CSP 已注入）`,
+  )
 } else {
   console.error(`\n${failures} 项问题`)
   process.exit(1)

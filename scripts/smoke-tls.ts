@@ -22,7 +22,10 @@ import type { TlsProbe } from '../src/lib/tls-types'
 let pass = 0
 const fails: string[] = []
 function ok(cond: boolean, label: string): void {
-  if (cond) { pass++; return }
+  if (cond) {
+    pass++
+    return
+  }
   fails.push(label)
   console.error(`  ✗ ${label}`)
 }
@@ -44,10 +47,13 @@ function makeSelfSigned(): { key: string; cert: string } {
   cert.setIssuer(attrs)
   // SAN 里放多个域名，验证解析时能全部取到
   cert.setExtensions([
-    { name: 'subjectAltName', altNames: [
-      { type: 2, value: 'localhost' },
-      { type: 7, ip: '127.0.0.1' },
-    ] },
+    {
+      name: 'subjectAltName',
+      altNames: [
+        { type: 2, value: 'localhost' },
+        { type: 7, ip: '127.0.0.1' },
+      ],
+    },
   ])
   cert.sign(keys.privateKey, forge.md.sha256.create())
   return { key: forge.pki.privateKeyToPem(keys.privateKey), cert: forge.pki.certificateToPem(cert) }
@@ -57,18 +63,21 @@ const { key, cert } = makeSelfSigned()
 
 /** 起本地 TLS 服务器 */
 function startServer(): Promise<{ port: number; close: () => Promise<void> }> {
-  return new Promise(resolve => {
-    const server = https.createServer({ key, cert }, (_req, res) => { res.end('ok') })
+  return new Promise((resolve) => {
+    const server = https.createServer({ key, cert }, (_req, res) => {
+      res.end('ok')
+    })
     server.listen(0, '127.0.0.1', () => {
       const addr = server.address()
       const port = typeof addr === 'object' && addr ? addr.port : 0
       resolve({
         port,
-        close: () => new Promise<void>(r => {
-          // 主动 destroy 活跃连接，否则 server.close() 会等连接释放而挂住
-          server.closeAllConnections?.()
-          server.close(() => r())
-        }),
+        close: () =>
+          new Promise<void>((r) => {
+            // 主动 destroy 活跃连接，否则 server.close() 会等连接释放而挂住
+            server.closeAllConnections?.()
+            server.close(() => r())
+          }),
       })
     })
   })
@@ -133,7 +142,10 @@ try {
   /* --- 9. 连上但立刻断开（对未监听端口） --- */
   const r5 = await probeTls('127.0.0.1', 1, 2000)
   eq(r5.ok, false, '未监听端口探测失败')
-  ok(['ECONNREFUSED', 'CONN_FAILED', 'ETIMEDOUT'].includes(r5.errorCode ?? ''), `错误码合理（${r5.errorCode}）`)
+  ok(
+    ['ECONNREFUSED', 'CONN_FAILED', 'ETIMEDOUT'].includes(r5.errorCode ?? ''),
+    `错误码合理（${r5.errorCode}）`,
+  )
 
   /* --- 10. 超时要能收场（连一个丢弃包的地址） --- */
   // 203.0.113.x 是 TEST-NET-3，RFC 5737 保留，不会真的连上

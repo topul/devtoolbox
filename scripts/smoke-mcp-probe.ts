@@ -14,20 +14,20 @@ const NODE = process.execPath
 let pass = 0
 const fail: string[] = []
 function ok(name: string, cond: boolean, detail = ''): void {
-  if (cond) { pass++ } else { fail.push(`${name}${detail ? ` —— ${detail}` : ''}`) }
+  if (cond) {
+    pass++
+  } else {
+    fail.push(`${name}${detail ? ` —— ${detail}` : ''}`)
+  }
 }
 
-const stdio = (over: Partial<ChatToolServer> = {}): ChatToolServer => ({
-  command: NODE,
-  args: [SERVER],
-  ...over,
-})
+/** 函数声明收在 `}` 上，后面行首的 `{` 裸块（顶层 await 分组）永远不会被 ASI 合并 */
+function stdio(over: Partial<ChatToolServer> = {}): ChatToolServer {
+  return { command: NODE, args: [SERVER], ...over }
+}
 
 /* ================= 正常路径：真实内置服务端 ================= */
 
-// 前置分号：上一行是 `=> ({...})` 箭头函数，行首的 `{` 需要显式断开，
-// 否则 TS 解析器会把裸块当对象字面量继续解析（esbuild/node 不挑，ESLint 挑）。
-;
 {
   const r = await probeServer(stdio(), 30_000)
   ok('内置服务端探测成功', r.ok, r.error ?? '')

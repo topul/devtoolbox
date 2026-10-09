@@ -38,10 +38,18 @@ function ok(name: string, cond: boolean, detail = ''): void {
   }
 }
 function eq(name: string, actual: unknown, expected: unknown): void {
-  ok(name, Object.is(actual, expected), `期望 ${JSON.stringify(expected)}，实际 ${JSON.stringify(actual)}`)
+  ok(
+    name,
+    Object.is(actual, expected),
+    `期望 ${JSON.stringify(expected)}，实际 ${JSON.stringify(actual)}`,
+  )
 }
 function includes(name: string, haystack: string, needle: string): void {
-  ok(name, haystack.includes(needle), `未在「${haystack.slice(0, 200)}」中找到 ${JSON.stringify(needle)}`)
+  ok(
+    name,
+    haystack.includes(needle),
+    `未在「${haystack.slice(0, 200)}」中找到 ${JSON.stringify(needle)}`,
+  )
 }
 function waitFor(cond: () => boolean, timeoutMs: number): Promise<void> {
   return new Promise((resolve) => {
@@ -72,7 +80,9 @@ function startModel() {
       }
 
       res.writeHead(200, { 'Content-Type': 'text/event-stream' })
-      const send = (o: unknown): void => { res.write(`data: ${JSON.stringify(o)}\n\n`) }
+      const send = (o: unknown): void => {
+        res.write(`data: ${JSON.stringify(o)}\n\n`)
+      }
       const frame = (delta: Record<string, unknown>, extra: Record<string, unknown> = {}): void => {
         send({ model: 'mock-model', choices: [{ index: 0, delta, ...extra }] })
       }
@@ -81,7 +91,9 @@ function startModel() {
         res.end()
       }
       const emitToolCall = (id: string, name: string, argsJson: string): void => {
-        frame({ tool_calls: [{ index: 0, id, type: 'function', function: { name, arguments: argsJson } }] })
+        frame({
+          tool_calls: [{ index: 0, id, type: 'function', function: { name, arguments: argsJson } }],
+        })
         frame({}, { finish_reason: 'tool_calls' })
         done()
       }
@@ -97,7 +109,11 @@ function startModel() {
       }
       for (const part of '工具结果已收到') frame({ content: part })
       frame({}, { finish_reason: 'stop' })
-      send({ model: 'mock-model', choices: [], usage: { prompt_tokens: 5, completion_tokens: 6, total_tokens: 11 } })
+      send({
+        model: 'mock-model',
+        choices: [],
+        usage: { prompt_tokens: 5, completion_tokens: 6, total_tokens: 11 },
+      })
       done()
     })
   })
@@ -114,13 +130,14 @@ const ctl = createChatController({ emit: (e) => events.push(e) })
 const of = <T extends ChatEvent['type']>(id: string, type: T): Extract<ChatEvent, { type: T }>[] =>
   events.filter((e) => e.type === type && e.requestId === id) as Extract<ChatEvent, { type: T }>[]
 
-const baseSpec = (over: Partial<ChatSendSpec>): ChatSendSpec => ({
-  baseUrl: over.baseUrl ?? '',
-  apiKey: 'sk-secret-123',
-  model: 'mock-model',
-  messages: [{ role: 'user', content: '你好' }],
-  ...over,
-} as ChatSendSpec)
+const baseSpec = (over: Partial<ChatSendSpec>): ChatSendSpec =>
+  ({
+    baseUrl: over.baseUrl ?? '',
+    apiKey: 'sk-secret-123',
+    model: 'mock-model',
+    messages: [{ role: 'user', content: '你好' }],
+    ...over,
+  }) as ChatSendSpec
 
 const watchdog = setTimeout(() => {
   console.error('\n错误: 冒烟脚本超时（90s）')
@@ -144,7 +161,10 @@ async function main(): Promise<void> {
     /* ---------- 纯对话：一轮完整链路 ---------- */
     {
       ctl.send(baseSpec({ requestId: 'req-plain', baseUrl, model: 'mock-model' }))
-      await waitFor(() => of('req-plain', 'done').length > 0 || of('req-plain', 'error').length > 0, 10_000)
+      await waitFor(
+        () => of('req-plain', 'done').length > 0 || of('req-plain', 'error').length > 0,
+        10_000,
+      )
       eq('纯对话完成', of('req-plain', 'done').length, 1)
 
       const r = ctl.trace('req-plain')
@@ -177,13 +197,18 @@ async function main(): Promise<void> {
 
     /* ---------- 工具对话：逐轮请求体 ---------- */
     {
-      ctl.send(baseSpec({
-        requestId: 'req-agent',
-        baseUrl,
-        apiKey: 'sk-agent',
-        tools: { server: { command: NODE, args: [SERVER] }, maxRounds: 8 },
-      }))
-      await waitFor(() => of('req-agent', 'done').length > 0 || of('req-agent', 'error').length > 0, 30_000)
+      ctl.send(
+        baseSpec({
+          requestId: 'req-agent',
+          baseUrl,
+          apiKey: 'sk-agent',
+          tools: { server: { command: NODE, args: [SERVER] }, maxRounds: 8 },
+        }),
+      )
+      await waitFor(
+        () => of('req-agent', 'done').length > 0 || of('req-agent', 'error').length > 0,
+        30_000,
+      )
       eq('工具对话完成', of('req-agent', 'done').length, 1)
 
       const r = ctl.trace('req-agent')
@@ -191,23 +216,41 @@ async function main(): Promise<void> {
       const trace = (r as { ok: true; trace: ChatTrace }).trace
       eq('两轮请求', trace.rounds.length, 2)
 
-      const round1 = JSON.parse(trace.rounds[0].requestBody) as { messages: { role: string }[]; tools?: unknown[] }
+      const round1 = JSON.parse(trace.rounds[0].requestBody) as {
+        messages: { role: string }[]
+        tools?: unknown[]
+      }
       eq('第 1 轮只有用户消息', round1.messages.length, 1)
       ok('第 1 轮带了工具清单', Array.isArray(round1.tools) && round1.tools.length > 0)
 
       const round2 = JSON.parse(trace.rounds[1].requestBody) as {
-        messages: { role: string; tool_calls?: unknown[]; tool_call_id?: string; content?: string }[]
+        messages: {
+          role: string
+          tool_calls?: unknown[]
+          tool_call_id?: string
+          content?: string
+        }[]
       }
-      ok('第 2 轮回填了 assistant.tool_calls', !!round2.messages.find((m) => m.role === 'assistant')?.tool_calls)
+      ok(
+        '第 2 轮回填了 assistant.tool_calls',
+        !!round2.messages.find((m) => m.role === 'assistant')?.tool_calls,
+      )
       eq('第 2 轮带了 role=tool 结果', round2.messages.filter((m) => m.role === 'tool').length, 1)
-      eq('tool 消息的 id 对得上', round2.messages.find((m) => m.role === 'tool')?.tool_call_id, 'call_1')
+      eq(
+        'tool 消息的 id 对得上',
+        round2.messages.find((m) => m.role === 'tool')?.tool_call_id,
+        'call_1',
+      )
 
       ok('第 1 轮记了工具调用', trace.rounds[0].tools.length === 1)
       eq('调用名正确', trace.rounds[0].tools[0].call.name, 'cidr_info')
       eq('调用参数正确', trace.rounds[0].tools[0].call.args, '{"cidr":"10.0.0.1/22"}')
       eq('结果已回填', trace.rounds[0].tools[0].result?.ok, true)
       includes('结果是真实执行输出', trace.rounds[0].tools[0].result?.text ?? '', '10.0.0.0/22')
-      ok('两轮各自的帧都记了', trace.rounds[0].frames.length > 0 && trace.rounds[1].frames.length > 0)
+      ok(
+        '两轮各自的帧都记了',
+        trace.rounds[0].frames.length > 0 && trace.rounds[1].frames.length > 0,
+      )
       ok('工具对话的密钥同样脱敏', !JSON.stringify(trace.headers).includes('sk-agent'))
     }
 
@@ -229,11 +272,18 @@ async function main(): Promise<void> {
       ctl.send(baseSpec({ requestId: 'req-abort', baseUrl, model: 'slow' }))
       await waitFor(() => of('req-abort', 'delta').length > 0, 10_000)
       ctl.abort()
-      await waitFor(() => of('req-abort', 'error').length > 0 || of('req-abort', 'done').length > 0, 10_000)
+      await waitFor(
+        () => of('req-abort', 'error').length > 0 || of('req-abort', 'done').length > 0,
+        10_000,
+      )
       const r = ctl.trace('req-abort')
       eq('被取消对话的链路可查', r.ok, true)
       const trace = (r as { ok: true; trace: ChatTrace }).trace
-      ok('已收到的帧保留', trace.rounds[0].frames.length >= 1, String(trace.rounds[0].frames.length))
+      ok(
+        '已收到的帧保留',
+        trace.rounds[0].frames.length >= 1,
+        String(trace.rounds[0].frames.length),
+      )
       eq('没有完成的 meta 为空', trace.rounds[0].meta, null)
     }
 
@@ -250,13 +300,20 @@ async function main(): Promise<void> {
         reg.begin(`t-${i}`).request(1, { url: `u-${i}`, headers: [], body: '{}' })
       }
       eq('超过上限淘汰最旧', reg.get('t-0'), null)
-      ok('最新一条还在', reg.get(`t-${CHAT_TRACE_MAX_TRACES}`)?.url === `u-${CHAT_TRACE_MAX_TRACES}`)
+      ok(
+        '最新一条还在',
+        reg.get(`t-${CHAT_TRACE_MAX_TRACES}`)?.url === `u-${CHAT_TRACE_MAX_TRACES}`,
+      )
 
       const big = reg.begin('t-big')
       big.request(1, { url: 'u', headers: [], body: 'x'.repeat(CHAT_TRACE_MAX_BODY + 1000) })
       const bigTrace = reg.get('t-big')!
       ok('超长请求体标记 truncated', bigTrace.rounds[0].truncated === true)
-      ok('超长请求体长度在上限内', bigTrace.rounds[0].requestBody.length <= CHAT_TRACE_MAX_BODY, String(bigTrace.rounds[0].requestBody.length))
+      ok(
+        '超长请求体长度在上限内',
+        bigTrace.rounds[0].requestBody.length <= CHAT_TRACE_MAX_BODY,
+        String(bigTrace.rounds[0].requestBody.length),
+      )
 
       const many = reg.begin('t-frames')
       for (let i = 0; i < CHAT_TRACE_MAX_FRAMES + 50; i++) many.frame(1, `data: frame-${i}`)
@@ -266,7 +323,14 @@ async function main(): Promise<void> {
 
       const tools = reg.begin('t-tools')
       tools.toolCall(1, { id: 'c1', name: 'a', args: '{}' })
-      tools.toolResult(1, 'c1', { id: 'c1', name: 'a', ok: true, isError: false, text: 'r', durationMs: 1 })
+      tools.toolResult(1, 'c1', {
+        id: 'c1',
+        name: 'a',
+        ok: true,
+        isError: false,
+        text: 'r',
+        durationMs: 1,
+      })
       eq('结果回填到对应调用', reg.get('t-tools')!.rounds[0].tools[0].result?.text, 'r')
 
       // 异常轮次号：丢弃而不是造出脏轮次

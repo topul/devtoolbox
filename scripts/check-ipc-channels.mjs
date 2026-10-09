@@ -21,7 +21,10 @@ const MAIN_DIR = path.join(ROOT, 'electron', 'main')
 
 let failures = 0
 const notes = []
-const fail = (m) => { failures++; console.error(`  ✗ ${m}`) }
+const fail = (m) => {
+  failures++
+  console.error(`  ✗ ${m}`)
+}
 
 /** 递归收集主进程下所有 .ts（含子目录），preload 只解析自身 */
 function walk(dir) {
@@ -38,7 +41,9 @@ function walk(dir) {
 const collect = (re, text) => [...text.matchAll(re)].map((m) => m[1])
 
 const preloadSrc = fs.readFileSync(PRELOAD, 'utf8')
-const mainSrc = walk(MAIN_DIR).map((f) => fs.readFileSync(f, 'utf8')).join('\n')
+const mainSrc = walk(MAIN_DIR)
+  .map((f) => fs.readFileSync(f, 'utf8'))
+  .join('\n')
 
 // --- preload 侧：调用了哪些、监听了哪些 ---
 const invoked = new Set(collect(/ipcRenderer\.(?:invoke|send|sendSync)\(\s*'([^']+)'/g, preloadSrc))
@@ -75,7 +80,9 @@ for (const ch of emitted) {
   }
 }
 
-console.log(`\nIPC 通道：preload 调用 ${invoked.size} 个 / 监听 ${listened.size} 个；主进程注册 ${handled.size + onChannel.size} 个 / 发出 ${emitted.size} 个`)
+console.log(
+  `\nIPC 通道：preload 调用 ${invoked.size} 个 / 监听 ${listened.size} 个；主进程注册 ${handled.size + onChannel.size} 个 / 发出 ${emitted.size} 个`,
+)
 for (const n of notes) console.log(`  · ${n}`)
 
 if (failures) {

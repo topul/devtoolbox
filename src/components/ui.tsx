@@ -3,7 +3,14 @@ import { createPortal } from 'react-dom'
 import { useI18n, COMMON, useLocalized } from '../lib/i18n'
 import { collectFocusable, trapTab, focusFirst } from '../lib/focus'
 import { truncationNotice, makeAsyncGuard } from '../lib/interaction'
-import { loadPersisted, savePersisted, clearPersisted, hasPersisted, toolStateKey, isSensitiveField } from '../lib/persist'
+import {
+  loadPersisted,
+  savePersisted,
+  clearPersisted,
+  hasPersisted,
+  toolStateKey,
+  isSensitiveField,
+} from '../lib/persist'
 import { exampleFor } from '../lib/examples'
 import { guideL, GUIDE_FOR_TOOL, type GuideEntry, type GuideKey } from '../lib/locales/guide'
 
@@ -16,7 +23,12 @@ import { guideL, GUIDE_FOR_TOOL, type GuideEntry, type GuideKey } from '../lib/l
  * - 焦点可见：focus ring 用 --c-focus（对键盘用户是必需品，不是装饰）
  */
 
-export function Panel({ title, children, right, className = '' }: {
+export function Panel({
+  title,
+  children,
+  right,
+  className = '',
+}: {
   title?: string
   children: React.ReactNode
   right?: React.ReactNode
@@ -45,10 +57,11 @@ export function Panel({ title, children, right, className = '' }: {
  * 屏幕上看不到焦点在哪。这是评审里的 P0 项。
  *
  * `inert` 是浏览器原生属性（Chromium 102+/Safari 15.5+），一个属性同时解决
- * 焦点、点击与读屏三件事。属性不被支持时 `inert=""` 会被当成未知属性忽略，
- * 此时退化回「只有 aria-hidden」—— 不比原来差。
+ * 焦点、点击与读屏三件事。React 19 起 inert 是一等 boolean 属性（true 渲染为
+ * `inert=""`），旧浏览器不支持时会被当成未知属性忽略，此时退化回
+ * 「只有 aria-hidden」—— 不比原来差。
  */
-const COLLAPSED_PROPS = { 'aria-hidden': true, inert: '' } as const
+const COLLAPSED_PROPS = { 'aria-hidden': true, inert: true } as const
 const EXPANDED_PROPS = { 'aria-hidden': false } as const
 
 /**
@@ -64,7 +77,12 @@ const EXPANDED_PROPS = { 'aria-hidden': false } as const
  * password…）时不进 localStorage，改用会话级存储 —— 切页仍保留，关闭应用即清空。
  * 不想让某个字段落盘时传 `sensitive: true` 强制开启。
  */
-export function usePersistedState<T>(toolId: string, field: string, initial: T, opts: { sensitive?: boolean } = {}): [
+export function usePersistedState<T>(
+  toolId: string,
+  field: string,
+  initial: T,
+  opts: { sensitive?: boolean } = {},
+): [
   T,
   (v: T | ((prev: T) => T)) => void,
   { persisted: boolean; clear: () => void; restorable: boolean },
@@ -76,13 +94,16 @@ export function usePersistedState<T>(toolId: string, field: string, initial: T, 
   // 首次挂载时 key 对应的存储里没有内容 → 提示「可以恢复上次输入」是假的
   const [restorable] = useState(() => hasPersisted(key, { sensitive }))
 
-  const update = useCallback((v: T | ((prev: T) => T)) => {
-    setValue((prev) => {
-      const next = typeof v === 'function' ? (v as (p: T) => T)(prev) : v
-      setPersisted(savePersisted(key, next, { sensitive }))
-      return next
-    })
-  }, [key, sensitive])
+  const update = useCallback(
+    (v: T | ((prev: T) => T)) => {
+      setValue((prev) => {
+        const next = typeof v === 'function' ? (v as (p: T) => T)(prev) : v
+        setPersisted(savePersisted(key, next, { sensitive }))
+        return next
+      })
+    },
+    [key, sensitive],
+  )
 
   const clear = useCallback(() => {
     clearPersisted(key, { sensitive })
@@ -104,7 +125,11 @@ export function usePersistedState<T>(toolId: string, field: string, initial: T, 
  *
  * 示例值来自 lib/examples.ts（与界面无关的纯数据），双语标签由调用方传入。
  */
-export function ExampleBar({ sample, onPick, label }: {
+export function ExampleBar({
+  sample,
+  onPick,
+  label,
+}: {
   sample: string
   onPick: (v: string) => void
   label: string
@@ -133,7 +158,11 @@ export function ExampleBar({ sample, onPick, label }: {
  * 工作区本来就窄，引导是参考信息，不该常驻占一屏。动画复用 collapse-grid
  * （grid-template-rows 0fr→1fr，内容高度未知也能平滑展开）。
  */
-export function ToolGuide({ title, steps, note }: {
+export function ToolGuide({
+  title,
+  steps,
+  note,
+}: {
   title: string
   steps: string[]
   note?: string
@@ -146,11 +175,21 @@ export function ToolGuide({ title, steps, note }: {
         aria-expanded={open}
         className="w-full flex items-center gap-2 px-4 py-2 text-left"
       >
-        <span className={`text-phosphor/70 text-[10px] w-2 shrink-0 transition-transform duration-200 ${open ? 'rotate-90' : ''}`}>▶</span>
-        <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-phosphor/80 select-none shrink-0">{title}</span>
+        <span
+          className={`text-phosphor/70 text-[10px] w-2 shrink-0 transition-transform duration-200 ${open ? 'rotate-90' : ''}`}
+        >
+          ▶
+        </span>
+        <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-phosphor/80 select-none shrink-0">
+          {title}
+        </span>
         {!open && <span className="text-[11px] text-muted/60 truncate min-w-0">{steps[0]}</span>}
       </button>
-      <div className="collapse-grid" style={{ gridTemplateRows: open ? '1fr' : '0fr' }} {...(open ? EXPANDED_PROPS : COLLAPSED_PROPS)}>
+      <div
+        className="collapse-grid"
+        style={{ gridTemplateRows: open ? '1fr' : '0fr' }}
+        {...(open ? EXPANDED_PROPS : COLLAPSED_PROPS)}
+      >
         <div>
           <div className="px-4 pb-3">
             <ol className="space-y-1.5">
@@ -163,7 +202,8 @@ export function ToolGuide({ title, steps, note }: {
             </ol>
             {note && (
               <p className="mt-2.5 pt-2 border-t border-phosphor/15 text-[12.5px] text-amber leading-relaxed">
-                <span aria-hidden>⚠ </span>{note}
+                <span aria-hidden>⚠ </span>
+                {note}
               </p>
             )}
           </div>
@@ -180,7 +220,13 @@ export function ToolGuide({ title, steps, note }: {
  * 高度过渡用 grid-template-rows 0fr→1fr：内容高度未知也能做平滑展开，
  * 这是纯 CSS 里唯一不依赖 max-height 魔法数字的方案。
  */
-export function Collapse({ title, hint, right, defaultOpen = false, children }: {
+export function Collapse({
+  title,
+  hint,
+  right,
+  defaultOpen = false,
+  children,
+}: {
   title: string
   hint?: string
   right?: React.ReactNode
@@ -190,13 +236,19 @@ export function Collapse({ title, hint, right, defaultOpen = false, children }: 
   const [open, setOpen] = useState(defaultOpen)
   return (
     <div className="rounded-lg border border-line bg-panel">
-      <div className={`flex items-center gap-2 px-3 py-2 ${open ? 'border-b border-line-soft' : ''}`}>
+      <div
+        className={`flex items-center gap-2 px-3 py-2 ${open ? 'border-b border-line-soft' : ''}`}
+      >
         <button
           onClick={() => setOpen((o) => !o)}
           aria-expanded={open}
           className="flex items-center gap-2 flex-1 min-w-0 text-left"
         >
-          <span className={`text-muted/70 text-[10px] w-2 shrink-0 transition-transform duration-200 ${open ? 'rotate-90' : ''}`}>▶</span>
+          <span
+            className={`text-muted/70 text-[10px] w-2 shrink-0 transition-transform duration-200 ${open ? 'rotate-90' : ''}`}
+          >
+            ▶
+          </span>
           <span className="text-[12px] font-medium text-muted select-none truncate hover:text-bright transition-colors">
             {title}
           </span>
@@ -204,7 +256,11 @@ export function Collapse({ title, hint, right, defaultOpen = false, children }: 
         </button>
         {right}
       </div>
-      <div className="collapse-grid" style={{ gridTemplateRows: open ? '1fr' : '0fr' }} {...(open ? EXPANDED_PROPS : COLLAPSED_PROPS)}>
+      <div
+        className="collapse-grid"
+        style={{ gridTemplateRows: open ? '1fr' : '0fr' }}
+        {...(open ? EXPANDED_PROPS : COLLAPSED_PROPS)}
+      >
         <div>
           <div className="p-3">{children}</div>
         </div>
@@ -226,7 +282,12 @@ export function Collapse({ title, hint, right, defaultOpen = false, children }: 
  * 缩放容器内，尺寸会被一起放大（同一个坑曾让对话视图的 100vh 超出视口），挂到 body
  * 才拿得到真实视口。
  */
-export function Drawer({ title, onClose, width = 720, children }: {
+export function Drawer({
+  title,
+  onClose,
+  width = 720,
+  children,
+}: {
   title: string
   onClose: () => void
   /** 内容最大宽度（CSS px） */
@@ -250,13 +311,20 @@ export function Drawer({ title, onClose, width = 720, children }: {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') { requestClose(); return }
+      if (e.key === 'Escape') {
+        requestClose()
+        return
+      }
       if (e.key !== 'Tab') return
       // 焦点环绕：不拦的话 Tab 走出抽屉外，抽屉还开着人却已经不在里面了
       const panel = panelRef.current
       if (!panel) return
       const items = collectFocusable(panel)
-      if (items.length === 0) { e.preventDefault(); panel.focus(); return }
+      if (items.length === 0) {
+        e.preventDefault()
+        panel.focus()
+        return
+      }
       if (trapTab(panel, e.shiftKey ? 'backward' : 'forward')) {
         e.preventDefault()
       } else if (!panel.contains(document.activeElement)) {
@@ -271,7 +339,8 @@ export function Drawer({ title, onClose, width = 720, children }: {
 
   // 打开时接管焦点 + 锁背景滚动；卸载时把焦点还给触发元素
   useEffect(() => {
-    const prevFocus = typeof document !== 'undefined' ? (document.activeElement as HTMLElement | null) : null
+    const prevFocus =
+      typeof document !== 'undefined' ? (document.activeElement as HTMLElement | null) : null
     restoreRef.current = prevFocus
     focusFirst(panelRef.current)
     const prevOverflow = document.body.style.overflow
@@ -311,7 +380,9 @@ export function Drawer({ title, onClose, width = 720, children }: {
             onClick={requestClose}
             aria-label={closeLabel}
             className="flex h-7 w-7 items-center justify-center rounded-md text-muted hover:bg-panel-2 hover:text-bright transition-colors"
-          >×</button>
+          >
+            ×
+          </button>
         </div>
         <div className="flex-1 min-h-0 overflow-y-auto p-4">{children}</div>
       </aside>
@@ -331,7 +402,8 @@ export function NoteList({ lines }: { lines: string[] }) {
     <div className="rounded-lg border border-phosphor/25 bg-phosphor-faint/40 px-3 py-2 space-y-0.5">
       {lines.map((n, i) => (
         <div key={`${i}-${n}`} className="text-[12.5px] text-bright leading-relaxed">
-          <span className="text-phosphor/80">{i === 0 ? '✓ ' : '· '}</span>{n}
+          <span className="text-phosphor/80">{i === 0 ? '✓ ' : '· '}</span>
+          {n}
         </div>
       ))}
     </div>
@@ -352,7 +424,15 @@ export function NoteList({ lines }: { lines: string[] }) {
  *   - `rows`：表格类结果，配`total` 时自动显示截断提示
  *   - 都不传：自定义 children（比如哈希那种一行一个卡片）
  */
-export function ResultPanel({ title, text, rows, total, emptyHint, maxHeight = 320, children }: {
+export function ResultPanel({
+  title,
+  text,
+  rows,
+  total,
+  emptyHint,
+  maxHeight = 320,
+  children,
+}: {
   title?: string
   /** 纯文本结果；给了就自动挂复制入口 */
   text?: string
@@ -387,7 +467,9 @@ export function ResultPanel({ title, text, rows, total, emptyHint, maxHeight = 3
                 <tbody>
                   {rows!.map((r, i) => (
                     <tr key={i} className="border-b border-line-soft last:border-0">
-                      <td className="py-1 pr-3 align-top font-mono break-all whitespace-pre-wrap">{r}</td>
+                      <td className="py-1 pr-3 align-top font-mono break-all whitespace-pre-wrap">
+                        {r}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -398,7 +480,9 @@ export function ResultPanel({ title, text, rows, total, emptyHint, maxHeight = 3
             <pre
               className="codeblock text-[12px] overflow-auto whitespace-pre-wrap break-all p-0 m-0"
               style={{ maxHeight }}
-            >{text}</pre>
+            >
+              {text}
+            </pre>
           )}
           {children}
           {notice && <p className="text-[11px] text-muted mt-2">{c.showingOf(shown, total!)}</p>}
@@ -419,7 +503,15 @@ export function ResultPanel({ title, text, rows, total, emptyHint, maxHeight = 3
  * 用法：`<ConfirmButton label="清空" onConfirm={...} />`
  * 第一次点只进入待确认态，第二次才真正执行；点取消或等 3 秒自动退回。
  */
-export function ConfirmButton({ label, confirmLabel, onConfirm, cancelLabel, variant = 'ghost', className = '', disabled }: {
+export function ConfirmButton({
+  label,
+  confirmLabel,
+  onConfirm,
+  cancelLabel,
+  variant = 'ghost',
+  className = '',
+  disabled,
+}: {
   label: string
   /** 待确认态下主按钮的文案；不传用 label + COMMON.confirm */
   confirmLabel?: string
@@ -445,7 +537,12 @@ export function ConfirmButton({ label, confirmLabel, onConfirm, cancelLabel, var
 
   if (!armed) {
     return (
-      <Btn variant={variant} className={className} disabled={disabled} onClick={() => setArmed(true)}>
+      <Btn
+        variant={variant}
+        className={className}
+        disabled={disabled}
+        onClick={() => setArmed(true)}
+      >
         {label}
       </Btn>
     )
@@ -457,9 +554,16 @@ export function ConfirmButton({ label, confirmLabel, onConfirm, cancelLabel, var
         aria-label={confirmLabel ?? label}
         // 「再点一次确认」是唯一的反馈来源，必须播报
         aria-live="polite"
-        onClick={() => { setArmed(false); onConfirm() }}
-      >{confirmLabel ?? `${label} · ${c.confirm}`}</Btn>
-      <Btn variant="ghost" onClick={() => setArmed(false)}>{cancelLabel ?? c.cancel}</Btn>
+        onClick={() => {
+          setArmed(false)
+          onConfirm()
+        }}
+      >
+        {confirmLabel ?? `${label} · ${c.confirm}`}
+      </Btn>
+      <Btn variant="ghost" onClick={() => setArmed(false)}>
+        {cancelLabel ?? c.cancel}
+      </Btn>
     </div>
   )
 }
@@ -473,25 +577,29 @@ export function ConfirmButton({ label, confirmLabel, onConfirm, cancelLabel, var
  *
  * `run` 返回值约定：返回 false 表示被守卫拒绝（busy 中重复触发），调用方不要再改状态。
  */
-export function useAsyncAction<A extends unknown[]>(fn: (...args: A) => Promise<void> | void): {
+export function useAsyncAction<A extends unknown[]>(
+  fn: (...args: A) => Promise<void> | void,
+): {
   busy: boolean
   run: (...args: A) => Promise<boolean>
 } {
   const [busy, setBusy] = useState(false)
   const guard = makeAsyncGuard(() => busy)
-  const run = useCallback(async (...args: A): Promise<boolean> => {
-    if (!guard.enter()) return false
-    setBusy(true)
-    try {
-      await fn(...args)
-      return true
-    } finally {
-      setBusy(false) // 必须在 finally：catch 里漏清就会永久禁用
-    }
-  }, [fn])
+  const run = useCallback(
+    async (...args: A): Promise<boolean> => {
+      if (!guard.enter()) return false
+      setBusy(true)
+      try {
+        await fn(...args)
+        return true
+      } finally {
+        setBusy(false) // 必须在 finally：catch 里漏清就会永久禁用
+      }
+    },
+    [fn],
+  )
   return { busy, run }
 }
-
 
 /** 按钮的 aria-* / data-* 透传口：图标按钮需要可读名称，纯文字按钮不需要 */
 type BtnAria = {
@@ -503,19 +611,28 @@ type BtnAria = {
   'data-testid'?: string
 }
 
-export function Btn({ children, onClick, variant = 'default', disabled, className = '', title, ...aria }:
-  BtnAria & {
-    children: React.ReactNode
-    onClick?: () => void
-    variant?: 'default' | 'primary' | 'danger' | 'ghost'
-    disabled?: boolean
-    className?: string
-    title?: string
-  }) {
-  const base = 'px-3 py-1.5 text-[12.5px] rounded-md border transition-all duration-150 select-none disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98] '
+export function Btn({
+  children,
+  onClick,
+  variant = 'default',
+  disabled,
+  className = '',
+  title,
+  ...aria
+}: BtnAria & {
+  children: React.ReactNode
+  onClick?: () => void
+  variant?: 'default' | 'primary' | 'danger' | 'ghost'
+  disabled?: boolean
+  className?: string
+  title?: string
+}) {
+  const base =
+    'px-3 py-1.5 text-[12.5px] rounded-md border transition-all duration-150 select-none disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98] '
   const styles = {
     default: 'border-line text-phosphor/90 hover:bg-phosphor-faint hover:border-phosphor/40',
-    primary: 'border-phosphor bg-phosphor text-on-phosphor font-semibold hover:bg-phosphor-hover shadow-sm',
+    primary:
+      'border-phosphor bg-phosphor text-on-phosphor font-semibold hover:bg-phosphor-hover shadow-sm',
     danger: 'border-danger/50 text-danger hover:bg-danger/10',
     ghost: 'border-transparent text-muted hover:text-bright hover:bg-panel-2',
   }
@@ -534,7 +651,15 @@ export function Btn({ children, onClick, variant = 'default', disabled, classNam
   )
 }
 
-export function CopyBtn({ text, className = '', label }: { text: string; className?: string; label?: string }) {
+export function CopyBtn({
+  text,
+  className = '',
+  label,
+}: {
+  text: string
+  className?: string
+  label?: string
+}) {
   const { locale } = useI18n()
   const c = COMMON[locale]
   const [ok, setOk] = useState(false)
@@ -578,21 +703,31 @@ type FieldAria = {
   'aria-invalid'?: boolean
 }
 
-export function TA({ value, onChange, placeholder, rows = 8, readOnly = false, label, labelRight, toolInput, spellCheck = false, ...aria }:
-  FieldAria & {
-    value: string
-    onChange?: (v: string) => void
-    placeholder?: string
-    rows?: number
-    readOnly?: boolean
-    label?: string
-    /** 代码/SQL/GraphQL 这类内容要关掉拼写检查（红波浪线满屏很难看） */
-    spellCheck?: boolean
-    /** label 行右侧的槽位（「清空」这类动作放这里，与 label 同行、不会因 items-end 对不齐而漂浮） */
-    labelRight?: React.ReactNode
-    /** 标记为工具的主输入框：示例条会把示例值填到这里（页面上第一个） */
-    toolInput?: boolean
-  }) {
+export function TA({
+  value,
+  onChange,
+  placeholder,
+  rows = 8,
+  readOnly = false,
+  label,
+  labelRight,
+  toolInput,
+  spellCheck = false,
+  ...aria
+}: FieldAria & {
+  value: string
+  onChange?: (v: string) => void
+  placeholder?: string
+  rows?: number
+  readOnly?: boolean
+  label?: string
+  /** 代码/SQL/GraphQL 这类内容要关掉拼写检查（红波浪线满屏很难看） */
+  spellCheck?: boolean
+  /** label 行右侧的槽位（「清空」这类动作放这里，与 label 同行、不会因 items-end 对不齐而漂浮） */
+  labelRight?: React.ReactNode
+  /** 标记为工具的主输入框：示例条会把示例值填到这里（页面上第一个） */
+  toolInput?: boolean
+}) {
   // label 与控件的编程关联：光有可见文字不够，读屏要能拿到「这个框是干什么的」。
   // useId 保证同页多个同类控件的 id 不重复，label 不会指错字段。
   const id = useId()
@@ -600,7 +735,12 @@ export function TA({ value, onChange, placeholder, rows = 8, readOnly = false, l
     <div className="flex flex-col gap-1">
       {label && (
         <div className="flex items-center justify-between gap-2">
-          <label htmlFor={id} className="text-[11.5px] font-medium text-muted uppercase tracking-wider">{label}</label>
+          <label
+            htmlFor={id}
+            className="text-[11.5px] font-medium text-muted uppercase tracking-wider"
+          >
+            {label}
+          </label>
           <div className="flex items-center gap-1.5">
             {readOnly && value && <CopyBtn text={value} />}
             {labelRight}
@@ -613,7 +753,7 @@ export function TA({ value, onChange, placeholder, rows = 8, readOnly = false, l
         aria-label={aria['aria-label']}
         aria-describedby={aria['aria-describedby']}
         value={value}
-        onChange={e => onChange?.(e.target.value)}
+        onChange={(e) => onChange?.(e.target.value)}
         placeholder={placeholder}
         rows={rows}
         readOnly={readOnly}
@@ -625,22 +765,35 @@ export function TA({ value, onChange, placeholder, rows = 8, readOnly = false, l
   )
 }
 
-export function Input({ value, onChange, placeholder, label, type = 'text', className = '', toolInput, ...aria }:
-  FieldAria & {
-    value: string
-    onChange: (v: string) => void
-    placeholder?: string
-    label?: string
-    type?: string
-    className?: string
-    /** 标记为工具的主输入框：示例条会把示例值填到这里（页面上第一个） */
-    toolInput?: boolean
-  }) {
+export function Input({
+  value,
+  onChange,
+  placeholder,
+  label,
+  type = 'text',
+  className = '',
+  toolInput,
+  ...aria
+}: FieldAria & {
+  value: string
+  onChange: (v: string) => void
+  placeholder?: string
+  label?: string
+  type?: string
+  className?: string
+  /** 标记为工具的主输入框：示例条会把示例值填到这里（页面上第一个） */
+  toolInput?: boolean
+}) {
   const id = useId()
   return (
     <div className="flex flex-col gap-1">
       {label && (
-        <label htmlFor={id} className="text-[11.5px] font-medium text-muted uppercase tracking-wider">{label}</label>
+        <label
+          htmlFor={id}
+          className="text-[11.5px] font-medium text-muted uppercase tracking-wider"
+        >
+          {label}
+        </label>
       )}
       <input
         id={id}
@@ -649,7 +802,7 @@ export function Input({ value, onChange, placeholder, label, type = 'text', clas
         aria-describedby={aria['aria-describedby']}
         aria-invalid={aria['aria-invalid']}
         value={value}
-        onChange={e => onChange(e.target.value)}
+        onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         spellCheck={false}
         data-tool-input={toolInput ? '' : undefined}
@@ -659,28 +812,42 @@ export function Input({ value, onChange, placeholder, label, type = 'text', clas
   )
 }
 
-export function Select({ value, onChange, options, label, ...aria }:
-  FieldAria & {
-    value: string
-    onChange: (v: string) => void
-    options: { value: string; label: string }[]
-    label?: string
-  }) {
+export function Select({
+  value,
+  onChange,
+  options,
+  label,
+  ...aria
+}: FieldAria & {
+  value: string
+  onChange: (v: string) => void
+  options: { value: string; label: string }[]
+  label?: string
+}) {
   const id = useId()
   return (
     <div className="flex flex-col gap-1">
       {label && (
-        <label htmlFor={id} className="text-[11.5px] font-medium text-muted uppercase tracking-wider">{label}</label>
+        <label
+          htmlFor={id}
+          className="text-[11.5px] font-medium text-muted uppercase tracking-wider"
+        >
+          {label}
+        </label>
       )}
       <select
         id={id}
         aria-label={aria['aria-label']}
         aria-describedby={aria['aria-describedby']}
         value={value}
-        onChange={e => onChange(e.target.value)}
+        onChange={(e) => onChange(e.target.value)}
         className={FIELD_CLS + ' py-1.5 pr-6'}
       >
-        {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
       </select>
     </div>
   )
@@ -699,7 +866,10 @@ export function ErrorNote({ msg }: { msg: string | null }) {
   if (!msg) return null
   return (
     // role=alert：错误是「 assertive」级别，读屏要立刻打断当前朗读
-    <div role="alert" className="rounded-lg border border-danger/35 bg-danger/10 px-3 py-2 text-[12.5px] text-danger">
+    <div
+      role="alert"
+      className="rounded-lg border border-danger/35 bg-danger/10 px-3 py-2 text-[12.5px] text-danger"
+    >
       {msg}
     </div>
   )
@@ -708,7 +878,9 @@ export function ErrorNote({ msg }: { msg: string | null }) {
 export function Stat({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="rounded-lg border border-line-soft bg-panel-2 px-3 py-2">
-      <div className="text-[10.5px] font-medium uppercase tracking-[0.12em] text-muted">{label}</div>
+      <div className="text-[10.5px] font-medium uppercase tracking-[0.12em] text-muted">
+        {label}
+      </div>
       <div className="text-lg font-semibold text-phosphor leading-tight">{value}</div>
     </div>
   )
@@ -738,7 +910,13 @@ export function Stat({ label, value }: { label: string; value: React.ReactNode }
  * 三件事都是**可选**的：没传 steps 就不渲染引导条，没传 onSubmit 就不监听 ⌘↵，
  * 示例表里没这个工具也不显示示例行。
  */
-export function ToolShell({ toolId, guide, note, onSubmit, children }: {
+export function ToolShell({
+  toolId,
+  guide,
+  note,
+  onSubmit,
+  children,
+}: {
   /** 语言中立的工具 id，用于查示例表与引导词条 */
   toolId: string
   /** 覆盖自动推导的引导词条键；一般不用传 */
@@ -752,7 +930,7 @@ export function ToolShell({ toolId, guide, note, onSubmit, children }: {
   const dict = useLocalized(guideL)
   // 索引签名让 TS 只能给出联合类型，这里显式收窄成引导条目（shell 不该被当成引导）
   const key = guide ?? GUIDE_FOR_TOOL[toolId]
-  const text: GuideEntry | undefined = key ? dict[key] as GuideEntry : undefined
+  const text: GuideEntry | undefined = key ? (dict[key] as GuideEntry) : undefined
   const ex = exampleFor(toolId)
 
   // ⌘↵ 提交：只在传了 onSubmit 时注册，避免每个工具都被绑一个空快捷键
@@ -772,9 +950,7 @@ export function ToolShell({ toolId, guide, note, onSubmit, children }: {
 
   return (
     <div className="space-y-3">
-      {text && (
-        <ToolGuide title={dict.shell.title} steps={text.steps} note={note ?? text.note} />
-      )}
+      {text && <ToolGuide title={dict.shell.title} steps={text.steps} note={note ?? text.note} />}
       {ex && (
         <ExampleBar
           sample={ex.sample}
@@ -786,9 +962,10 @@ export function ToolShell({ toolId, guide, note, onSubmit, children }: {
             )
             if (!el) return
             // React 受控输入：直接改 value 不会被它知道，得走原生 setter 再派发 input
-            const proto = el instanceof HTMLTextAreaElement
-              ? HTMLTextAreaElement.prototype
-              : HTMLInputElement.prototype
+            const proto =
+              el instanceof HTMLTextAreaElement
+                ? HTMLTextAreaElement.prototype
+                : HTMLInputElement.prototype
             const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set
             setter?.call(el, ex.sample)
             el.dispatchEvent(new Event('input', { bubbles: true }))
@@ -799,7 +976,9 @@ export function ToolShell({ toolId, guide, note, onSubmit, children }: {
       {children}
       {onSubmit && text && (
         <div className="text-right text-[11px] text-muted/70 select-none">
-          <kbd className="rounded border border-line px-1 py-0.5 font-mono">{IS_MAC_HINT ? '⌘↵' : 'Ctrl ↵'}</kbd>{' '}
+          <kbd className="rounded border border-line px-1 py-0.5 font-mono">
+            {IS_MAC_HINT ? '⌘↵' : 'Ctrl ↵'}
+          </kbd>{' '}
           {text.submit}
         </div>
       )}
@@ -808,7 +987,8 @@ export function ToolShell({ toolId, guide, note, onSubmit, children }: {
 }
 
 /** 平台相关的快捷键文案（Mac 显示 ⌘，其他显示 Ctrl） */
-const IS_MAC_HINT = typeof navigator !== 'undefined' && /Mac|iP(hone|ad|od)/.test(navigator.platform)
+const IS_MAC_HINT =
+  typeof navigator !== 'undefined' && /Mac|iP(hone|ad|od)/.test(navigator.platform)
 
 /**
  * 持久化状态不可用时的统一提示。
@@ -820,7 +1000,10 @@ export function PersistHint({ persisted }: { persisted: boolean }) {
   const { locale } = useI18n()
   if (persisted) return null
   return (
-    <div role="status" className="rounded-lg border border-amber/35 bg-amber/10 px-3 py-2 text-[12px] text-amber">
+    <div
+      role="status"
+      className="rounded-lg border border-amber/35 bg-amber/10 px-3 py-2 text-[12px] text-amber"
+    >
       {locale === 'zh'
         ? '当前环境无法保存输入（隐私模式或内容过大），本次输入在切换页面后会丢失'
         : 'Input cannot be saved here (private mode or content too large); it will be lost when you switch pages'}

@@ -3,11 +3,11 @@ name: CI
 # PR / push 到 main 时的提交前检查。
 #
 # 为什么单独一个文件：发布流水线（build.yml）只在打 tag 时触发，等它红的时候
-# 半成品已经要进 Release 了。这里把 typecheck、i18n 对齐和全部「不依赖构建产物」
+# 半成品已经要进 Release 了。这里把格式、类型、单测、i18n 对齐和全部「不依赖构建产物」
 # 的 smoke 前移到每次提交 —— 问题在合并前就暴露，而不是在发布夜。
 #
 # 与 build.yml 的分工：
-#   ci.yml     —— 每个 PR / 每次 push：静态检查 + 源码级冒烟 + 构建产物复检
+#   ci.yml     —— 每个 PR / 每次 push：静态检查 + 源码级冒烟 + 构建产物复检 + 扩展构建
 #   build.yml  —— 只有 tag：三平台打包并发布 Release
 
 on:
@@ -34,10 +34,15 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: 20
+          # 22 是 Active LTS；@electron/rebuild 等 >=22.12 的依赖也不再告警
+          node-version: 22
           cache: npm
 
       - run: npm ci
+
+      # 风格漂移会让所有 diff 变噪：格式不对直接红，最便宜的检查放最前
+      - name: Format check (prettier)
+        run: npm run format:check
 
       # 类型检查拆了两份 tsconfig，两侧都要跑：渲染层（src）+ 主进程/electron
       - name: Typecheck (renderer)
@@ -49,6 +54,10 @@ jobs:
       # 死代码 / 未使用导入 / hooks 误用。warn（如 no-explicit-any）不阻断，只拦 error
       - name: Lint
         run: npm run lint
+
+      # toolkit 纯函数的单测（Vitest）：与 MCP 服务端、渲染层三方共用的核心逻辑
+      - name: Unit tests (toolkit)
+        run: npm test
 
       # 中英文词条键结构一致，漏翻译 / 多键在这里红
       - name: i18n parity
@@ -62,32 +71,23 @@ jobs:
       - name: Smoke — IPC channels
         run: npm run smoke:ipc
 
-      # 以下冒烟都不需要构建产物：esbuild 从源码打包后直接用 node 跑
+      # 剩余源码级冒烟统一走 runner：`npm run smoke` 即全量
       - name: Smoke — chat & agent
-        run: |
-          npm run smoke:chat
-          npm run smoke:chatagent
-          npm run smoke:chatstore
-          npm run smoke:chattrace
-          npm run smoke:skills
-          npm run smoke:compare
-          npm run smoke:chatui
+        run: npm run smoke chat chatagent chatstore chattrace skills compare chatui
 
       - name: Smoke — schema & HTTP kernels
-        run: |
-          npm run smoke:schema
-          npm run smoke:httpcodec
-          npm run smoke:httpenv
-          npm run smoke:httpsnap
-          npm run smoke:httpsave
-          npm run smoke:sse
-          npm run smoke:proxy
+        run: npm run smoke schema httpcodec httpenv httpsnap httpsave sse proxy
 
-      - name: Smoke — agent rules / MCP probe / trace store
+      - name: Smoke — agent rules / MCP / 其余内核
+        run: npm run smoke agentrules mcpprobe tracestore mcpclient sqlcheck tls har graphql regexreplace systemproxy ux
+
+      # 供应链卫生：生产依赖里有 critical 直接红（high 及以下由 Dependabot 跟进）。
+      # node-forge 目前存在无修复的 high（本地证书解析场景，攻击面在可控范围），
+      # 因此门禁设在 critical，同时把完整报告打出来供人看。
+      - name: Audit (production deps)
         run: |
-          npm run smoke:agentrules
-          npm run smoke:mcpprobe
-          npm run smoke:tracestore
+          npm audit --omit=dev --audit-level=critical
+          npm audit --omit=dev || true
 
   # ============ 构建复检：与发布流水线同一套构建，跑依赖产物的冒烟 ============
   build:
@@ -98,7 +98,7 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - run: npm ci
@@ -119,3 +119,27 @@ jobs:
       # MCP 服务端端到端：起真实进程走 stdio JSON-RPC，逐个调用目录里声明的工具
       - name: Smoke — MCP server end-to-end
         run: npm run smoke:mcp
+
+  # ============ 浏览器扩展构建：此前没有任何一道检查，manifest 改坏只有用户知道 ============
+  extension:
+    name: Extension build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # 扩展版（无本机进程）构建 + 打包；desktopOnly 工具的可见性逻辑在这里被 exercises
+      - name: Build extension
+        run: npm run build:ext
+
+      - name: Verify extension artifacts
+        run: |
+          test -d dist-extension
+          test -f dist-extension/manifest.json
+          node -e "const m=require('./dist-extension/manifest.json'); if(!m.version) throw new Error('manifest missing version'); console.log('manifest ok:', m.version)"

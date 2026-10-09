@@ -18,7 +18,10 @@ import {
 let pass = 0
 const fails: string[] = []
 function ok(cond: boolean, label: string): void {
-  if (cond) { pass++; return }
+  if (cond) {
+    pass++
+    return
+  }
   fails.push(label)
   console.error(`  ✗ ${label}`)
 }
@@ -52,20 +55,48 @@ const SAMPLE = {
             {
               name: 'user',
               description: '按 id 取用户',
-              type: { kind: 'NON_NULL', name: null, ofType: { kind: 'OBJECT', name: 'User', ofType: null } },
+              type: {
+                kind: 'NON_NULL',
+                name: null,
+                ofType: { kind: 'OBJECT', name: 'User', ofType: null },
+              },
               args: [
-                { name: 'id', description: '用户 id', type: { kind: 'NON_NULL', name: null, ofType: { kind: 'SCALAR', name: 'ID' } }, defaultValue: null },
-                { name: 'withPosts', description: '是否带文章', type: { kind: 'SCALAR', name: 'Boolean' }, defaultValue: 'false' },
+                {
+                  name: 'id',
+                  description: '用户 id',
+                  type: { kind: 'NON_NULL', name: null, ofType: { kind: 'SCALAR', name: 'ID' } },
+                  defaultValue: null,
+                },
+                {
+                  name: 'withPosts',
+                  description: '是否带文章',
+                  type: { kind: 'SCALAR', name: 'Boolean' },
+                  defaultValue: 'false',
+                },
               ],
               enumValues: null,
             },
             {
               name: 'users',
               description: '用户列表',
-              type: { kind: 'LIST', name: null, ofType: { kind: 'OBJECT', name: 'User', ofType: null } },
+              type: {
+                kind: 'LIST',
+                name: null,
+                ofType: { kind: 'OBJECT', name: 'User', ofType: null },
+              },
               args: [
-                { name: 'limit', description: '条数', type: { kind: 'SCALAR', name: 'Int' }, defaultValue: '20' },
-                { name: 'role', description: '角色', type: { kind: 'ENUM', name: 'Role', ofType: null }, defaultValue: null },
+                {
+                  name: 'limit',
+                  description: '条数',
+                  type: { kind: 'SCALAR', name: 'Int' },
+                  defaultValue: '20',
+                },
+                {
+                  name: 'role',
+                  description: '角色',
+                  type: { kind: 'ENUM', name: 'Role', ofType: null },
+                  defaultValue: null,
+                },
               ],
               enumValues: null,
             },
@@ -82,7 +113,16 @@ const SAMPLE = {
               description: '建用户',
               type: { kind: 'OBJECT', name: 'User', ofType: null },
               args: [
-                { name: 'name', description: '姓名', type: { kind: 'NON_NULL', name: null, ofType: { kind: 'SCALAR', name: 'String' } }, defaultValue: null },
+                {
+                  name: 'name',
+                  description: '姓名',
+                  type: {
+                    kind: 'NON_NULL',
+                    name: null,
+                    ofType: { kind: 'SCALAR', name: 'String' },
+                  },
+                  defaultValue: null,
+                },
               ],
               enumValues: null,
             },
@@ -94,9 +134,27 @@ const SAMPLE = {
           name: 'User',
           description: '用户',
           fields: [
-            { name: 'id', description: null, type: { kind: 'NON_NULL', name: null, ofType: { kind: 'SCALAR', name: 'ID' } }, args: [], enumValues: null },
-            { name: 'email', description: '邮箱', type: { kind: 'SCALAR', name: 'String' }, args: [], enumValues: null },
-            { name: 'role', description: '角色', type: { kind: 'ENUM', name: 'Role' }, args: [], enumValues: null },
+            {
+              name: 'id',
+              description: null,
+              type: { kind: 'NON_NULL', name: null, ofType: { kind: 'SCALAR', name: 'ID' } },
+              args: [],
+              enumValues: null,
+            },
+            {
+              name: 'email',
+              description: '邮箱',
+              type: { kind: 'SCALAR', name: 'String' },
+              args: [],
+              enumValues: null,
+            },
+            {
+              name: 'role',
+              description: '角色',
+              type: { kind: 'ENUM', name: 'Role' },
+              args: [],
+              enumValues: null,
+            },
           ],
           enumValues: null,
         },
@@ -114,7 +172,13 @@ const SAMPLE = {
         { kind: 'SCALAR', name: 'String', description: null, fields: null, enumValues: null },
         { kind: 'SCALAR', name: 'Int', description: null, fields: null, enumValues: null },
         // introspection 自类型：应该被过滤
-        { kind: 'OBJECT', name: '__Schema', description: null, fields: [{ name: 'types', description: null, type: null, args: [], enumValues: null }], enumValues: null },
+        {
+          kind: 'OBJECT',
+          name: '__Schema',
+          description: null,
+          fields: [{ name: 'types', description: null, type: null, args: [], enumValues: null }],
+          enumValues: null,
+        },
       ],
     },
   },
@@ -125,9 +189,12 @@ const SAMPLE = {
   const s: GqlSchema = parseIntrospection(SAMPLE)
   eq(s.typeCount, 7, 'typeCount 是原始类型总数 7（含标量与 __ 类型）')
   eq(s.types.length, 4, '展示用 types 有4 个（Query/Mutation/User/Role，标量与 __ 已过滤）')
-  ok(!s.types.some(t => t.name === 'String'), '内置标量 String 不进展示列表')
-  ok(!s.types.some(t => t.name === '__Schema'), '__Schema 不进展示列表')
-  ok(s.types.some(t => t.name === 'User'), 'User 在展示列表里')
+  ok(!s.types.some((t) => t.name === 'String'), '内置标量 String 不进展示列表')
+  ok(!s.types.some((t) => t.name === '__Schema'), '__Schema 不进展示列表')
+  ok(
+    s.types.some((t) => t.name === 'User'),
+    'User 在展示列表里',
+  )
 }
 
 {
@@ -152,7 +219,7 @@ const SAMPLE = {
 
 {
   const s = parseIntrospection(SAMPLE)
-  const role = s.types.find(t => t.name === 'Role')
+  const role = s.types.find((t) => t.name === 'Role')
   ok(!!role, 'Role 类型存在')
   eq(role!.kind, 'ENUM', 'Role 是 ENUM')
   eq(role!.enumValues.length, 2, 'Role 有 2 个枚举值')
@@ -169,14 +236,20 @@ const SAMPLE = {
 
 {
   // 服务端禁用 introspection 时 types 为 null
-  throws('BAD_INTROSPECTION', () => parseIntrospection({ data: { __schema: { types: null } } }),
-    'types 为 null 时抛 BAD_INTROSPECTION')
+  throws(
+    'BAD_INTROSPECTION',
+    () => parseIntrospection({ data: { __schema: { types: null } } }),
+    'types 为 null 时抛 BAD_INTROSPECTION',
+  )
 }
 
 {
   // 权限不足时走 errors
-  throws('BAD_INTROSPECTION', () => parseIntrospection({ errors: [{ message: 'introspection disabled' }] }),
-    '服务端返回 errors 时抛 BAD_INTROSPECTION')
+  throws(
+    'BAD_INTROSPECTION',
+    () => parseIntrospection({ errors: [{ message: 'introspection disabled' }] }),
+    '服务端返回 errors 时抛 BAD_INTROSPECTION',
+  )
 }
 
 {
@@ -188,9 +261,17 @@ const SAMPLE = {
 {
   // 字段里 type 为 null（部分服务端裁剪过）不该崩
   const weird = {
-    data: { __schema: { types: [
-      { kind: 'OBJECT', name: 'Query', fields: [{ name: 'x', type: null, args: null, enumValues: null }] },
-    ] } },
+    data: {
+      __schema: {
+        types: [
+          {
+            kind: 'OBJECT',
+            name: 'Query',
+            fields: [{ name: 'x', type: null, args: null, enumValues: null }],
+          },
+        ],
+      },
+    },
   }
   const s = parseIntrospection(weird)
   eq(s.queryFields[0].type, '', 'type 为 null 时渲染成空串而不是崩')
@@ -200,11 +281,32 @@ const SAMPLE = {
 {
   // 深层嵌套的 ofType（4 层以上）
   const deep = {
-    data: { __schema: { types: [
-      { kind: 'OBJECT', name: 'Query', fields: [
-        { name: 'deep', type: { kind: 'NON_NULL', ofType: { kind: 'LIST', ofType: { kind: 'NON_NULL', ofType: { kind: 'OBJECT', name: 'A', ofType: null } } } }, args: [] },
-      ] },
-    ] } },
+    data: {
+      __schema: {
+        types: [
+          {
+            kind: 'OBJECT',
+            name: 'Query',
+            fields: [
+              {
+                name: 'deep',
+                type: {
+                  kind: 'NON_NULL',
+                  ofType: {
+                    kind: 'LIST',
+                    ofType: {
+                      kind: 'NON_NULL',
+                      ofType: { kind: 'OBJECT', name: 'A', ofType: null },
+                    },
+                  },
+                },
+                args: [],
+              },
+            ],
+          },
+        ],
+      },
+    },
   }
   // NON_NULL → LIST → NON_NULL → A：每层各一个 '!'，所以是 [A!]!
   eq(parseIntrospection(deep).queryFields[0].type, '[A!]!', '多层 ofType 正确还原')
@@ -217,7 +319,11 @@ const SAMPLE = {
 
 /* ================= 2. 响应整形 ================= */
 {
-  const r = parseGqlResponse(JSON.stringify({ data: { user: { id: '1', email: 'a@b.c' } } }), 200, 42)
+  const r = parseGqlResponse(
+    JSON.stringify({ data: { user: { id: '1', email: 'a@b.c' } } }),
+    200,
+    42,
+  )
   eq(r.status, 200, '状态码透传')
   eq(r.errors.length, 0, '无错误')
   eq(r.elapsedMs, 42, '耗时透传')
@@ -227,10 +333,21 @@ const SAMPLE = {
 
 {
   // GraphQL 的典型错误：HTTP 200 但 errors 数组有值
-  const r = parseGqlResponse(JSON.stringify({
-    data: null,
-    errors: [{ message: 'Cannot query field "nmae"', path: ['user', 'nmae'], extensions: { code: 'GRAPHQL_VALIDATION_FAILED' }, locations: [{ line: 2, column: 5 }] }],
-  }), 200, 10)
+  const r = parseGqlResponse(
+    JSON.stringify({
+      data: null,
+      errors: [
+        {
+          message: 'Cannot query field "nmae"',
+          path: ['user', 'nmae'],
+          extensions: { code: 'GRAPHQL_VALIDATION_FAILED' },
+          locations: [{ line: 2, column: 5 }],
+        },
+      ],
+    }),
+    200,
+    10,
+  )
   eq(r.errors.length, 1, '提取到 1 个错误')
   eq(r.errors[0].message, 'Cannot query field "nmae"', '错误 message 正确')
   eq(r.errors[0].path, 'user.nmae', 'path 数组拼成点号路径')
@@ -240,7 +357,11 @@ const SAMPLE = {
 
 {
   // 服务端禁用了 introspection：400 + errors
-  const r = parseGqlResponse(JSON.stringify({ errors: [{ message: 'GraphQL introspection is not allowed' }] }), 400, 8)
+  const r = parseGqlResponse(
+    JSON.stringify({ errors: [{ message: 'GraphQL introspection is not allowed' }] }),
+    400,
+    8,
+  )
   eq(r.status, 400, '400 状态码透传')
   eq(r.errors.length, 1, '400 也照样提取 errors（这才是有用的信息）')
   eq(r.errors[0].code, '', 'extensions 缺失时 code 为空串')
@@ -258,7 +379,11 @@ const SAMPLE = {
 
 {
   // partial data + errors 同时存在（GraphQL 允许）
-  const r = parseGqlResponse(JSON.stringify({ data: { a: 1 }, errors: [{ message: 'field b failed' }] }), 200, 3)
+  const r = parseGqlResponse(
+    JSON.stringify({ data: { a: 1 }, errors: [{ message: 'field b failed' }] }),
+    200,
+    3,
+  )
   ok(r.data.includes('"a"'), '部分成功时 data 仍有内容')
   eq(r.errors.length, 1, '部分成功时错误也要报出来（不能因为有 data 就吞掉）')
 }
@@ -301,7 +426,11 @@ const SAMPLE = {
 {
   // 非法 JSON variables 必须报明确错误
   let msg = ''
-  try { buildGqlBody('q', '{bad json', '') } catch (e) { msg = (e as Error).message }
+  try {
+    buildGqlBody('q', '{bad json', '')
+  } catch (e) {
+    msg = (e as Error).message
+  }
   ok(msg.startsWith('BAD_VARIABLES:'), `variables 非法时抛 BAD_VARIABLES（实际 ${msg}）`)
 }
 
@@ -314,8 +443,16 @@ const SAMPLE = {
 /* ================= 4. operation 名猜测 ================= */
 {
   eq(guessOperationName('query GetUser { user { id } }'), 'GetUser', '猜出 query 名')
-  eq(guessOperationName('mutation CreateUser($n:String!){ createUser(name:$n){ id } }'), 'CreateUser', '猜出 mutation 名')
-  eq(guessOperationName('subscription OnEvent { events { id } }'), 'OnEvent', '猜出 subscription 名')
+  eq(
+    guessOperationName('mutation CreateUser($n:String!){ createUser(name:$n){ id } }'),
+    'CreateUser',
+    '猜出 mutation 名',
+  )
+  eq(
+    guessOperationName('subscription OnEvent { events { id } }'),
+    'OnEvent',
+    '猜出 subscription 名',
+  )
   eq(guessOperationName('{ user { id } }'), '', '匿名 query 返回空串')
   eq(guessOperationName(''), '', '空查询返回空串')
   // 字段里出现 query 这个词不该被误判

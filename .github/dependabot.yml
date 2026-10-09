@@ -7,8 +7,8 @@ updates:
     schedule:
       interval: weekly
       day: monday
-      time: "06:00"
-      timezone: "Asia/Shanghai"
+      time: '06:00'
+      timezone: 'Asia/Shanghai'
     open-pull-requests-limit: 5
     labels: [dependencies]
     commit-message:
@@ -20,7 +20,7 @@ updates:
     schedule:
       interval: weekly
       day: monday
-      timezone: "Asia/Shanghai"
+      timezone: 'Asia/Shanghai'
     labels: [ci]
     commit-message:
       prefix: chore(ci)

@@ -45,7 +45,10 @@ import { MessageView } from '../src/components/chat/MessageView'
 let pass = 0
 const fails: string[] = []
 function ok(cond: boolean, label: string): void {
-  if (cond) { pass++; return }
+  if (cond) {
+    pass++
+    return
+  }
   fails.push(label)
   console.error(`  ✗ ${label}`)
 }
@@ -99,25 +102,49 @@ function fakeBridge(opts: { script?: Script; fail?: string } = {}): FakeBridge {
         out.specs.push(spec)
         if (opts.fail) return { ok: false, error: opts.fail }
         // 事件在下一次微任务里开始发：正好覆盖「订阅早于流创建」的缓冲路径
-        queueMicrotask(() => { void opts.script?.((evt) => { for (const cb of cbs) cb(evt) }, spec.requestId ?? '') })
+        queueMicrotask(() => {
+          void opts.script?.((evt) => {
+            for (const cb of cbs) cb(evt)
+          }, spec.requestId ?? '')
+        })
         return { ok: true, requestId: spec.requestId ?? '' }
       },
-      abort: async () => { out.aborts++; return true },
-      onEvent: (cb) => { cbs.add(cb); return () => { cbs.delete(cb) } },
+      abort: async () => {
+        out.aborts++
+        return true
+      },
+      onEvent: (cb) => {
+        cbs.add(cb)
+        return () => {
+          cbs.delete(cb)
+        }
+      },
     },
   }
   return out
 }
 
-function makeChat(bridge: FakeBridge, onFinish?: (info: { isAbort: boolean; isError: boolean }) => void): Chat<ChatUIMessage> {
+function makeChat(
+  bridge: FakeBridge,
+  onFinish?: (info: { isAbort: boolean; isError: boolean }) => void,
+): Chat<ChatUIMessage> {
   const transport = createIpcChatTransport({
-    get api() { return bridge.api },
+    get api() {
+      return bridge.api
+    },
     buildSpec: (messages, requestId) => ({
-      requestId, baseUrl: 'https://example.test/v1', apiKey: 'k', model: 'demo-model', messages,
+      requestId,
+      baseUrl: 'https://example.test/v1',
+      apiKey: 'k',
+      model: 'demo-model',
+      messages,
     }),
     onUserMessage: () => {},
     // 固定 id 便于断言
-    nextId: (() => { let n = 0; return () => `id-${++n}` })(),
+    nextId: (() => {
+      let n = 0
+      return () => `id-${++n}`
+    })(),
   })
   return new Chat<ChatUIMessage>({
     id: 'smoke',
@@ -129,8 +156,20 @@ function makeChat(bridge: FakeBridge, onFinish?: (info: { isAbort: boolean; isEr
 
 const evt = {
   start: (requestId: string): ChatEvent => ({ type: 'start', requestId }),
-  content: (requestId: string, text: string): ChatEvent => ({ type: 'delta', requestId, text, kind: 'content', atMs: 0 }),
-  reasoning: (requestId: string, text: string): ChatEvent => ({ type: 'delta', requestId, text, kind: 'reasoning', atMs: 0 }),
+  content: (requestId: string, text: string): ChatEvent => ({
+    type: 'delta',
+    requestId,
+    text,
+    kind: 'content',
+    atMs: 0,
+  }),
+  reasoning: (requestId: string, text: string): ChatEvent => ({
+    type: 'delta',
+    requestId,
+    text,
+    kind: 'reasoning',
+    atMs: 0,
+  }),
 }
 
 /* ================= 1. 片段映射 ================= */
@@ -138,13 +177,18 @@ const evt = {
 {
   const state = createChunkState()
   const seq = [
-    ...chunksForEvent(state, evt.reasoning('r', '先想')),          // reasoning-start + delta
-    ...chunksForEvent(state, evt.reasoning('r', '一下')),          // reasoning-delta
-    ...chunksForEvent(state, evt.content('r', '答案是')),           // reasoning-end + text-start + delta
-    ...chunksForEvent(state, evt.content('r', '42')),              // text-delta
-    ...chunksForEvent(state, evt.start('r')),                     // start（不碰部件）
-    ...chunksForEvent(state, { type: 'toolCall', requestId: 'r', round: 1, call: { id: 'c1', name: 'http_request', args: '{"url":"http://x"}' } }),
-    ...chunksForEvent(state, evt.content('r', '结论')),             // text-start + delta
+    ...chunksForEvent(state, evt.reasoning('r', '先想')), // reasoning-start + delta
+    ...chunksForEvent(state, evt.reasoning('r', '一下')), // reasoning-delta
+    ...chunksForEvent(state, evt.content('r', '答案是')), // reasoning-end + text-start + delta
+    ...chunksForEvent(state, evt.content('r', '42')), // text-delta
+    ...chunksForEvent(state, evt.start('r')), // start（不碰部件）
+    ...chunksForEvent(state, {
+      type: 'toolCall',
+      requestId: 'r',
+      round: 1,
+      call: { id: 'c1', name: 'http_request', args: '{"url":"http://x"}' },
+    }),
+    ...chunksForEvent(state, evt.content('r', '结论')), // text-start + delta
   ]
   const kinds = seq.map((c) => c.type)
   eq(kinds[0], 'reasoning-start', '思考块先开 reasoning-start')
@@ -158,7 +202,8 @@ const evt = {
   for (const c of seq) {
     if (c.type === 'text-start' || c.type === 'reasoning-start') open.add(c.id)
     if (c.type === 'text-end' || c.type === 'reasoning-end') open.delete(c.id)
-    if ((c.type === 'text-delta' || c.type === 'reasoning-delta') && !open.has(c.id)) deltaOk = false
+    if ((c.type === 'text-delta' || c.type === 'reasoning-delta') && !open.has(c.id))
+      deltaOk = false
   }
   ok(deltaOk, '所有增量片段都落在已打开的部件里')
   const tool = seq.find((c) => c.type === 'tool-input-available')
@@ -166,10 +211,19 @@ const evt = {
   eq(kinds[kinds.indexOf('tool-input-available') - 1], 'text-end', '工具调用前先收尾正文')
 
   // 取消不发 error 片段：否则「已停止」会被渲染成「失败」
-  const aborted = chunksForEvent(createChunkState(), { type: 'error', requestId: 'r', message: 'aborted', code: 'ABORTED' })
+  const aborted = chunksForEvent(createChunkState(), {
+    type: 'error',
+    requestId: 'r',
+    message: 'aborted',
+    code: 'ABORTED',
+  })
   eq(aborted.length, 1, '取消失败事件只产出一个片段')
   eq(aborted[0].type, 'abort', '取消映射成 abort 而不是 error')
-  const realErr = chunksForEvent(createChunkState(), { type: 'error', requestId: 'r', message: 'boom' })
+  const realErr = chunksForEvent(createChunkState(), {
+    type: 'error',
+    requestId: 'r',
+    message: 'boom',
+  })
   eq(realErr[0].type, 'error', '真实错误仍然映射成 error')
 }
 
@@ -183,20 +237,48 @@ await (async () => {
       emit(evt.reasoning(rid, '用户想要一个结果'))
       emit(evt.content(rid, '好的，'))
       emit(evt.content(rid, '我查一下。'))
-      emit({ type: 'toolCall', requestId: rid, round: 1, call: { id: 'call-1', name: 'hash', args: '{"text":"abc"}' } })
-      emit({ type: 'toolResult', requestId: rid, round: 1, result: { id: 'call-1', name: 'hash', ok: true, isError: false, text: '900150983cd24fb0', durationMs: 3 } })
+      emit({
+        type: 'toolCall',
+        requestId: rid,
+        round: 1,
+        call: { id: 'call-1', name: 'hash', args: '{"text":"abc"}' },
+      })
+      emit({
+        type: 'toolResult',
+        requestId: rid,
+        round: 1,
+        result: {
+          id: 'call-1',
+          name: 'hash',
+          ok: true,
+          isError: false,
+          text: '900150983cd24fb0',
+          durationMs: 3,
+        },
+      })
       emit(evt.content(rid, '结果是 900150983cd24fb0。'))
       emit({
-        type: 'done', requestId: rid, rounds: 2,
+        type: 'done',
+        requestId: rid,
+        rounds: 2,
         meta: {
-          ttfbMs: 12, firstTokenMs: 40, totalMs: 900, chunks: 5, chars: 20, reasoningChars: 11,
+          ttfbMs: 12,
+          firstTokenMs: 40,
+          totalMs: 900,
+          chunks: 5,
+          chars: 20,
+          reasoningChars: 11,
           usage: { promptTokens: 10, completionTokens: 20, totalTokens: 30 },
-          finishReason: 'stop', model: 'demo-model', toolCalls: [],
+          finishReason: 'stop',
+          model: 'demo-model',
+          toolCalls: [],
         },
       })
     },
   })
-  const chat = makeChat(bridge, (i) => { finish = i })
+  const chat = makeChat(bridge, (i) => {
+    finish = i
+  })
   await chat.sendMessage({ text: '帮我算个哈希' })
 
   const msgs = chat.messages
@@ -205,7 +287,11 @@ await (async () => {
   eq(messageText(msgs[0]), '帮我算个哈希', '用户消息内容原样保留')
   const reply = msgs[1]
   eq(reply.role, 'assistant', '第二条是助手消息')
-  eq(messageText(reply), '好的，我查一下。结果是 900150983cd24fb0。', '正文按顺序拼起来（工具调用前后的两段）')
+  eq(
+    messageText(reply),
+    '好的，我查一下。结果是 900150983cd24fb0。',
+    '正文按顺序拼起来（工具调用前后的两段）',
+  )
   eq(messageReasoning(reply), '用户想要一个结果', '思考内容单独成块，不进正文')
   ok(!reasoningStreaming(reply), '一轮结束后思考块不再是流式状态（界面据此自动折叠）')
 
@@ -217,7 +303,11 @@ await (async () => {
   ok(JSON.stringify(tools[0].input) === '{"text":"abc"}', '工具参数被解析成结构化对象')
 
   const meta = messageMeta(reply)
-  eq(meta.meta?.totalTokens ?? meta.meta?.usage?.totalTokens, 30, '本轮用量挂在消息 metadata 上（可随会话落盘）')
+  eq(
+    meta.meta?.totalTokens ?? meta.meta?.usage?.totalTokens,
+    30,
+    '本轮用量挂在消息 metadata 上（可随会话落盘）',
+  )
   eq(meta.rounds, 2, '轮数也一并记下')
   ok(!meta.error && !meta.aborted, '正常结束不带错误标记')
   eq(chat.status, 'ready', '结束后状态回到 ready')
@@ -225,15 +315,21 @@ await (async () => {
   eq(bridge.listeners(), 0, '流结束后事件监听器被摘掉（不残留）')
 
   // 部件顺序：思考 → 正文 → 工具 → 正文
-  const order = reply.parts.map((p) => (p.type === 'dynamic-tool' ? 'tool' : p.type)).filter((t) => t !== 'step-start')
-  ok(JSON.stringify(order) === JSON.stringify(['reasoning', 'text', 'tool', 'text']), `部件按发生顺序排列（实际 ${order.join(',')}）`)
+  const order = reply.parts
+    .map((p) => (p.type === 'dynamic-tool' ? 'tool' : p.type))
+    .filter((t) => t !== 'step-start')
+  ok(
+    JSON.stringify(order) === JSON.stringify(['reasoning', 'text', 'tool', 'text']),
+    `部件按发生顺序排列（实际 ${order.join(',')}）`,
+  )
 
   // 发给主进程的 spec
   eq(bridge.specs.length, 1, '只发起了一次请求')
   eq(bridge.specs[0].model, 'demo-model', 'spec 带上当前模型')
   eq(bridge.specs[0].messages.length, 1, '首次请求只带用户消息')
   eq(bridge.specs[0].messages[0].content, '帮我算个哈希', '历史内容来自界面消息')
-  if (typeof bridge.specs[0].requestId === 'string') ok(bridge.specs[0].requestId!.startsWith('id-'), '请求 id 由 transport 生成并贯穿事件')
+  if (typeof bridge.specs[0].requestId === 'string')
+    ok(bridge.specs[0].requestId!.startsWith('id-'), '请求 id 由 transport 生成并贯穿事件')
 })()
 
 /* ================= 3. 用户取消 ================= */
@@ -284,7 +380,9 @@ await (async () => {
   const cbs = new Set<(e: ChatEvent) => void>()
   let calls = 0
   const chat = makeChat({
-    specs: [], aborts: 0, listeners: () => cbs.size,
+    specs: [],
+    aborts: 0,
+    listeners: () => cbs.size,
     api: {
       send: async (spec) => {
         calls++
@@ -293,15 +391,33 @@ await (async () => {
           const rid = spec.requestId ?? ''
           for (const cb of [...cbs]) cb(evt.start(rid))
           for (const cb of [...cbs]) cb(evt.content(rid, '第二次成功'))
-          for (const cb of [...cbs]) cb({ type: 'done', requestId: rid, meta: {
-            ttfbMs: 1, firstTokenMs: 1, totalMs: 2, chunks: 1, chars: 4, reasoningChars: 0,
-            usage: null, finishReason: 'stop', model: null, toolCalls: [],
-          } })
+          for (const cb of [...cbs])
+            cb({
+              type: 'done',
+              requestId: rid,
+              meta: {
+                ttfbMs: 1,
+                firstTokenMs: 1,
+                totalMs: 2,
+                chunks: 1,
+                chars: 4,
+                reasoningChars: 0,
+                usage: null,
+                finishReason: 'stop',
+                model: null,
+                toolCalls: [],
+              },
+            })
         })
         return { ok: true, requestId: spec.requestId ?? '' }
       },
       abort: async () => true,
-      onEvent: (cb) => { cbs.add(cb); return () => { cbs.delete(cb) } },
+      onEvent: (cb) => {
+        cbs.add(cb)
+        return () => {
+          cbs.delete(cb)
+        }
+      },
     },
   })
   await chat.sendMessage({ text: '第一次' })
@@ -317,35 +433,68 @@ await (async () => {
 
 {
   const withTool: ChatUIMessage = {
-    id: 'a1', role: 'assistant',
+    id: 'a1',
+    role: 'assistant',
     parts: [
       { type: 'reasoning', id: 'r1', text: '内心戏', state: 'done' },
       { type: 'text', text: '正文一' },
-      { type: 'dynamic-tool', toolCallId: 'c1', toolName: 'hash', state: 'output-available', input: {}, output: 'x' },
+      {
+        type: 'dynamic-tool',
+        toolCallId: 'c1',
+        toolName: 'hash',
+        state: 'output-available',
+        input: {},
+        output: 'x',
+      },
       { type: 'text', text: '正文二' },
     ],
   }
-  const history = uiMessagesToHistory([{ id: 'u1', role: 'user', parts: [{ type: 'text', text: '问题' }] }, withTool])
+  const history = uiMessagesToHistory([
+    { id: 'u1', role: 'user', parts: [{ type: 'text', text: '问题' }] },
+    withTool,
+  ])
   eq(history.length, 2, '压平后每个角色一条')
   eq(history[0].content, '问题', '用户文本保留')
-  eq(history[1].content, '正文一正文二', '助手只带正文：思考与工具调用交给主进程的 agent 循环，不能重复塞')
+  eq(
+    history[1].content,
+    '正文一正文二',
+    '助手只带正文：思考与工具调用交给主进程的 agent 循环，不能重复塞',
+  )
   ok(!JSON.stringify(history).includes('内心戏'), '思考内容不会被当成历史发回去')
 
   const legacy = legacyTurnsToUIMessages([
     { id: 'u-1', role: 'user', blocks: [{ kind: 'text', text: '老会话的问题' }], status: 'done' },
     {
-      id: 'a-1', role: 'assistant', status: 'stopped', rounds: 3,
+      id: 'a-1',
+      role: 'assistant',
+      status: 'stopped',
+      rounds: 3,
       error: '网络断了',
-      meta: { ttfbMs: 1, firstTokenMs: 2, totalMs: 3, chunks: 1, chars: 1, reasoningChars: 0, usage: null, finishReason: null, model: null, toolCalls: [] },
+      meta: {
+        ttfbMs: 1,
+        firstTokenMs: 2,
+        totalMs: 3,
+        chunks: 1,
+        chars: 1,
+        reasoningChars: 0,
+        usage: null,
+        finishReason: null,
+        model: null,
+        toolCalls: [],
+      },
       blocks: [
         { kind: 'reasoning', text: '旧思考' },
         { kind: 'text', text: '旧正文' },
-        { kind: 'tool', call: { id: 'c9', name: 'jwt_decode', args: 'not-json' }, result: { ok: true, isError: false, text: '结果', durationMs: 1 } },
+        {
+          kind: 'tool',
+          call: { id: 'c9', name: 'jwt_decode', args: 'not-json' },
+          result: { ok: true, isError: false, text: '结果', durationMs: 1 },
+        },
       ],
     },
-    { role: 'assistant' },                        // 坏数据：没有 blocks
-    null,                                          // 坏数据：压根不是对象
-    { role: 'tool', blocks: [] },                  // 坏数据：角色不认识
+    { role: 'assistant' }, // 坏数据：没有 blocks
+    null, // 坏数据：压根不是对象
+    { role: 'tool', blocks: [] }, // 坏数据：角色不认识
   ])
   eq(legacy.length, 2, '旧格式迁移只认能认的条目，坏数据跳过而不是整份炸掉')
   eq(messageText(legacy[1]), '旧正文', '旧正文转成 text 部件')
@@ -359,7 +508,12 @@ await (async () => {
   eq(lm.rounds, 3, '旧轮数迁移过来')
 
   eq(normalizeStoredTurns([withTool]).length, 1, '新格式原样返回')
-  eq(normalizeStoredTurns([{ id: 'x', role: 'assistant', blocks: [{ kind: 'text', text: 't' }] }]).length, 1, '旧格式走迁移分支')
+  eq(
+    normalizeStoredTurns([{ id: 'x', role: 'assistant', blocks: [{ kind: 'text', text: 't' }] }])
+      .length,
+    1,
+    '旧格式走迁移分支',
+  )
   eq(normalizeStoredTurns([]).length, 0, '空会话返回空数组')
   eq(normalizeStoredTurns(null as unknown as unknown[]).length, 0, '非数组输入不炸')
 }
@@ -408,23 +562,25 @@ await (async () => {
 /* ================= 7. 思考块的展开 / 自动折叠 ================= */
 
 {
-  const renderMsg = (live: boolean, state: 'streaming' | 'done'): string => renderToStaticMarkup(
-    React.createElement(
-      I18nProvider,
-      null,
-      React.createElement(MessageView, {
-        live,
-        price: null,
-        msg: {
-          id: 'm1', role: 'assistant',
-          parts: [
-            { type: 'reasoning', id: 'r1', text: '这是思考内容', state },
-            { type: 'text', text: '这是正文' },
-          ],
-        } as ChatUIMessage,
-      }),
-    ),
-  )
+  const renderMsg = (live: boolean, state: 'streaming' | 'done'): string =>
+    renderToStaticMarkup(
+      React.createElement(
+        I18nProvider,
+        null,
+        React.createElement(MessageView, {
+          live,
+          price: null,
+          msg: {
+            id: 'm1',
+            role: 'assistant',
+            parts: [
+              { type: 'reasoning', id: 'r1', text: '这是思考内容', state },
+              { type: 'text', text: '这是正文' },
+            ],
+          } as ChatUIMessage,
+        }),
+      ),
+    )
 
   const streaming = renderMsg(true, 'streaming')
   ok(streaming.includes('aria-expanded="true"'), '流式输出中：思考块自动展开')
@@ -440,14 +596,21 @@ await (async () => {
   // 已经结束的旧消息（不在流式）即便部件状态还写着 streaming，也不该展开 ——
   // 中断的会话里部件状态会永远停在 streaming
   const stale = renderMsg(false, 'streaming')
-  ok(stale.includes('aria-expanded="false"'), '非当前流式的消息不展开（中断的部件状态不会让它一直张着）')
+  ok(
+    stale.includes('aria-expanded="false"'),
+    '非当前流式的消息不展开（中断的部件状态不会让它一直张着）',
+  )
 }
 
 /* ================= 8. 外链白名单 ================= */
 
 {
   eq(safeExternalUrl('https://example.com/a?b=1'), 'https://example.com/a?b=1', 'https 放行')
-  eq(safeExternalUrl('  http://127.0.0.1:8080/x  '), 'http://127.0.0.1:8080/x', 'http 放行（内网地址照开）')
+  eq(
+    safeExternalUrl('  http://127.0.0.1:8080/x  '),
+    'http://127.0.0.1:8080/x',
+    'http 放行（内网地址照开）',
+  )
   eq(safeExternalUrl('mailto:a@b.com'), 'mailto:a@b.com', 'mailto 放行')
   eq(safeExternalUrl('javascript:alert(1)'), null, 'javascript: 拒绝')
   eq(safeExternalUrl('file:///etc/passwd'), null, 'file: 拒绝')

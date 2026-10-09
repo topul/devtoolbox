@@ -1,0 +1,7 @@
+out/
+dist/
+dist-extension/
+release/
+node_modules/
+package-lock.json
+*.zip

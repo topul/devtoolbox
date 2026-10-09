@@ -31,7 +31,9 @@ const logs = []
 
 async function main() {
   if (!existsSync(preloadPath)) {
-    console.error(`preload 产物不存在：${preloadPath}\n请先执行 npm run build（sandbox 下 preload 必须是 CJS，见 electron.vite.config.ts）`)
+    console.error(
+      `preload 产物不存在：${preloadPath}\n请先执行 npm run build（sandbox 下 preload 必须是 CJS，见 electron.vite.config.ts）`,
+    )
     app.exit(2)
     return
   }
@@ -39,11 +41,18 @@ async function main() {
     show: false,
     width: 900,
     height: 700,
-    webPreferences: { preload: preloadPath, sandbox, contextIsolation: true, nodeIntegration: false },
+    webPreferences: {
+      preload: preloadPath,
+      sandbox,
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
   })
 
   win.webContents.on('console-message', (event) => {
-    logs.push(`[console:${event.level}] ${event.message} (${event.sourceId ?? ''}:${event.lineNumber ?? ''})`)
+    logs.push(
+      `[console:${event.level}] ${event.message} (${event.sourceId ?? ''}:${event.lineNumber ?? ''})`,
+    )
   })
   win.webContents.on('preload-error', (_event, path, error) => {
     logs.push(`[preload-error] ${path}\n  ${error?.stack ?? error}`)
@@ -70,12 +79,20 @@ async function main() {
   }
 
   const ok = JSON.parse(probe)
-  const pass = ok.electronAPI === 'object' && ok.httpSend === 'function' && ok.proxyStart === 'function'
-  console.log(pass ? '\nOK: 预加载桥接可用，window.electronAPI 暴露 http/proxy' : '\n失败：window.electronAPI 未正确暴露')
+  const pass =
+    ok.electronAPI === 'object' && ok.httpSend === 'function' && ok.proxyStart === 'function'
+  console.log(
+    pass
+      ? '\nOK: 预加载桥接可用，window.electronAPI 暴露 http/proxy'
+      : '\n失败：window.electronAPI 未正确暴露',
+  )
   app.exit(pass ? 0 : 1)
 }
 
-app.whenReady().then(main).catch((err) => {
-  console.error('探针异常：', err)
-  app.exit(2)
-})
+app
+  .whenReady()
+  .then(main)
+  .catch((err) => {
+    console.error('探针异常：', err)
+    app.exit(2)
+  })

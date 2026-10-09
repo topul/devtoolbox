@@ -6,7 +6,14 @@
  *
  * 运行：npm run smoke:httpsnap
  */
-import { snapshotFromResponse, addSnapshot, boundedDiff, MAX_SNAPSHOTS, MAX_BODY_CHARS, MAX_DIFF_LINES } from '../src/components/http/SnapshotPanel'
+import {
+  snapshotFromResponse,
+  addSnapshot,
+  boundedDiff,
+  MAX_SNAPSHOTS,
+  MAX_BODY_CHARS,
+  MAX_DIFF_LINES,
+} from '../src/components/http/SnapshotPanel'
 import type { HttpRequestResult } from '../src/lib/http-types'
 import type { DecodedBody } from '../src/lib/http-utils'
 
@@ -88,17 +95,42 @@ const TEXT_DECODED = {
 }
 {
   const list = Array.from({ length: MAX_SNAPSHOTS }, (_, i) => ({
-    id: `s${i}`, at: i, method: 'GET', url: '', status: 200, bodyText: '', truncated: false, durationMs: 1,
+    id: `s${i}`,
+    at: i,
+    method: 'GET',
+    url: '',
+    status: 200,
+    bodyText: '',
+    truncated: false,
+    durationMs: 1,
   }))
   const next = addSnapshot(list, snapshotFromResponse(RESP, TEXT_DECODED)!)
   eq('超上限丢最旧', next.length, MAX_SNAPSHOTS)
   // 列表语义是「新在前」：新条目插到头部，超出上限时从末尾（最旧）挤掉
   eq('新的在最前', next[0].id !== `s${MAX_SNAPSHOTS - 1}`, true)
-  ok('末尾最旧的被挤出', next.every((x) => x.id !== `s${MAX_SNAPSHOTS - 1}`))
-  eq('最前的还在', next.some((x) => x.id === 's0'), true)
+  ok(
+    '末尾最旧的被挤出',
+    next.every((x) => x.id !== `s${MAX_SNAPSHOTS - 1}`),
+  )
+  eq(
+    '最前的还在',
+    next.some((x) => x.id === 's0'),
+    true,
+  )
 }
 {
-  const list = [{ id: 'a', at: 0, method: 'GET', url: '', status: 200, bodyText: '', truncated: false, durationMs: 1 }]
+  const list = [
+    {
+      id: 'a',
+      at: 0,
+      method: 'GET',
+      url: '',
+      status: 200,
+      bodyText: '',
+      truncated: false,
+      durationMs: 1,
+    },
+  ]
   eq('二进制入参原样返回', addSnapshot(list, null), list)
 }
 
@@ -106,7 +138,11 @@ const TEXT_DECODED = {
 
 {
   const d = boundedDiff('a\nb\nc', 'a\nX\nc')
-  eq('单行修改产生 1 增 1 删', `${d.lines.filter((l) => l.type === 'add').length}/${d.lines.filter((l) => l.type === 'del').length}`, '1/1')
+  eq(
+    '单行修改产生 1 增 1 删',
+    `${d.lines.filter((l) => l.type === 'add').length}/${d.lines.filter((l) => l.type === 'del').length}`,
+    '1/1',
+  )
   eq('未截断', d.truncated, false)
 }
 {

@@ -49,7 +49,9 @@ const hasSips = (() => {
 for (const size of ICON_SIZES) {
   const dest = join(iconsDir, `icon-${size}.png`)
   if (hasSips) {
-    execFileSync('sips', ['-z', String(size), String(size), srcIcon, '--out', dest], { stdio: 'ignore' })
+    execFileSync('sips', ['-z', String(size), String(size), srcIcon, '--out', dest], {
+      stdio: 'ignore',
+    })
   } else {
     copyFileSync(srcIcon, dest)
   }

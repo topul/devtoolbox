@@ -48,7 +48,10 @@ function hv(headers: [string, string][], name: string): string | null {
   return hit ? hit[1] : null
 }
 function warnCodes(w: { code: string }[]): string {
-  return w.map((x) => x.code).sort().join(',')
+  return w
+    .map((x) => x.code)
+    .sort()
+    .join(',')
 }
 
 /* ================= 样例 ================= */
@@ -59,7 +62,8 @@ const DEVTOOLS = `curl 'https://api.example.com/v1/users?limit=10' \\
   -H 'content-type: application/json' \\
   --data-raw '{"name":"张三","tags":["a","b"]}'`
 
-const POWERSHELL = 'curl.exe -X PUT "https://api.example.com/v1/users/1" `\n' +
+const POWERSHELL =
+  'curl.exe -X PUT "https://api.example.com/v1/users/1" `\n' +
   '  -H "Content-Type: application/json" `\n' +
   '  -d "{\\"name\\":\\"it is ok\\"}"'
 
@@ -85,8 +89,16 @@ const RICH: RequestDoc = {
   eq('devtools: 方法推断为 POST', r.request?.method, 'POST')
   eq('devtools: URL 保留查询串', r.request?.url, 'https://api.example.com/v1/users?limit=10')
   eq('devtools: 两个请求头', r.request?.headers.length, 2)
-  eq('devtools: 请求头内容', headersOf(r.request), 'accept:application/json|content-type:application/json')
-  eq('devtools: 正文原样保留', r.request?.body.kind === 'text' ? r.request.body.text : null, '{"name":"张三","tags":["a","b"]}')
+  eq(
+    'devtools: 请求头内容',
+    headersOf(r.request),
+    'accept:application/json|content-type:application/json',
+  )
+  eq(
+    'devtools: 正文原样保留',
+    r.request?.body.kind === 'text' ? r.request.body.text : null,
+    '{"name":"张三","tags":["a","b"]}',
+  )
   eq('devtools: 提示按正文推断方法', warnCodes(r.warnings), 'METHOD_INFERRED')
 }
 
@@ -95,7 +107,11 @@ const RICH: RequestDoc = {
   ok('powershell: 解析成功', r.ok, JSON.stringify(r))
   eq('powershell: curl.exe 别名可用', r.request?.method, 'PUT')
   eq('powershell: 反引号续行被归一化', r.request?.url, 'https://api.example.com/v1/users/1')
-  eq('powershell: 双引号内 \\" 解转义', r.request?.body.kind === 'text' ? r.request.body.text : null, '{"name":"it is ok"}')
+  eq(
+    'powershell: 双引号内 \\" 解转义',
+    r.request?.body.kind === 'text' ? r.request.body.text : null,
+    '{"name":"it is ok"}',
+  )
 }
 
 {
@@ -106,11 +122,17 @@ const RICH: RequestDoc = {
 }
 
 {
-  const r = parseCurlCommand(`curl -k -L --proxy http://127.0.0.1:8899 -A 'MyAgent/1.0' -e 'https://ref.example.com/' -b 'a=1; b=2' https://api.example.com/x`)
+  const r = parseCurlCommand(
+    `curl -k -L --proxy http://127.0.0.1:8899 -A 'MyAgent/1.0' -e 'https://ref.example.com/' -b 'a=1; b=2' https://api.example.com/x`,
+  )
   eq('开关: -k 关校验', r.request?.verifyTls, false)
   eq('开关: -L 跟随重定向', r.request?.followRedirects, true)
   eq('开关: --proxy 记录代理', r.request?.proxy, 'http://127.0.0.1:8899')
-  eq('简写: -A/-e/-b 都进请求头', headersOf(r.request), 'User-Agent:MyAgent/1.0|Referer:https://ref.example.com/|Cookie:a=1; b=2')
+  eq(
+    '简写: -A/-e/-b 都进请求头',
+    headersOf(r.request),
+    'User-Agent:MyAgent/1.0|Referer:https://ref.example.com/|Cookie:a=1; b=2',
+  )
 }
 
 {
@@ -120,8 +142,14 @@ const RICH: RequestDoc = {
 }
 
 {
-  const r = parseCurlCommand(`curl --data-urlencode 'q=hello world&x=1' https://api.example.com/search`)
-  eq('--data-urlencode 做百分号编码', r.request?.body.kind === 'text' ? r.request.body.text : null, 'q=hello%20world%26x%3D1')
+  const r = parseCurlCommand(
+    `curl --data-urlencode 'q=hello world&x=1' https://api.example.com/search`,
+  )
+  eq(
+    '--data-urlencode 做百分号编码',
+    r.request?.body.kind === 'text' ? r.request.body.text : null,
+    'q=hello%20world%26x%3D1',
+  )
   eq('--data-urlencode 有提示', warnCodes(r.warnings), 'DATA_URLENCODE,METHOD_INFERRED')
 }
 
@@ -139,7 +167,9 @@ const RICH: RequestDoc = {
 }
 
 {
-  const r = parseCurlCommand(`curl -s --max-time 10 --compressed https://api.example.com/a https://api.example.com/b`)
+  const r = parseCurlCommand(
+    `curl -s --max-time 10 --compressed https://api.example.com/a https://api.example.com/b`,
+  )
   eq('已知携带值开关不吞掉 URL', r.request?.url, 'https://api.example.com/a')
   eq('多余 URL 只给提示', warnCodes(r.warnings), 'MULTI_URL')
 }
@@ -152,11 +182,17 @@ const RICH: RequestDoc = {
 }
 
 {
-  const r = parseCurlCommand(`curl -F 'file=@/tmp/a.png' -F 'name=demo' https://api.example.com/upload`)
+  const r = parseCurlCommand(
+    `curl -F 'file=@/tmp/a.png' -F 'name=demo' https://api.example.com/upload`,
+  )
   eq('-F: 解析为字段', r.request?.body.kind, 'fields')
   const fields = r.request?.body.kind === 'fields' ? r.request.body.fields : []
   eq('-F: 两个字段', fields.length, 2)
-  eq('-F: 标记 multipart', r.request?.body.kind === 'fields' ? r.request.body.multipart : false, true)
+  eq(
+    '-F: 标记 multipart',
+    r.request?.body.kind === 'fields' ? r.request.body.multipart : false,
+    true,
+  )
   eq('-F: @文件只提示不臆造内容', warnCodes(r.warnings), 'FILE_BODY,METHOD_INFERRED')
 }
 
@@ -187,9 +223,17 @@ const RICH: RequestDoc = {
 /* ================= 1b. 分词器的边界输入 ================= */
 
 {
-  eq('分词: 未闭合引号按字面量收尾', tokenizeCommand(`curl 'https://a.example.com/x`).join('|'), 'curl|https://a.example.com/x')
+  eq(
+    '分词: 未闭合引号按字面量收尾',
+    tokenizeCommand(`curl 'https://a.example.com/x`).join('|'),
+    'curl|https://a.example.com/x',
+  )
   eq('分词: bash 拼接写法还原单引号', tokenizeCommand(`-H 'it'\\''s'`).join('|'), "-H|it's")
-  eq('分词: 连续空白不产生空 token', tokenizeCommand(`curl   -H\t'a: b'   https://x`).join('|'), 'curl|-H|a: b|https://x')
+  eq(
+    '分词: 连续空白不产生空 token',
+    tokenizeCommand(`curl   -H\t'a: b'   https://x`).join('|'),
+    'curl|-H|a: b|https://x',
+  )
   eq('分词: 空输入得到空数组', tokenizeCommand('   ').length, 0)
 
   // 未闭合引号不该让整条命令失效：URL 仍能解析出来，后续内容退化成字面量
@@ -259,7 +303,15 @@ const RICH: RequestDoc = {
 
 {
   /* GET 无正文时，各语言都不该凭空造出 body */
-  const g: RequestDoc = { method: 'GET', url: 'https://api.example.com/x', headers: [], body: { kind: 'none' }, followRedirects: false, verifyTls: true, proxy: null }
+  const g: RequestDoc = {
+    method: 'GET',
+    url: 'https://api.example.com/x',
+    headers: [],
+    body: { kind: 'none' },
+    followRedirects: false,
+    verifyTls: true,
+    proxy: null,
+  }
   notIncludes('get/fetch: 无 body 字段', generateCode('fetch', g), 'body:')
   notIncludes('get/curl: 无 --data-raw', generateCode('curl', g), '--data-raw')
   notIncludes('get/curl: 无 -k', generateCode('curl', g), '-k')
@@ -272,7 +324,14 @@ const RICH: RequestDoc = {
     method: 'POST',
     url: 'https://api.example.com/login',
     headers: [['Content-Type', 'application/x-www-form-urlencoded']],
-    body: { kind: 'fields', fields: [['user', 'a b'], ['pwd', "p'1"]], multipart: false },
+    body: {
+      kind: 'fields',
+      fields: [
+        ['user', 'a b'],
+        ['pwd', "p'1"],
+      ],
+      multipart: false,
+    },
     followRedirects: false,
     verifyTls: true,
     proxy: null,
@@ -281,14 +340,29 @@ const RICH: RequestDoc = {
   includes('form/php: 正文做百分号编码', generateCode('php', f), 'a%20b')
   includes('form/curl: 正文做百分号编码', generateCode('curl', f), 'user=a%20b')
 
-  const m = materializeBody({ ...f, body: { kind: 'fields', fields: [['n', 'v']], multipart: true } })
-  includes('multipart: 带 boundary 头', m.contentType ?? '', 'multipart/form-data; boundary=----DevToolboxBoundary')
+  const m = materializeBody({
+    ...f,
+    body: { kind: 'fields', fields: [['n', 'v']], multipart: true },
+  })
+  includes(
+    'multipart: 带 boundary 头',
+    m.contentType ?? '',
+    'multipart/form-data; boundary=----DevToolboxBoundary',
+  )
   includes('multipart: 正文含分隔符', m.text ?? '', '----DevToolboxBoundary')
   includes('multipart: 正文含字段名', m.text ?? '', 'name="n"')
 }
 
 {
-  const none = materializeBody({ method: 'GET', url: 'https://a', headers: [], body: { kind: 'none' }, followRedirects: false, verifyTls: true, proxy: null })
+  const none = materializeBody({
+    method: 'GET',
+    url: 'https://a',
+    headers: [],
+    body: { kind: 'none' },
+    followRedirects: false,
+    verifyTls: true,
+    proxy: null,
+  })
   eq('materialize: 无正文返回 null', none.text, null)
   eq('materialize: 无正文不带类型', none.contentType, null)
 }
@@ -307,8 +381,16 @@ const RICH: RequestDoc = {
     proxy: null,
   }
   const h = effectiveHeaders(m)
-  eq('生成头: 旧 boundary 被替换', hv(h, 'content-type'), `multipart/form-data; boundary=${MULTIPART_BOUNDARY}`)
-  eq('生成头: 不新增重复 Content-Type', h.filter(([k]) => k.toLowerCase() === 'content-type').length, 1)
+  eq(
+    '生成头: 旧 boundary 被替换',
+    hv(h, 'content-type'),
+    `multipart/form-data; boundary=${MULTIPART_BOUNDARY}`,
+  )
+  eq(
+    '生成头: 不新增重复 Content-Type',
+    h.filter(([k]) => k.toLowerCase() === 'content-type').length,
+    1,
+  )
   const php = generateCode('php', m)
   includes('php: 头里是新 boundary', php, `boundary=${MULTIPART_BOUNDARY}`)
   includes('php: 正文用的是同一个 boundary', php, `--${MULTIPART_BOUNDARY}`)
@@ -316,32 +398,73 @@ const RICH: RequestDoc = {
 
   /* curl -F 解析出来的文档没有 Content-Type，生成时必须补上带 boundary 的那条 */
   const fromCurl = parseCurlCommand(`curl -F 'a=b' https://api.example.com/u`).request
-  eq('curl -F: 自动补 multipart 头', hv(effectiveHeaders(fromCurl!), 'content-type'), `multipart/form-data; boundary=${MULTIPART_BOUNDARY}`)
+  eq(
+    'curl -F: 自动补 multipart 头',
+    hv(effectiveHeaders(fromCurl!), 'content-type'),
+    `multipart/form-data; boundary=${MULTIPART_BOUNDARY}`,
+  )
 
   /* 纯文本正文且没声明类型时，不该凭空造一个 Content-Type */
-  const bare: RequestDoc = { method: 'POST', url: 'https://api.example.com/x', headers: [], body: { kind: 'text', text: 'hi' }, followRedirects: false, verifyTls: true, proxy: null }
+  const bare: RequestDoc = {
+    method: 'POST',
+    url: 'https://api.example.com/x',
+    headers: [],
+    body: { kind: 'text', text: 'hi' },
+    followRedirects: false,
+    verifyTls: true,
+    proxy: null,
+  }
   eq('无声明类型: 不凭空补头', effectiveHeaders(bare).length, 0)
 }
 
 /* ================= 2c. 生成代码的边缘情况 ================= */
 
 {
-  const base: RequestDoc = { method: 'GET', url: 'https://api.example.com/x', headers: [], body: { kind: 'none' }, followRedirects: false, verifyTls: true, proxy: null }
+  const base: RequestDoc = {
+    method: 'GET',
+    url: 'https://api.example.com/x',
+    headers: [],
+    body: { kind: 'none' },
+    followRedirects: false,
+    verifyTls: true,
+    proxy: null,
+  }
 
   /* 重复请求头不能被悄悄合并掉（curl 允许重名，Go 的 Set 会盖掉前一个） */
-  const dup: RequestDoc = { ...base, headers: [['Accept', 'a'], ['Accept', 'b']] }
-  eq('go: 重复头用 Add 保留两份', (generateCode('go', dup).match(/req\.Header\.Add\("Accept"/g) ?? []).length, 2)
+  const dup: RequestDoc = {
+    ...base,
+    headers: [
+      ['Accept', 'a'],
+      ['Accept', 'b'],
+    ],
+  }
+  eq(
+    'go: 重复头用 Add 保留两份',
+    (generateCode('go', dup).match(/req\.Header\.Add\("Accept"/g) ?? []).length,
+    2,
+  )
   const feDup = generateCode('fetch', dup)
-  ok('fetch: 重复头退化成数组字面量', feDup.includes('"a"') && feDup.includes('"b"') && !feDup.includes('"Accept": '))
+  ok(
+    'fetch: 重复头退化成数组字面量',
+    feDup.includes('"a"') && feDup.includes('"b"') && !feDup.includes('"Accept": '),
+  )
 
   /* OkHttp 对 POST 族要求 body 非 null，否则运行期直接抛 */
   const postEmpty: RequestDoc = { ...base, method: 'POST' }
-  includes('java: POST 空正文给空体', generateCode('java', postEmpty), 'RequestBody.create("", null)')
+  includes(
+    'java: POST 空正文给空体',
+    generateCode('java', postEmpty),
+    'RequestBody.create("", null)',
+  )
   includes('java: GET 允许 null 体', generateCode('java', base), 'RequestBody body = null;')
 
   /* 非标准方法在 requests / httpx 里没有同名简写 */
   const purge: RequestDoc = { ...base, method: 'PURGE' }
-  includes('python: 非标准方法走 request()', generateCode('python', purge), 'requests.request("PURGE"')
+  includes(
+    'python: 非标准方法走 request()',
+    generateCode('python', purge),
+    'requests.request("PURGE"',
+  )
   includes('httpx: 非标准方法走 request()', generateCode('httpx', purge), 'httpx.request("PURGE"')
   includes('python: 标准方法仍用简写', generateCode('python', postEmpty), 'requests.post(')
 }
@@ -349,27 +472,76 @@ const RICH: RequestDoc = {
 /* ================= 3. 导出 / 导入往返 ================= */
 
 {
-  const entries = [{ name: '用户列表', doc: RICH }, { name: '健康检查', doc: { method: 'GET', url: 'https://api.example.com/health', headers: [], body: { kind: 'none' }, followRedirects: true, verifyTls: true, proxy: null } }]
+  const entries = [
+    { name: '用户列表', doc: RICH },
+    {
+      name: '健康检查',
+      doc: {
+        method: 'GET',
+        url: 'https://api.example.com/health',
+        headers: [],
+        body: { kind: 'none' },
+        followRedirects: true,
+        verifyTls: true,
+        proxy: null,
+      },
+    },
+  ]
   const text = buildRequestFile(entries)
   const back = parseRequestFile(text)
   ok('往返: 解析成功', back.ok, JSON.stringify(back).slice(0, 200))
   eq('往返: 条数一致', back.requests.length, 2)
   eq('往返: 名称保留', back.requests[0]?.name, '用户列表')
-  eq('往返: 方法与 URL 保留', `${back.requests[0]?.doc.method} ${back.requests[0]?.doc.url}`, `${RICH.method} ${RICH.url}`)
+  eq(
+    '往返: 方法与 URL 保留',
+    `${back.requests[0]?.doc.method} ${back.requests[0]?.doc.url}`,
+    `${RICH.method} ${RICH.url}`,
+  )
   eq('往返: 请求头保留', headersOf(back.requests[0]?.doc), headersOf(RICH))
   eq('往返: 正文保留', JSON.stringify(back.requests[0]?.doc.body), JSON.stringify(RICH.body))
-  eq('往返: 开关保留', `${back.requests[0]?.doc.followRedirects}/${back.requests[0]?.doc.verifyTls}/${back.requests[0]?.doc.proxy}`, 'true/false/http://127.0.0.1:8899')
-  eq('往返: 幂等（再导出再导入条目一致）', JSON.stringify(parseRequestFile(buildRequestFile(back.requests)).requests), JSON.stringify(back.requests))
+  eq(
+    '往返: 开关保留',
+    `${back.requests[0]?.doc.followRedirects}/${back.requests[0]?.doc.verifyTls}/${back.requests[0]?.doc.proxy}`,
+    'true/false/http://127.0.0.1:8899',
+  )
+  eq(
+    '往返: 幂等（再导出再导入条目一致）',
+    JSON.stringify(parseRequestFile(buildRequestFile(back.requests)).requests),
+    JSON.stringify(back.requests),
+  )
   includes('导出: 带 kind 标记', text, 'devtoolbox.http-requests')
 }
 
 {
   eq('导入: 坏 JSON 报 BAD_JSON', parseRequestFile('{oops').errorCode, 'BAD_JSON')
-  eq('导入: 形状不对报 BAD_SHAPE', parseRequestFile('{"kind":"devtoolbox.http-requests"}').errorCode, 'BAD_SHAPE')
-  eq('导入: 版本不符报 BAD_VERSION', parseRequestFile(JSON.stringify({ kind: 'devtoolbox.http-requests', version: 99, requests: [] })).errorCode, 'BAD_VERSION')
-  eq('导入: 版本不相符时回传版本号', parseRequestFile(JSON.stringify({ kind: 'devtoolbox.http-requests', version: 99, requests: [] })).version, 99)
-  eq('导入: 空数组合法', parseRequestFile(JSON.stringify({ kind: 'devtoolbox.http-requests', version: 1, requests: [] })).ok, true)
-  const bad = parseRequestFile(JSON.stringify({ kind: 'devtoolbox.http-requests', version: 1, requests: [{ name: 'x' }] }))
+  eq(
+    '导入: 形状不对报 BAD_SHAPE',
+    parseRequestFile('{"kind":"devtoolbox.http-requests"}').errorCode,
+    'BAD_SHAPE',
+  )
+  eq(
+    '导入: 版本不符报 BAD_VERSION',
+    parseRequestFile(
+      JSON.stringify({ kind: 'devtoolbox.http-requests', version: 99, requests: [] }),
+    ).errorCode,
+    'BAD_VERSION',
+  )
+  eq(
+    '导入: 版本不相符时回传版本号',
+    parseRequestFile(
+      JSON.stringify({ kind: 'devtoolbox.http-requests', version: 99, requests: [] }),
+    ).version,
+    99,
+  )
+  eq(
+    '导入: 空数组合法',
+    parseRequestFile(JSON.stringify({ kind: 'devtoolbox.http-requests', version: 1, requests: [] }))
+      .ok,
+    true,
+  )
+  const bad = parseRequestFile(
+    JSON.stringify({ kind: 'devtoolbox.http-requests', version: 1, requests: [{ name: 'x' }] }),
+  )
   eq('导入: 条目缺 doc 报 BAD_SHAPE', bad.errorCode, 'BAD_SHAPE')
   ok('导入: 失败时不返回任何条目（不静默清空）', bad.requests.length === 0)
 }
@@ -392,7 +564,15 @@ const RICH: RequestDoc = {
 
 {
   /* 只要有一个 RequestDoc 就能出全部 8 种代码 —— 页面不发请求也该看得到 */
-  const doc: RequestDoc = { method: 'DELETE', url: 'https://api.example.com/v1/users/1', headers: [], body: { kind: 'none' }, followRedirects: false, verifyTls: true, proxy: null }
+  const doc: RequestDoc = {
+    method: 'DELETE',
+    url: 'https://api.example.com/v1/users/1',
+    headers: [],
+    body: { kind: 'none' },
+    followRedirects: false,
+    verifyTls: true,
+    proxy: null,
+  }
   for (const t of CODE_TARGETS) {
     includes(`未发请求也能生成 ${t}`, generateCode(t, doc), 'https://api.example.com/v1/users/1')
   }

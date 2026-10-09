@@ -40,13 +40,24 @@ function ok(name: string, cond: boolean, detail = ''): void {
   }
 }
 function eq(name: string, actual: unknown, expected: unknown): void {
-  ok(name, Object.is(actual, expected), `期望 ${JSON.stringify(expected)}，实际 ${JSON.stringify(actual)}`)
+  ok(
+    name,
+    Object.is(actual, expected),
+    `期望 ${JSON.stringify(expected)}，实际 ${JSON.stringify(actual)}`,
+  )
 }
 function includes(name: string, haystack: string, needle: string): void {
-  ok(name, haystack.includes(needle), `未在「${haystack.slice(0, 200)}」中找到 ${JSON.stringify(needle)}`)
+  ok(
+    name,
+    haystack.includes(needle),
+    `未在「${haystack.slice(0, 200)}」中找到 ${JSON.stringify(needle)}`,
+  )
 }
 /** 每个用例都独立的控制器 + 事件收集器 */
-function makeHarness(): { events: McpClientEvent[]; ctl: ReturnType<typeof createMcpClientController> } {
+function makeHarness(): {
+  events: McpClientEvent[]
+  ctl: ReturnType<typeof createMcpClientController>
+} {
   const events: McpClientEvent[] = []
   const ctl = createMcpClientController({ emit: (e) => events.push(e) }, { version: 'test' })
   return { events, ctl }
@@ -71,9 +82,15 @@ function startHttpMock() {
       let msg: any = {}
       try {
         msg = JSON.parse(Buffer.concat(chunks).toString('utf8'))
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
 
-      const reply = (result: unknown): Record<string, unknown> => ({ jsonrpc: '2.0', id: msg.id, result })
+      const reply = (result: unknown): Record<string, unknown> => ({
+        jsonrpc: '2.0',
+        id: msg.id,
+        result,
+      })
       let payload: Record<string, unknown> | null = null
       if (msg.method === 'initialize') {
         payload = reply({
@@ -85,11 +102,21 @@ function startHttpMock() {
       } else if (msg.method === 'tools/list') {
         payload = reply({
           tools: [
-            { name: 'echo', description: '回显参数', inputSchema: { type: 'object', properties: { text: { type: 'string', description: '要回显的文本' } }, required: ['text'] } },
+            {
+              name: 'echo',
+              description: '回显参数',
+              inputSchema: {
+                type: 'object',
+                properties: { text: { type: 'string', description: '要回显的文本' } },
+                required: ['text'],
+              },
+            },
           ],
         })
       } else if (msg.method === 'tools/call') {
-        payload = reply({ content: [{ type: 'text', text: `echo:${JSON.stringify(msg.params?.arguments)}` }] })
+        payload = reply({
+          content: [{ type: 'text', text: `echo:${JSON.stringify(msg.params?.arguments)}` }],
+        })
       } else if (msg.method === 'resources/list') {
         payload = reply({ resources: [{ uri: 'mock://a', name: 'A', mimeType: 'text/plain' }] })
       } else if (msg.method === 'ping') {
@@ -178,17 +205,42 @@ async function main(): Promise<void> {
       eq('未声明 resources 时清单为空', res.catalog?.resources.length, 0)
       eq('declared.resources 为假', res.catalog?.declared.resources, false)
       eq('能力清单与 catalog 声明一致', res.catalog?.tools.length, MCP_TOOLS.length)
-      ok('工具带说明与参数 schema', !!res.catalog?.tools[0]?.description && !!res.catalog?.tools[0]?.inputSchema)
+      ok(
+        '工具带说明与参数 schema',
+        !!res.catalog?.tools[0]?.description && !!res.catalog?.tools[0]?.inputSchema,
+      )
 
       const statuses = events.filter((e) => e.type === 'status').map((e) => (e as any).status)
       eq('状态依次为 connecting → connected', statuses.join(','), 'connecting,connected')
-      ok('收到了 serverInfo 事件', events.some((e) => e.type === 'serverInfo'))
-      ok('收到了 catalog 事件', events.some((e) => e.type === 'catalog'))
-      ok('收到了子进程 stderr 日志', events.some((e) => e.type === 'log' && e.source === 'stderr'))
+      ok(
+        '收到了 serverInfo 事件',
+        events.some((e) => e.type === 'serverInfo'),
+      )
+      ok(
+        '收到了 catalog 事件',
+        events.some((e) => e.type === 'catalog'),
+      )
+      ok(
+        '收到了子进程 stderr 日志',
+        events.some((e) => e.type === 'log' && e.source === 'stderr'),
+      )
 
-      const frames = events.filter((e) => e.type === 'frame') as Extract<McpClientEvent, { type: 'frame' }>[]
-      ok('原始帧里有 send 也有 recv', frames.some((f) => f.dir === 'send') && frames.some((f) => f.dir === 'recv'))
-      ok('所有帧都是合法 JSON', frames.every((f) => f.ok), frames.filter((f) => !f.ok).map((f) => f.payload).join(' | '))
+      const frames = events.filter((e) => e.type === 'frame') as Extract<
+        McpClientEvent,
+        { type: 'frame' }
+      >[]
+      ok(
+        '原始帧里有 send 也有 recv',
+        frames.some((f) => f.dir === 'send') && frames.some((f) => f.dir === 'recv'),
+      )
+      ok(
+        '所有帧都是合法 JSON',
+        frames.every((f) => f.ok),
+        frames
+          .filter((f) => !f.ok)
+          .map((f) => f.payload)
+          .join(' | '),
+      )
       includes('帧里能看到 initialize', frames.map((f) => f.payload).join('\n'), 'initialize')
       includes('帧里能看到 tools/list', frames.map((f) => f.payload).join('\n'), 'tools/list')
 
@@ -248,7 +300,9 @@ async function main(): Promise<void> {
     /* ---------- stdio：起不来要有清楚报错且不留残留 ---------- */
     {
       const { ctl } = makeHarness()
-      const res = await ctl.connect(stdioSpec({ id: 'bad-cmd', command: 'definitely-not-a-real-command-xyz' }))
+      const res = await ctl.connect(
+        stdioSpec({ id: 'bad-cmd', command: 'definitely-not-a-real-command-xyz' }),
+      )
       eq('命令不存在时连接失败', res.ok, false)
       ok('报错说明是启动失败', /启动失败|ENOENT/.test(res.error ?? ''), res.error)
       eq('失败后 isConnected 为假', ctl.isConnected(), false)
@@ -261,7 +315,12 @@ async function main(): Promise<void> {
     /* ---------- http：JSON 响应 ---------- */
     {
       const { events, ctl } = makeHarness()
-      const spec: McpConnectSpec = { id: 'http-json', transport: 'http', url: `http://127.0.0.1:${port}/mcp`, timeoutMs: 10000 }
+      const spec: McpConnectSpec = {
+        id: 'http-json',
+        transport: 'http',
+        url: `http://127.0.0.1:${port}/mcp`,
+        timeoutMs: 10000,
+      }
       const res = await ctl.connect(spec)
       eq('HTTP 连接成功', res.ok, true)
       eq('HTTP 服务端名', res.info?.name, 'http-mock')
@@ -276,14 +335,22 @@ async function main(): Promise<void> {
 
       const ping = await ctl.ping()
       eq('HTTP ping 成功', ping.ok, true)
-      ok('HTTP 传输有诊断日志', events.some((e) => e.type === 'log'))
+      ok(
+        'HTTP 传输有诊断日志',
+        events.some((e) => e.type === 'log'),
+      )
       await ctl.disconnect()
     }
 
     /* ---------- http：SSE 响应 ---------- */
     {
       const { ctl } = makeHarness()
-      const res = await ctl.connect({ id: 'http-sse', transport: 'http', url: `http://127.0.0.1:${port}/sse`, timeoutMs: 10000 })
+      const res = await ctl.connect({
+        id: 'http-sse',
+        transport: 'http',
+        url: `http://127.0.0.1:${port}/sse`,
+        timeoutMs: 10000,
+      })
       eq('SSE 响应也能完成握手', res.ok, true)
       eq('SSE 服务端名', res.info?.name, 'http-mock')
       const called = await ctl.callTool('echo', { n: 2 })
@@ -296,14 +363,24 @@ async function main(): Promise<void> {
     {
       const { ctl } = makeHarness()
       // /session 会返回 Mcp-Session-Id，客户端要带上（这里只验证不影响握手与调用）
-      const res = await ctl.connect({ id: 'http-session', transport: 'http', url: `http://127.0.0.1:${port}/session`, timeoutMs: 10000 })
+      const res = await ctl.connect({
+        id: 'http-session',
+        transport: 'http',
+        url: `http://127.0.0.1:${port}/session`,
+        timeoutMs: 10000,
+      })
       eq('带会话 id 的服务端可用', res.ok, true)
       const called = await ctl.callTool('echo', { ok: true })
       eq('带会话 id 时调用成功', called.ok, true)
       await ctl.disconnect()
 
       // 连不上的地址：要在超时前给出可读错误，而不是干等
-      const dead = await ctl.connect({ id: 'http-dead', transport: 'http', url: 'http://127.0.0.1:1/mcp', timeoutMs: 3000 })
+      const dead = await ctl.connect({
+        id: 'http-dead',
+        transport: 'http',
+        url: 'http://127.0.0.1:1/mcp',
+        timeoutMs: 3000,
+      })
       eq('连不上的地址连接失败', dead.ok, false)
       ok('连不上时有错误信息', !!dead.error, dead.error)
 
@@ -317,7 +394,12 @@ async function main(): Promise<void> {
       const { ctl } = makeHarness()
       const first = await ctl.connect(stdioSpec({ id: 'first' }))
       eq('第一条连接建立', first.ok, true)
-      const second = await ctl.connect({ id: 'second', transport: 'http', url: `http://127.0.0.1:${port}/mcp`, timeoutMs: 10000 })
+      const second = await ctl.connect({
+        id: 'second',
+        transport: 'http',
+        url: `http://127.0.0.1:${port}/mcp`,
+        timeoutMs: 10000,
+      })
       eq('第二条连接建立', second.ok, true)
       eq('第二条连接是 HTTP 服务端', second.info?.name, 'http-mock')
       const called = await ctl.callTool('echo', { z: 1 })

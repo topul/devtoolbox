@@ -10,13 +10,15 @@
  *      'var(--tw-bg-opacity, 1)' 的**变量引用字符串**（不能 parseFloat！）
  *   3. toColorValue 路径        → 无参调用，opacityValue 为 undefined
  */
-const themeColor = (name) => ({ opacityValue } = {}) => {
-  if (opacityValue === undefined) return `var(${name})`
-  if (String(opacityValue).startsWith('var(')) {
-    return `color-mix(in srgb, var(${name}) calc((${opacityValue}) * 100%), transparent)`
+const themeColor =
+  (name) =>
+  ({ opacityValue } = {}) => {
+    if (opacityValue === undefined) return `var(${name})`
+    if (String(opacityValue).startsWith('var(')) {
+      return `color-mix(in srgb, var(${name}) calc((${opacityValue}) * 100%), transparent)`
+    }
+    return `color-mix(in srgb, var(${name}) ${Math.round(parseFloat(opacityValue) * 100)}%, transparent)`
   }
-  return `color-mix(in srgb, var(${name}) ${Math.round(parseFloat(opacityValue) * 100)}%, transparent)`
-}
 
 /** @type {import('tailwindcss').Config} */
 export default {
@@ -44,8 +46,26 @@ export default {
         'on-phosphor': themeColor('--c-on-phosphor'),
       },
       fontFamily: {
-        sans: ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', '"PingFang SC"', '"Hiragino Sans GB"', '"Microsoft YaHei"', '"Noto Sans SC"', 'sans-serif'],
-        mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Consolas', '"PingFang SC"', '"Microsoft YaHei"', 'monospace'],
+        sans: [
+          '-apple-system',
+          'BlinkMacSystemFont',
+          'Segoe UI',
+          '"PingFang SC"',
+          '"Hiragino Sans GB"',
+          '"Microsoft YaHei"',
+          '"Noto Sans SC"',
+          'sans-serif',
+        ],
+        mono: [
+          '"JetBrains Mono"',
+          'ui-monospace',
+          'SFMono-Regular',
+          'Menlo',
+          'Consolas',
+          '"PingFang SC"',
+          '"Microsoft YaHei"',
+          'monospace',
+        ],
       },
     },
   },

@@ -15,7 +15,11 @@ import type { ChatEvent } from '../src/lib/chat-types'
 let pass = 0
 const fail: string[] = []
 function ok(name: string, cond: boolean, detail = ''): void {
-  if (cond) { pass++ } else { fail.push(`${name}${detail ? ` —— ${detail}` : ''}`) }
+  if (cond) {
+    pass++
+  } else {
+    fail.push(`${name}${detail ? ` —— ${detail}` : ''}`)
+  }
 }
 
 const cols = (): CompareColumn[] => [
@@ -26,10 +30,19 @@ const cols = (): CompareColumn[] => [
 /* ================= spec 构建 ================= */
 
 {
-  const p = { id: 'm1', label: '', baseUrl: ' https://api.x.com/v1 ', apiKey: ' k ', model: ' m1-model ' }
+  const p = {
+    id: 'm1',
+    label: '',
+    baseUrl: ' https://api.x.com/v1 ',
+    apiKey: ' k ',
+    model: ' m1-model ',
+  }
   const s = buildCompareSpec(p, '你好', 'cmp-1')
   eq('三件套都 trim', `${s.baseUrl}|${s.apiKey}|${s.model}`, 'https://api.x.com/v1|k|m1-model')
-  ok('单条用户消息', s.messages.length === 1 && s.messages[0].role === 'user' && s.messages[0].content === '你好')
+  ok(
+    '单条用户消息',
+    s.messages.length === 1 && s.messages[0].role === 'user' && s.messages[0].content === '你好',
+  )
   ok('纯文本路径：不带工具', s.tools === null)
   ok('带 requestId', s.requestId === 'cmp-1')
   ok('请求 usage', s.includeUsage === true)
@@ -43,7 +56,10 @@ const cols = (): CompareColumn[] => [
 
 {
   let c = cols()
-  ok('不认识的事件被忽略', applyCompareEvent(c, { type: 'start', requestId: 'zzz' } as ChatEvent) === c)
+  ok(
+    '不认识的事件被忽略',
+    applyCompareEvent(c, { type: 'start', requestId: 'zzz' } as ChatEvent) === c,
+  )
 
   c = applyCompareEvent(c, { type: 'start', requestId: 'a' })
   ok('start → streaming', c[0].status === 'streaming')
@@ -52,15 +68,41 @@ const cols = (): CompareColumn[] => [
 
   c = applyCompareEvent(c, { type: 'delta', requestId: 'a', text: '你', kind: 'content', atMs: 0 })
   c = applyCompareEvent(c, { type: 'delta', requestId: 'a', text: '好', kind: 'content', atMs: 0 })
-  c = applyCompareEvent(c, { type: 'delta', requestId: 'a', text: '<think>', kind: 'reasoning', atMs: 0 })
+  c = applyCompareEvent(c, {
+    type: 'delta',
+    requestId: 'a',
+    text: '<think>',
+    kind: 'reasoning',
+    atMs: 0,
+  })
   eq('content 累积成正文', c[0].text, '你好')
   ok('reasoning 只计字符不进正文', c[0].reasoningChars === 7 && c[0].text === '你好')
   ok('首条 content 记了首字', c[0].firstTokenMs !== null)
 
-  c = applyCompareEvent(c, { type: 'toolCall', requestId: 'a', round: 1, call: { id: 'x', name: 'n', args: '{}' } })
+  c = applyCompareEvent(c, {
+    type: 'toolCall',
+    requestId: 'a',
+    round: 1,
+    call: { id: 'x', name: 'n', args: '{}' },
+  })
   ok('工具事件被忽略（纯文本对比）', c[0].text === '你好' && c[0].status === 'streaming')
 
-  c = applyCompareEvent(c, { type: 'done', requestId: 'a', meta: { ttfbMs: 10, firstTokenMs: 120, totalMs: 900, chunks: 2, chars: 2, reasoningChars: 0, usage: { promptTokens: 5, completionTokens: 2, totalTokens: 7 }, finishReason: 'stop', model: 'deepseek-chat', toolCalls: [] } })
+  c = applyCompareEvent(c, {
+    type: 'done',
+    requestId: 'a',
+    meta: {
+      ttfbMs: 10,
+      firstTokenMs: 120,
+      totalMs: 900,
+      chunks: 2,
+      chars: 2,
+      reasoningChars: 0,
+      usage: { promptTokens: 5, completionTokens: 2, totalTokens: 7 },
+      finishReason: 'stop',
+      model: 'deepseek-chat',
+      toolCalls: [],
+    },
+  })
   eq('done → 完成', c[0].status, 'done')
   eq('totalMs 用服务端值', c[0].totalMs, 900)
   eq('tokens 归集', c[0].usage?.totalTokens, 7)
@@ -83,10 +125,21 @@ const cols = (): CompareColumn[] => [
 
 {
   ok('空列表不可发', !allReady([]))
-  ok('有未就绪档案不可发', !allReady([{ id: 'm', label: '', baseUrl: 'u', apiKey: '', model: 'x' }]))
+  ok(
+    '有未就绪档案不可发',
+    !allReady([{ id: 'm', label: '', baseUrl: 'u', apiKey: '', model: 'x' }]),
+  )
   ok('全部就绪可发', allReady([{ id: 'm', label: '', baseUrl: 'u', apiKey: 'k', model: 'x' }]))
-  eq('显示名回落模型名', columnLabel({ id: 'm', label: '', baseUrl: '', apiKey: '', model: 'glm-4' }), 'glm-4')
-  eq('显示名优先用户命名', columnLabel({ id: 'm', label: '智谱', baseUrl: '', apiKey: '', model: 'glm-4' }), '智谱')
+  eq(
+    '显示名回落模型名',
+    columnLabel({ id: 'm', label: '', baseUrl: '', apiKey: '', model: 'glm-4' }),
+    'glm-4',
+  )
+  eq(
+    '显示名优先用户命名',
+    columnLabel({ id: 'm', label: '智谱', baseUrl: '', apiKey: '', model: 'glm-4' }),
+    '智谱',
+  )
 }
 
 /* ================= 结果 ================= */

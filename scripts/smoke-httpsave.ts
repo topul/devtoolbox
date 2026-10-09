@@ -65,7 +65,9 @@ g.localStorage = { setItem: () => {}, getItem: () => null }
 ok('写入成功返回 true', saveJson('k', { a: 1 }) === true)
 
 g.localStorage = {
-  setItem: () => { throw new Error('QuotaExceededError') },
+  setItem: () => {
+    throw new Error('QuotaExceededError')
+  },
   getItem: () => null,
 }
 ok('配额爆掉返回 false（不再静默）', saveJson('k', { a: 1 }) === false)

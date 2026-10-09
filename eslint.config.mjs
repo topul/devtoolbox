@@ -17,8 +17,12 @@ export default tseslint.config(
   {
     // 构建产物、依赖、打包 zip 一律不检
     ignores: [
-      'out/**', 'dist/**', 'dist-extension/**', 'release/**',
-      'node_modules/**', 'devtoolbox-extension-*.zip',
+      'out/**',
+      'dist/**',
+      'dist-extension/**',
+      'release/**',
+      'node_modules/**',
+      'devtoolbox-extension-*.zip',
     ],
   },
   ...tseslint.configs.recommended,
@@ -30,7 +34,10 @@ export default tseslint.config(
       'react-hooks/exhaustive-deps': 'warn',
       '@typescript-eslint/no-explicit-any': 'warn',
       // `_` 前缀 = 有意保留的未使用项（解构剔除、接口占位参数）
-      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
+      ],
     },
   },
 )

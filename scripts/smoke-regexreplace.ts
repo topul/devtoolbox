@@ -24,7 +24,10 @@ import {
 let pass = 0
 const fails: string[] = []
 function ok(cond: boolean, label: string): void {
-  if (cond) { pass++; return }
+  if (cond) {
+    pass++
+    return
+  }
   fails.push(label)
   console.error(`  ✗ ${label}`)
 }
@@ -64,12 +67,15 @@ function eq<T>(got: T, want: T, label: string): void {
 
 /* ================= 2. 捕获组引用 ================= */
 {
-  eq(regexReplace('2024-01-15', '(\\d{4})-(\\d{2})-(\\d{2})', '$3/$2/$1').output,
-    '15/01/2024', '$1 $2 $3 按序引用')
+  eq(
+    regexReplace('2024-01-15', '(\\d{4})-(\\d{2})-(\\d{2})', '$3/$2/$1').output,
+    '15/01/2024',
+    '$1 $2 $3 按序引用',
+  )
   eq(regexReplace('ab', '(a)(b)', '$2$1').output, 'ba', '组顺序可以重排')
   eq(regexReplace('abc', 'b', '[$&]').output, 'a[b]c', '$& 是整个匹配')
   eq(regexReplace('abc', 'b', '[$`]').output, 'a[a]c', '$` 是匹配前的文本')
-  eq(regexReplace('abc', 'b', "[$']").output, "a[c]c", "$' 是匹配后的文本")
+  eq(regexReplace('abc', 'b', "[$']").output, 'a[c]c', "$' 是匹配后的文本")
   eq(regexReplace('x', 'x', '$$').output, '$', '$$ 是字面量美元符号')
   // 原生：$$ →字面 $，剩下 $1 没有对应组可引用，原样输出
   eq(regexReplace('x', 'x', '$$$1').output, '$$1', '$$ 与 $1 混排：与原生一致')
@@ -142,7 +148,7 @@ function eq<T>(got: T, want: T, label: string): void {
   eq(list[0].match, '1', '第 1 处匹配到 "1"')
   eq(list[1].index, 3, '第 2 处在 index 3')
   eq(list[2].index, 5, '第 3 处在 index 5')
-  eq(list.map(r => r.replacement).join(''), '###', '替换串一致')
+  eq(list.map((r) => r.replacement).join(''), '###', '替换串一致')
 }
 
 {
@@ -156,8 +162,11 @@ function eq<T>(got: T, want: T, label: string): void {
     last = r.index + r.match.length
   }
   built += src.slice(last)
-  eq(built, regexReplace(src, '(\\w+)=(\\d+)', '$2:$1').output,
-    '按明细拼出的结果与整体替换一致（预览不会骗人）')
+  eq(
+    built,
+    regexReplace(src, '(\\w+)=(\\d+)', '$2:$1').output,
+    '按明细拼出的结果与整体替换一致（预览不会骗人）',
+  )
 }
 
 {
@@ -208,14 +217,22 @@ function eq<T>(got: T, want: T, label: string): void {
 {
   // 非法正则：抛稳定错误码，不给中英文提示语
   let code = ''
-  try { regexReplace('abc', '(', 'X') } catch (e) { code = (e as Error).message }
+  try {
+    regexReplace('abc', '(', 'X')
+  } catch (e) {
+    code = (e as Error).message
+  }
   eq(code, 'BAD_REGEX', '非法正则抛 BAD_REGEX（界面负责映射文案）')
 }
 
 {
   // 非法 flags
   let code = ''
-  try { regexReplace('abc', 'a', 'X', 'gg') } catch (e) { code = (e as Error).message }
+  try {
+    regexReplace('abc', 'a', 'X', 'gg')
+  } catch (e) {
+    code = (e as Error).message
+  }
   eq(code, 'BAD_REGEX', '非法 flags 抛 BAD_REGEX')
 }
 

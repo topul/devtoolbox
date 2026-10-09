@@ -57,7 +57,9 @@ interface Received {
 }
 
 /** 最小 SOCKS5 服务（无认证 / 用户名密码认证），用于验证客户端的 SOCKS 通道 */
-function startSocksServer(opts: { user?: string; pass?: string } = {}): Promise<{ port: number; close: () => Promise<void> }> {
+function startSocksServer(
+  opts: { user?: string; pass?: string } = {},
+): Promise<{ port: number; close: () => Promise<void> }> {
   const clients = new Set<net.Socket>()
   const server = net.createServer((socket) => {
     clients.add(socket)
@@ -65,7 +67,9 @@ function startSocksServer(opts: { user?: string; pass?: string } = {}): Promise<
     let stage: 'greet' | 'auth' | 'req' | 'tunnel' = 'greet'
     let buf = Buffer.alloc(0)
     const upstreams: net.Socket[] = []
-    socket.on('error', () => { for (const u of upstreams) u.destroy() })
+    socket.on('error', () => {
+      for (const u of upstreams) u.destroy()
+    })
     const onData = (chunk: Buffer): void => {
       if (stage === 'tunnel') return
       buf = Buffer.concat([buf, chunk])
@@ -74,12 +78,18 @@ function startSocksServer(opts: { user?: string; pass?: string } = {}): Promise<
         const methods = buf.subarray(2, 2 + buf[1])
         buf = buf.subarray(2 + buf[1])
         if (opts.user) {
-          if (!methods.includes(0x02)) { socket.end(Buffer.from([0x05, 0xff])); return }
+          if (!methods.includes(0x02)) {
+            socket.end(Buffer.from([0x05, 0xff]))
+            return
+          }
           socket.write(Buffer.from([0x05, 0x02]))
           stage = 'auth'
           return
         }
-        if (!methods.includes(0x00)) { socket.end(Buffer.from([0x05, 0xff])); return }
+        if (!methods.includes(0x00)) {
+          socket.end(Buffer.from([0x05, 0xff]))
+          return
+        }
         socket.write(Buffer.from([0x05, 0x00]))
         stage = 'req'
         return
@@ -95,7 +105,10 @@ function startSocksServer(opts: { user?: string; pass?: string } = {}): Promise<
         buf = buf.subarray(3 + ulen + plen)
         const ok = uname === opts.user && pass === opts.pass
         socket.write(Buffer.from([0x01, ok ? 0x00 : 0x01]))
-        if (!ok) { socket.end(); return }
+        if (!ok) {
+          socket.end()
+          return
+        }
         stage = 'req'
         return
       }
@@ -128,7 +141,9 @@ function startSocksServer(opts: { user?: string; pass?: string } = {}): Promise<
         socket.pipe(upstream)
       })
       upstreams.push(upstream)
-      upstream.on('error', () => socket.end(Buffer.from([0x05, 0x04, 0x00, 0x01, 0, 0, 0, 0, 0, 0])))
+      upstream.on('error', () =>
+        socket.end(Buffer.from([0x05, 0x04, 0x00, 0x01, 0, 0, 0, 0, 0, 0])),
+      )
     }
     socket.on('data', onData)
   })
@@ -138,11 +153,12 @@ function startSocksServer(opts: { user?: string; pass?: string } = {}): Promise<
       resolve({
         port: typeof addr === 'object' && addr ? addr.port : 0,
         // 关闭时主动断开所有连接，否则 server.close() 会一直等连接释放（表现为测试挂住）
-        close: () => new Promise<void>((r) => {
-          for (const c of clients) c.destroy()
-          clients.clear()
-          server.close(() => r())
-        }),
+        close: () =>
+          new Promise<void>((r) => {
+            for (const c of clients) c.destroy()
+            clients.clear()
+            server.close(() => r())
+          }),
       })
     })
   })
@@ -206,35 +222,85 @@ const main = async (): Promise<void> => {
   const lastSession = (): ProxySession => sessions[sessions.length - 1]
 
   console.log('\n[1] 根证书')
-  check('根证书已生成并落盘', fs.existsSync(caInfo.certPath) && fs.existsSync(caInfo.keyPath), caInfo.certPath)
+  check(
+    '根证书已生成并落盘',
+    fs.existsSync(caInfo.certPath) && fs.existsSync(caInfo.keyPath),
+    caInfo.certPath,
+  )
   const keyMode = fs.statSync(caInfo.keyPath).mode & 0o777
   check('私钥权限为 600', keyMode === 0o600, `mode=${keyMode.toString(8)}`)
   check('根证书自签且 CN 正确', caInfo.subject.includes('DevOps Toolbox Root CA'), caInfo.subject)
-  check('指纹可读', /^([0-9A-F]{2}:){31}[0-9A-F]{2}$/.test(caInfo.fingerprintSha256), caInfo.fingerprintSha256.slice(0, 23) + '…')
+  check(
+    '指纹可读',
+    /^([0-9A-F]{2}:){31}[0-9A-F]{2}$/.test(caInfo.fingerprintSha256),
+    caInfo.fingerprintSha256.slice(0, 23) + '…',
+  )
 
   console.log('\n[2] 叶证书签发链')
   const leaf = proxy.authority.leafPems('localhost')
   const leafX509 = new X509Certificate(leaf.cert)
   const caX509 = new X509Certificate(caInfo.certPem)
-  check('叶证书由本地 CA 签发（验签通过）', leafX509.verify(caX509.publicKey), `issuer=${leafX509.issuer.split('\n')[0]}`)
-  check('叶证书含 SAN=localhost', leafX509.subjectAltName?.includes('DNS:localhost') === true, leafX509.subjectAltName ?? '')
+  check(
+    '叶证书由本地 CA 签发（验签通过）',
+    leafX509.verify(caX509.publicKey),
+    `issuer=${leafX509.issuer.split('\n')[0]}`,
+  )
+  check(
+    '叶证书含 SAN=localhost',
+    leafX509.subjectAltName?.includes('DNS:localhost') === true,
+    leafX509.subjectAltName ?? '',
+  )
   const ipLeaf = new X509Certificate(proxy.authority.leafPems('127.0.0.1').cert)
-  check('IP 主机签发 IP SAN', ipLeaf.subjectAltName?.includes('IP Address:127.0.0.1') === true, ipLeaf.subjectAltName ?? '')
+  check(
+    'IP 主机签发 IP SAN',
+    ipLeaf.subjectAltName?.includes('IP Address:127.0.0.1') === true,
+    ipLeaf.subjectAltName ?? '',
+  )
 
   console.log('\n[3] 明文 HTTP 抓包')
   const plainUrl = `http://127.0.0.1:${upstreamPort}/echo?a=1`
-  const r1 = await performRequest({ method: 'POST', url: plainUrl, headers: [['Content-Type', 'text/plain']], bodyText: 'ping', proxy: proxyUrl, rejectUnauthorized: false })
+  const r1 = await performRequest({
+    method: 'POST',
+    url: plainUrl,
+    headers: [['Content-Type', 'text/plain']],
+    bodyText: 'ping',
+    proxy: proxyUrl,
+    rejectUnauthorized: false,
+  })
   check('请求成功返回 200', r1.ok && r1.status === 200, `status=${r1.status} err=${r1.error ?? ''}`)
-  check('会话已记录', sessions.length === 1 && lastSession().url === plainUrl, `count=${sessions.length}`)
-  check('记录了请求方法/路径', lastSession().method === 'POST' && lastSession().path === '/echo?a=1')
-  check('记录了响应体明文', decode(lastSession().resBodyBase64).includes('echo:POST:/echo?a=1:ping'), decode(lastSession().resBodyBase64))
-  check('响应头被记录（x-upstream）', lastSession().resHeaders.some(([k, v]) => k.toLowerCase() === 'x-upstream' && v === 'plain'))
+  check(
+    '会话已记录',
+    sessions.length === 1 && lastSession().url === plainUrl,
+    `count=${sessions.length}`,
+  )
+  check(
+    '记录了请求方法/路径',
+    lastSession().method === 'POST' && lastSession().path === '/echo?a=1',
+  )
+  check(
+    '记录了响应体明文',
+    decode(lastSession().resBodyBase64).includes('echo:POST:/echo?a=1:ping'),
+    decode(lastSession().resBodyBase64),
+  )
+  check(
+    '响应头被记录（x-upstream）',
+    lastSession().resHeaders.some(([k, v]) => k.toLowerCase() === 'x-upstream' && v === 'plain'),
+  )
   check('耗时已统计', lastSession().durationMs >= 0)
   check('未篡改的请求标记 modified=false', lastSession().modified === false)
 
   console.log('\n[4] gzip 响应自动解压')
-  await performRequest({ method: 'GET', url: `http://127.0.0.1:${upstreamPort}/gzip`, proxy: proxyUrl, rejectUnauthorized: false })
-  check('客户端拿到解压后正文', decode(lastSession().resBodyBase64) === 'compressed-payload-and-more', decode(lastSession().resBodyBase64))
+  await performRequest({
+    method: 'GET',
+    url: `http://127.0.0.1:${upstreamPort}/gzip`,
+    proxy: proxyUrl,
+    rejectUnauthorized: false,
+  })
+  check(
+    '客户端拿到解压后正文',
+    decode(lastSession().resBodyBase64) === 'compressed-payload-and-more',
+    decode(lastSession().resBodyBase64),
+  )
   check('会话保留 content-encoding 事实', lastSession().resContentEncoding.includes('gzip'))
 
   /* ---------- 上游：自签 TLS 服务 ---------- */
@@ -243,7 +309,12 @@ const main = async (): Promise<void> => {
     const chunks: Buffer[] = []
     req.on('data', (c: Buffer) => chunks.push(c))
     req.on('end', () => {
-      tlsUpstreamReceived.push({ method: req.method ?? '', url: req.url ?? '', headers: req.headers, body: Buffer.concat(chunks).toString('utf8') })
+      tlsUpstreamReceived.push({
+        method: req.method ?? '',
+        url: req.url ?? '',
+        headers: req.headers,
+        body: Buffer.concat(chunks).toString('utf8'),
+      })
       res.writeHead(200, { 'content-type': 'application/json' })
       res.end(JSON.stringify({ secure: true, path: req.url }))
     })
@@ -262,13 +333,32 @@ const main = async (): Promise<void> => {
     rejectUnauthorized: false,
   })
   const httpsSession = sessions[beforeHttps]
-  check('HTTPS 请求成功', r2.ok && r2.status === 200, `status=${r2.status} body=${decode(r2.bodyBase64).slice(0, 120)} note=${httpsSession?.note ?? ''} err=${httpsSession?.error ?? ''}`)
+  check(
+    'HTTPS 请求成功',
+    r2.ok && r2.status === 200,
+    `status=${r2.status} body=${decode(r2.bodyBase64).slice(0, 120)} note=${httpsSession?.note ?? ''} err=${httpsSession?.error ?? ''}`,
+  )
   check('会话标记为 https', httpsSession?.scheme === 'https', `scheme=${httpsSession?.scheme}`)
-  check('请求体明文可见（密码也能看到）', decode(httpsSession?.reqBodyBase64 ?? '').includes('"password":"secret"'), decode(httpsSession?.reqBodyBase64 ?? ''))
-  check('响应体明文可见', decode(httpsSession?.resBodyBase64 ?? '').includes('"secure":true'), decode(httpsSession?.resBodyBase64 ?? ''))
-  check('上游确实收到请求', tlsUpstreamReceived.length === 1 && tlsUpstreamReceived[0].url === '/login')
+  check(
+    '请求体明文可见（密码也能看到）',
+    decode(httpsSession?.reqBodyBase64 ?? '').includes('"password":"secret"'),
+    decode(httpsSession?.reqBodyBase64 ?? ''),
+  )
+  check(
+    '响应体明文可见',
+    decode(httpsSession?.resBodyBase64 ?? '').includes('"secure":true'),
+    decode(httpsSession?.resBodyBase64 ?? ''),
+  )
+  check(
+    '上游确实收到请求',
+    tlsUpstreamReceived.length === 1 && tlsUpstreamReceived[0].url === '/login',
+  )
   check('未开启系统信任也不影响转发（上游自签证书降级放行）', r2.status === 200)
-  check('降级放行在会话里有明确提示', (httpsSession?.note ?? '').includes('降级放行'), httpsSession?.note ?? '')
+  check(
+    '降级放行在会话里有明确提示',
+    (httpsSession?.note ?? '').includes('降级放行'),
+    httpsSession?.note ?? '',
+  )
 
   console.log('\n[6] 请求头改写 / 请求体替换')
   proxy.ruleSet.replaceAll([
@@ -289,30 +379,68 @@ const main = async (): Promise<void> => {
   const r3 = await performRequest({
     method: 'POST',
     url: plainUrl,
-    headers: [['x-remove-me', 'yes'], ['X-Keep', '1']],
+    headers: [
+      ['x-remove-me', 'yes'],
+      ['X-Keep', '1'],
+    ],
     bodyText: 'ping',
     proxy: proxyUrl,
     rejectUnauthorized: false,
   })
   const ruleSession = lastSession()
-  check('上游收到注入的请求头', received[received.length - 1].headers['x-injected'] === 'by-devtoolbox', String(received[received.length - 1].headers['x-injected']))
+  check(
+    '上游收到注入的请求头',
+    received[received.length - 1].headers['x-injected'] === 'by-devtoolbox',
+    String(received[received.length - 1].headers['x-injected']),
+  )
   check('上游未收到被删除的头', received[received.length - 1].headers['x-remove-me'] === undefined)
-  check('上游收到替换后的请求体', received[received.length - 1].body === 'pong', received[received.length - 1].body)
-  check('客户端收到替换后的响应体', decode(r3.bodyBase64).startsWith('ECHO:'), decode(r3.bodyBase64))
+  check(
+    '上游收到替换后的请求体',
+    received[received.length - 1].body === 'pong',
+    received[received.length - 1].body,
+  )
+  check(
+    '客户端收到替换后的响应体',
+    decode(r3.bodyBase64).startsWith('ECHO:'),
+    decode(r3.bodyBase64),
+  )
   check('会话标记被规则命中', ruleSession.matchedRules.includes('注入头与替换体'))
   check('会话标记 modified=true', ruleSession.modified === true)
 
   console.log('\n[7] 伪造响应与阻断')
   proxy.ruleSet.replaceAll([
-    createRule({ name: 'mock 接口', host: '127.0.0.1', path: '/mock*', mock: { status: 201, headers: [['content-type', 'application/json']], bodyText: '{"mocked":true}' } }),
+    createRule({
+      name: 'mock 接口',
+      host: '127.0.0.1',
+      path: '/mock*',
+      mock: {
+        status: 201,
+        headers: [['content-type', 'application/json']],
+        bodyText: '{"mocked":true}',
+      },
+    }),
     createRule({ name: '拉黑路径', host: '127.0.0.1', path: '/blocked*', block: true }),
   ])
   const beforeMock = received.length
-  const r4 = await performRequest({ method: 'GET', url: `http://127.0.0.1:${upstreamPort}/mock/thing`, proxy: proxyUrl, rejectUnauthorized: false })
-  check('客户端拿到伪造响应', r4.status === 201 && decode(r4.bodyBase64) === '{"mocked":true}', `status=${r4.status}`)
+  const r4 = await performRequest({
+    method: 'GET',
+    url: `http://127.0.0.1:${upstreamPort}/mock/thing`,
+    proxy: proxyUrl,
+    rejectUnauthorized: false,
+  })
+  check(
+    '客户端拿到伪造响应',
+    r4.status === 201 && decode(r4.bodyBase64) === '{"mocked":true}',
+    `status=${r4.status}`,
+  )
   check('伪造请求没有下发上游', received.length === beforeMock)
   check('会话标记 mocked', lastSession().mocked === true)
-  const r5 = await performRequest({ method: 'GET', url: `http://127.0.0.1:${upstreamPort}/blocked/secret`, proxy: proxyUrl, rejectUnauthorized: false })
+  const r5 = await performRequest({
+    method: 'GET',
+    url: `http://127.0.0.1:${upstreamPort}/blocked/secret`,
+    proxy: proxyUrl,
+    rejectUnauthorized: false,
+  })
   check('被阻断请求返回 403', r5.status === 403, `status=${r5.status}`)
   check('阻断请求没有下发上游', received.length === beforeMock)
   check('会话标记 blocked', lastSession().blocked === true)
@@ -324,20 +452,39 @@ const main = async (): Promise<void> => {
   interceptHandler = (req) => ({
     action: 'forward',
     method: 'PUT',
-    headers: [...req.headers.filter(([k]) => k.toLowerCase() !== 'x-break'), ['X-Break', 'edited-in-flight']],
+    headers: [
+      ...req.headers.filter(([k]) => k.toLowerCase() !== 'x-break'),
+      ['X-Break', 'edited-in-flight'],
+    ],
     bodyBase64: Buffer.from('replaced-by-breakpoint', 'utf8').toString('base64'),
   })
   const beforeBreak = received.length
-  const r6 = await performRequest({ method: 'POST', url: `http://127.0.0.1:${upstreamPort}/break/1`, headers: [['x-break', 'original']], bodyText: 'original-body', proxy: proxyUrl, rejectUnauthorized: false })
+  const r6 = await performRequest({
+    method: 'POST',
+    url: `http://127.0.0.1:${upstreamPort}/break/1`,
+    headers: [['x-break', 'original']],
+    bodyText: 'original-body',
+    proxy: proxyUrl,
+    rejectUnauthorized: false,
+  })
   const broke = received[beforeBreak]
   check('断点事件已推送到宿主', intercepts.length >= 1, `intercepts=${intercepts.length}`)
-  check('断点改了方法与头', broke?.method === 'PUT' && broke?.headers['x-break'] === 'edited-in-flight', `${broke?.method} x-break=${broke?.headers['x-break']}`)
+  check(
+    '断点改了方法与头',
+    broke?.method === 'PUT' && broke?.headers['x-break'] === 'edited-in-flight',
+    `${broke?.method} x-break=${broke?.headers['x-break']}`,
+  )
   check('断点改了请求体', broke?.body === 'replaced-by-breakpoint', broke?.body ?? '')
   check('客户端仍正常拿到响应', r6.status === 200)
   check('会话标记 intercepted', lastSession().intercepted === true)
   interceptHandler = () => ({ action: 'drop' })
   const beforeDrop = received.length
-  const r7 = await performRequest({ method: 'GET', url: `http://127.0.0.1:${upstreamPort}/break/2`, proxy: proxyUrl, rejectUnauthorized: false })
+  const r7 = await performRequest({
+    method: 'GET',
+    url: `http://127.0.0.1:${upstreamPort}/break/2`,
+    proxy: proxyUrl,
+    rejectUnauthorized: false,
+  })
   check('断点丢弃返回 502', r7.status === 502, `status=${r7.status}`)
   check('丢弃的请求没有下发上游', received.length === beforeDrop)
 
@@ -347,18 +494,41 @@ const main = async (): Promise<void> => {
   await proxy.setMitm(false)
   const beforeTunnel = sessions.length
   const target = `https://localhost:${tlsPort}/tunnel`
-  const socketBased = await performRequest({ method: 'GET', url: target, proxy: proxyUrl, rejectUnauthorized: false })
+  const socketBased = await performRequest({
+    method: 'GET',
+    url: target,
+    proxy: proxyUrl,
+    rejectUnauthorized: false,
+  })
   const tunnelSession = sessions[beforeTunnel]
-  check('CONNECT 请求被记录为隧道', tunnelSession?.tunneled === true && tunnelSession?.scheme === 'tunnel', `scheme=${tunnelSession?.scheme}`)
+  check(
+    'CONNECT 请求被记录为隧道',
+    tunnelSession?.tunneled === true && tunnelSession?.scheme === 'tunnel',
+    `scheme=${tunnelSession?.scheme}`,
+  )
   check('隧道模式下仍能拿到上游响应', socketBased.status === 200, `status=${socketBased.status}`)
-  check('隧道会话明确提示正文不可见', (tunnelSession?.note ?? '').length > 0, tunnelSession?.note ?? '')
+  check(
+    '隧道会话明确提示正文不可见',
+    (tunnelSession?.note ?? '').length > 0,
+    tunnelSession?.note ?? '',
+  )
   await proxy.setMitm(true)
 
   console.log('\n[10] 重发能力（直连 / 经代理）')
-  const replayDirect = await performRequest({ method: 'GET', url: `http://127.0.0.1:${upstreamPort}/echo?replay=1` })
+  const replayDirect = await performRequest({
+    method: 'GET',
+    url: `http://127.0.0.1:${upstreamPort}/echo?replay=1`,
+  })
   check('直连重发成功', replayDirect.ok && decode(replayDirect.bodyBase64).includes('replay=1'))
-  const replayViaProxy = await performRequest({ method: 'GET', url: `http://127.0.0.1:${upstreamPort}/echo?replay=2`, proxy: proxyUrl })
-  check('经代理重发成功', replayViaProxy.ok && replayViaProxy.viaProxy && replayViaProxy.status === 200)
+  const replayViaProxy = await performRequest({
+    method: 'GET',
+    url: `http://127.0.0.1:${upstreamPort}/echo?replay=2`,
+    proxy: proxyUrl,
+  })
+  check(
+    '经代理重发成功',
+    replayViaProxy.ok && replayViaProxy.viaProxy && replayViaProxy.status === 200,
+  )
 
   console.log('\n[11] 代理形态：HTTP 认证 / SOCKS5 / SOCKS5 认证')
   const authSessionCount = sessions.length
@@ -368,8 +538,13 @@ const main = async (): Promise<void> => {
     proxy: `http://alice:s3cret@127.0.0.1:${proxyPort}`,
   })
   const authSession = sessions[authSessionCount]
-  const proxyAuth = authSession?.reqHeaders.find(([k]) => k.toLowerCase() === 'proxy-authorization')?.[1] ?? ''
-  check('带账号密码的 HTTP 代理会下发 Proxy-Authorization', proxyAuth === `Basic ${Buffer.from('alice:s3cret').toString('base64')}`, proxyAuth || '(缺失)')
+  const proxyAuth =
+    authSession?.reqHeaders.find(([k]) => k.toLowerCase() === 'proxy-authorization')?.[1] ?? ''
+  check(
+    '带账号密码的 HTTP 代理会下发 Proxy-Authorization',
+    proxyAuth === `Basic ${Buffer.from('alice:s3cret').toString('base64')}`,
+    proxyAuth || '(缺失)',
+  )
 
   const socks = await startSocksServer()
   const socksHttp = await performRequest({
@@ -377,14 +552,26 @@ const main = async (): Promise<void> => {
     url: `http://127.0.0.1:${upstreamPort}/echo?socks=plain`,
     proxy: `socks5://127.0.0.1:${socks.port}`,
   })
-  check('明文 HTTP 经 SOCKS5 成功', socksHttp.ok && socksHttp.status === 200 && decode(socksHttp.bodyBase64).includes('socks=plain'), `status=${socksHttp.status} ${socksHttp.error ?? ''}`)
+  check(
+    '明文 HTTP 经 SOCKS5 成功',
+    socksHttp.ok &&
+      socksHttp.status === 200 &&
+      decode(socksHttp.bodyBase64).includes('socks=plain'),
+    `status=${socksHttp.status} ${socksHttp.error ?? ''}`,
+  )
   const socksHttps = await performRequest({
     method: 'GET',
     url: `https://localhost:${tlsPort}/socks`,
     proxy: `socks5://127.0.0.1:${socks.port}`,
     rejectUnauthorized: false,
   })
-  check('HTTPS 经 SOCKS5（套 TLS）成功', socksHttps.ok && socksHttps.status === 200 && decode(socksHttps.bodyBase64).includes('"secure":true'), `status=${socksHttps.status} ${socksHttps.error ?? ''}`)
+  check(
+    'HTTPS 经 SOCKS5（套 TLS）成功',
+    socksHttps.ok &&
+      socksHttps.status === 200 &&
+      decode(socksHttps.bodyBase64).includes('"secure":true'),
+    `status=${socksHttps.status} ${socksHttps.error ?? ''}`,
+  )
   check('SOCKS5 通道下 TLS 信息仍可读', !!socksHttps.tls?.protocol, socksHttps.tls?.protocol ?? '')
 
   const socksAuth = await startSocksServer({ user: 'bob', pass: 'hunter2' })
@@ -393,49 +580,102 @@ const main = async (): Promise<void> => {
     url: `http://127.0.0.1:${upstreamPort}/echo?socks=auth`,
     proxy: `socks5://bob:hunter2@127.0.0.1:${socksAuth.port}`,
   })
-  check('SOCKS5 用户名密码认证通过', socksOk.ok && socksOk.status === 200, `status=${socksOk.status} ${socksOk.error ?? ''}`)
+  check(
+    'SOCKS5 用户名密码认证通过',
+    socksOk.ok && socksOk.status === 200,
+    `status=${socksOk.status} ${socksOk.error ?? ''}`,
+  )
   const socksBad = await performRequest({
     method: 'GET',
     url: `http://127.0.0.1:${upstreamPort}/echo`,
     proxy: `socks5://bob:wrong@127.0.0.1:${socksAuth.port}`,
   })
-  check('SOCKS5 认证失败有明确报错', !socksBad.ok && /认证失败/.test(socksBad.error ?? ''), socksBad.error ?? '')
+  check(
+    'SOCKS5 认证失败有明确报错',
+    !socksBad.ok && /认证失败/.test(socksBad.error ?? ''),
+    socksBad.error ?? '',
+  )
 
   const socksDown = await performRequest({
     method: 'GET',
     url: `http://127.0.0.1:${upstreamPort}/echo`,
     proxy: `socks5://127.0.0.1:${await freePort()}`,
   })
-  check('SOCKS5 端口不可用时如实报错', !socksDown.ok && !!socksDown.errorCode, `${socksDown.errorCode} ${socksDown.error ?? ''}`)
+  check(
+    'SOCKS5 端口不可用时如实报错',
+    !socksDown.ok && !!socksDown.errorCode,
+    `${socksDown.errorCode} ${socksDown.error ?? ''}`,
+  )
 
   const httpProxyDown = await performRequest({
     method: 'GET',
     url: `http://127.0.0.1:${upstreamPort}/echo`,
     proxy: `http://127.0.0.1:${await freePort()}`,
   })
-  check('HTTP 代理端口不可用时如实报错', !httpProxyDown.ok && !!httpProxyDown.errorCode, `${httpProxyDown.errorCode} ${httpProxyDown.error ?? ''}`)
+  check(
+    'HTTP 代理端口不可用时如实报错',
+    !httpProxyDown.ok && !!httpProxyDown.errorCode,
+    `${httpProxyDown.errorCode} ${httpProxyDown.error ?? ''}`,
+  )
   await socks.close()
   await socksAuth.close()
 
   console.log('\n[12] 引擎细节')
-  const r8 = await performRequest({ method: 'GET', url: `http://127.0.0.1:${upstreamPort}/redirect`, followRedirects: true })
-  check('重定向自动跟随并记录链路', r8.ok && r8.status === 200 && r8.redirects.length === 1 && decode(r8.bodyBase64).includes('followed=1'), `status=${r8.status} chain=${r8.redirects.length}`)
-  const r9 = await performRequest({ method: 'GET', url: `http://127.0.0.1:${upstreamPort}/redirect`, followRedirects: false })
-  check('关闭跟随时原样返回 302', r9.status === 302 && r9.redirects.length === 0, `status=${r9.status}`)
-  const tlsInfo = await performRequest({ method: 'GET', url: `https://localhost:${tlsPort}/tls-info` })
-  check('TLS 校验失败被如实报告', !tlsInfo.ok && /self.signed|unable to verify|UNABLE_TO_VERIFY|DEPTH_ZERO/i.test(tlsInfo.error ?? ''), tlsInfo.error ?? '')
+  const r8 = await performRequest({
+    method: 'GET',
+    url: `http://127.0.0.1:${upstreamPort}/redirect`,
+    followRedirects: true,
+  })
+  check(
+    '重定向自动跟随并记录链路',
+    r8.ok &&
+      r8.status === 200 &&
+      r8.redirects.length === 1 &&
+      decode(r8.bodyBase64).includes('followed=1'),
+    `status=${r8.status} chain=${r8.redirects.length}`,
+  )
+  const r9 = await performRequest({
+    method: 'GET',
+    url: `http://127.0.0.1:${upstreamPort}/redirect`,
+    followRedirects: false,
+  })
+  check(
+    '关闭跟随时原样返回 302',
+    r9.status === 302 && r9.redirects.length === 0,
+    `status=${r9.status}`,
+  )
+  const tlsInfo = await performRequest({
+    method: 'GET',
+    url: `https://localhost:${tlsPort}/tls-info`,
+  })
+  check(
+    'TLS 校验失败被如实报告',
+    !tlsInfo.ok &&
+      /self.signed|unable to verify|UNABLE_TO_VERIFY|DEPTH_ZERO/i.test(tlsInfo.error ?? ''),
+    tlsInfo.error ?? '',
+  )
   check('TLS 失败时 errorCode 可读', !!tlsInfo.errorCode, tlsInfo.errorCode ?? '')
   const badUrl = await performRequest({ method: 'GET', url: 'ftp://example.com/x' })
-  check('非 http(s) 协议被拒绝', !badUrl.ok && badUrl.errorCode === 'EBADPROTOCOL', badUrl.error ?? '')
+  check(
+    '非 http(s) 协议被拒绝',
+    !badUrl.ok && badUrl.errorCode === 'EBADPROTOCOL',
+    badUrl.error ?? '',
+  )
 
   console.log('\n[13] 停止后释放端口')
   const usedPort = proxy.port
   await proxy.stop()
   const stillOpen = await new Promise<boolean>((resolve) => {
     const s = net.connect(usedPort, '127.0.0.1')
-    s.on('connect', () => { s.destroy(); resolve(true) })
+    s.on('connect', () => {
+      s.destroy()
+      resolve(true)
+    })
     s.on('error', () => resolve(false))
-    setTimeout(() => { s.destroy(); resolve(false) }, 1000)
+    setTimeout(() => {
+      s.destroy()
+      resolve(false)
+    }, 1000)
   })
   check('代理端口已关闭', stillOpen === false, `port=${usedPort}`)
 
@@ -444,7 +684,9 @@ const main = async (): Promise<void> => {
   await new Promise<void>((r) => tlsUpstream.close(() => r()))
   fs.rmSync(tmp, { recursive: true, force: true })
 
-  console.log(`\n${failures.length === 0 ? `OK: ${passed} 项断言全部通过` : `${failures.length} 项失败：\n  - ${failures.join('\n  - ')}`}`)
+  console.log(
+    `\n${failures.length === 0 ? `OK: ${passed} 项断言全部通过` : `${failures.length} 项失败：\n  - ${failures.join('\n  - ')}`}`,
+  )
   process.exit(failures.length === 0 ? 0 : 1)
 }
 

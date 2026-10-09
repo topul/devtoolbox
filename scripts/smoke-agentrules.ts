@@ -47,8 +47,15 @@ const S: RulesStrings = {
   thCommand: '命令',
   thSource: '出处',
   commandKinds: {
-    install: '安装', dev: '开发', start: '启动', build: '构建', test: '测试',
-    lint: '静态检查', typecheck: '类型检查', format: '格式化', other: '其它',
+    install: '安装',
+    dev: '开发',
+    start: '启动',
+    build: '构建',
+    test: '测试',
+    lint: '静态检查',
+    typecheck: '类型检查',
+    format: '格式化',
+    other: '其它',
   },
   signals: {
     hasCi: '提交前先看 CI 的结论，别让流水线红着过夜。',
@@ -106,7 +113,12 @@ write(
         deploy: './deploy.sh',
       },
       dependencies: { react: '^18.0.0', express: '^4.19.0' },
-      devDependencies: { typescript: '^5.5.0', vite: '^6.0.0', vitest: '^2.0.0', electron: '^33.0.0' },
+      devDependencies: {
+        typescript: '^5.5.0',
+        vite: '^6.0.0',
+        vitest: '^2.0.0',
+        electron: '^33.0.0',
+      },
     },
     null,
     2,
@@ -115,7 +127,10 @@ write(
 write('tsconfig.json', '{"compilerOptions":{"strict":true}}')
 write('pnpm-lock.yaml', 'lockfileVersion: 9\n')
 write('README.md', '# demo-app\n')
-write('Makefile', 'build:\n\tnpm run build\n\ntest:\n\tnpm run test\n\ndeploy:\n\t./deploy.sh\n\nall: build test\n')
+write(
+  'Makefile',
+  'build:\n\tnpm run build\n\ntest:\n\tnpm run test\n\ndeploy:\n\t./deploy.sh\n\nall: build test\n',
+)
 write('Dockerfile', 'FROM node:22\n')
 write('.github/workflows/ci.yml', 'name: CI\non: [push]\n')
 write('src/index.ts', 'export const a = 1\n')
@@ -143,18 +158,51 @@ for (const fw of ['React', 'Electron', 'Vite', 'Express', 'Vitest']) {
   ok(`框架识别到 ${fw}`, facts.frameworks.includes(fw), JSON.stringify(facts.frameworks))
 }
 
-ok('带上了包管理器安装命令', facts.commands.some((c) => c.kind === 'install' && c.command === 'pnpm install'), JSON.stringify(facts.commands.slice(0, 3)))
-ok('读到了 dev 脚本', facts.commands.some((c) => c.command === 'npm run dev'))
-  ok('preview 归入开发', facts.commands.some((c) => c.name === 'preview' && c.kind === 'dev'))
-  ok('package:win 归入构建', facts.commands.some((c) => c.name === 'package:win' && c.kind === 'build'))
-  ok('compile 类脚本归入构建', facts.commands.some((c) => c.command === 'npm run build' && c.kind === 'build'))
-ok('读到了 smoke 脚本并归类为测试', facts.commands.some((c) => c.name === 'smoke:api' && c.kind === 'test'))
-ok('typecheck 被单独归类', facts.commands.some((c) => c.name === 'typecheck' && c.kind === 'typecheck'))
-ok('Makefile 目标被读出来', facts.commands.some((c) => c.source === 'Makefile' && c.command === 'make deploy'))
+ok(
+  '带上了包管理器安装命令',
+  facts.commands.some((c) => c.kind === 'install' && c.command === 'pnpm install'),
+  JSON.stringify(facts.commands.slice(0, 3)),
+)
+ok(
+  '读到了 dev 脚本',
+  facts.commands.some((c) => c.command === 'npm run dev'),
+)
+ok(
+  'preview 归入开发',
+  facts.commands.some((c) => c.name === 'preview' && c.kind === 'dev'),
+)
+ok(
+  'package:win 归入构建',
+  facts.commands.some((c) => c.name === 'package:win' && c.kind === 'build'),
+)
+ok(
+  'compile 类脚本归入构建',
+  facts.commands.some((c) => c.command === 'npm run build' && c.kind === 'build'),
+)
+ok(
+  '读到了 smoke 脚本并归类为测试',
+  facts.commands.some((c) => c.name === 'smoke:api' && c.kind === 'test'),
+)
+ok(
+  'typecheck 被单独归类',
+  facts.commands.some((c) => c.name === 'typecheck' && c.kind === 'typecheck'),
+)
+ok(
+  'Makefile 目标被读出来',
+  facts.commands.some((c) => c.source === 'Makefile' && c.command === 'make deploy'),
+)
 ok('Makefile 的 all 目标被跳过', !facts.commands.some((c) => c.command === 'make all'))
 ok('命令已去重', new Set(facts.commands.map((c) => c.command)).size === facts.commands.length)
 
-for (const sig of ['hasCi', 'hasGithubActions', 'hasDocker', 'hasLockfile', 'hasTests', 'hasTsconfig', 'hasReadme'] as const) {
+for (const sig of [
+  'hasCi',
+  'hasGithubActions',
+  'hasDocker',
+  'hasLockfile',
+  'hasTests',
+  'hasTsconfig',
+  'hasReadme',
+] as const) {
   ok(`命中特征 ${sig}`, facts.signals.includes(sig), JSON.stringify(facts.signals))
 }
 ok('没有 CI 就不该有 hasGitlabCi', !facts.signals.includes('hasGitlabCi'))
@@ -164,7 +212,11 @@ ok('目录树不包含 .git', !facts.tree.includes('.git'))
 ok('目录树不包含 dist', !facts.tree.includes('dist'))
 includes('目录树包含源码目录', facts.tree, 'src/')
 includes('目录树包含具体文件', facts.tree, 'index.ts')
-ok('统计到了文件与目录', facts.stats.files > 3 && facts.stats.dirs >= 3, JSON.stringify(facts.stats))
+ok(
+  '统计到了文件与目录',
+  facts.stats.files > 3 && facts.stats.dirs >= 3,
+  JSON.stringify(facts.stats),
+)
 ok('未被截断', facts.stats.truncated === false)
 includes('关键文件列出 README', facts.keyFiles.join(','), 'README.md')
 
@@ -185,7 +237,11 @@ includes('关键文件列出 README', facts.keyFiles.join(','), 'README.md')
   if (capped.ok) {
     // 这个项目太小，200 条装得下；用极小上限再试一次
     const tiny = scanProject({ root: project, maxEntries: 5 })
-    ok('极小上限会触发截断标记', tiny.ok && tiny.facts.stats.truncated === true, tiny.ok ? JSON.stringify(tiny.facts.stats) : '')
+    ok(
+      '极小上限会触发截断标记',
+      tiny.ok && tiny.facts.stats.truncated === true,
+      tiny.ok ? JSON.stringify(tiny.facts.stats) : '',
+    )
     ok('截断会写进 notes', tiny.ok && tiny.facts.notes.includes('truncated'))
   }
 }
@@ -197,7 +253,11 @@ includes('关键文件列出 README', facts.keyFiles.join(','), 'README.md')
   eq('不存在的目录报 ROOT_NOT_FOUND', miss.ok === false ? miss.code : 'ok', 'ROOT_NOT_FOUND')
 
   const fileAsRoot = scanProject({ root: path.join(project, 'package.json') })
-  eq('把文件当根目录报 ROOT_NOT_DIR', fileAsRoot.ok === false ? fileAsRoot.code : 'ok', 'ROOT_NOT_DIR')
+  eq(
+    '把文件当根目录报 ROOT_NOT_DIR',
+    fileAsRoot.ok === false ? fileAsRoot.code : 'ok',
+    'ROOT_NOT_DIR',
+  )
 
   const empty = scanProject({ root: '   ' })
   eq('空路径报 ROOT_EMPTY', empty.ok === false ? empty.code : 'ok', 'ROOT_EMPTY')
@@ -230,11 +290,18 @@ includes('.cursorrules 用指令式列表', cursor, '  - 开发: npm run dev')
 includes('.cursorrules 保留了目录树', cursor, '  ├── ')
 includes('.cursorrules 保留约定', cursor, '提交前先看 CI 的结论')
 
-ok('三种形态都非空且以换行结尾', [agents, claude, cursor].every((x) => x.length > 100 && x.endsWith('\n')))
+ok(
+  '三种形态都非空且以换行结尾',
+  [agents, claude, cursor].every((x) => x.length > 100 && x.endsWith('\n')),
+)
 
 /* ================= 一致性：三种形态都源自同一份事实 ================= */
 
-for (const [label, text] of [['AGENTS.md', agents], ['CLAUDE.md', claude], ['.cursorrules', cursor]] as const) {
+for (const [label, text] of [
+  ['AGENTS.md', agents],
+  ['CLAUDE.md', claude],
+  ['.cursorrules', cursor],
+] as const) {
   includes(`${label} 含安装命令`, text, 'pnpm install')
   includes(`${label} 含 Makefile 命令`, text, 'make deploy')
 }

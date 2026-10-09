@@ -21,7 +21,7 @@ import { builtinModules } from 'node:module'
 const SKIP = new Set([
   'electron', // Electron 运行时内置模块，普通 Node 下解析成字符串路径，无法在这里校验
   ...builtinModules,
-  ...builtinModules.map((m) => `node:${m}`)
+  ...builtinModules.map((m) => `node:${m}`),
 ])
 
 const files = process.argv.slice(2)
@@ -67,7 +67,7 @@ for (const file of files) {
         `${file}: \`import { ${missing.join(', ')} } from '${pkg}'\` —— Node ESM 探测不到这些具名导出\n` +
           `    该包是 CJS，请改成默认导入再解构：\n` +
           `      import ${pkg.replace(/[^a-zA-Z0-9]/g, '')} from '${pkg}'\n` +
-          `      const { ${missing.join(', ')} } = ${pkg.replace(/[^a-zA-Z0-9]/g, '')}`
+          `      const { ${missing.join(', ')} } = ${pkg.replace(/[^a-zA-Z0-9]/g, '')}`,
       )
     }
   }

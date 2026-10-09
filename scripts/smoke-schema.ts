@@ -38,7 +38,10 @@ function notIncludes(name: string, hay: string, needle: string): void {
   ok(name, !hay.includes(needle), `输出里不该有 ${JSON.stringify(needle)}`)
 }
 function codes(issues: { code: string }[]): string {
-  return issues.map((i) => i.code).sort().join(',')
+  return issues
+    .map((i) => i.code)
+    .sort()
+    .join(',')
 }
 
 /* ================= 样例 ================= */
@@ -95,7 +98,11 @@ const OPENAI_TOOLS = JSON.stringify([
   eq('OpenAI tools 数组解析出 2 个工具', r.tools.length, 2)
   eq('第一个工具名正确', r.tools[0].name, 'get_weather')
   eq('描述被带出来', r.tools[0].description, '查询指定城市的天气')
-  eq('工具描述为空时记 warn', codes(r.issues.filter((i) => i.code === 'TOOL_DESC_MISSING')), 'TOOL_DESC_MISSING')
+  eq(
+    '工具描述为空时记 warn',
+    codes(r.issues.filter((i) => i.code === 'TOOL_DESC_MISSING')),
+    'TOOL_DESC_MISSING',
+  )
   eq('没有 error 级问题', summarizeIssues(r.issues).errors, 0)
 }
 
@@ -193,7 +200,9 @@ expectCode('不是工具的 JSON 报 NO_TOOL', () => parseToolSchema('42'), 'NO_
       description: '选一个',
       parameters: {
         type: 'object',
-        properties: { mode: { type: 'string', enum: ['a', 'b'], default: 'z', description: '模式' } },
+        properties: {
+          mode: { type: 'string', enum: ['a', 'b'], default: 'z', description: '模式' },
+        },
         required: [],
       },
     },
@@ -253,7 +262,10 @@ expectCode('不是工具的 JSON 报 NO_TOOL', () => parseToolSchema('42'), 'NO_
       description: '怪名字',
       parameters: {
         type: 'object',
-        properties: { 'x-token': { type: 'string', description: '带横线' }, '2fa': { type: 'boolean', description: '数字开头' } },
+        properties: {
+          'x-token': { type: 'string', description: '带横线' },
+          '2fa': { type: 'boolean', description: '数字开头' },
+        },
         required: ['x-token', '2fa'],
       },
     },
@@ -325,8 +337,16 @@ expectCode('不是工具的 JSON 报 NO_TOOL', () => parseToolSchema('42'), 'NO_
   const { tools } = parseToolSchema(OPENAI_TOOLS)
   const back = parseToolSchema(toOpenAiSpec(tools))
   eq('OpenAI 往返工具数一致', back.tools.length, tools.length)
-  eq('OpenAI 往返名字一致', back.tools.map((t) => t.name).join(','), tools.map((t) => t.name).join(','))
-  eq('OpenAI 往返参数一致', JSON.stringify(back.tools[1].parameters), JSON.stringify(tools[1].parameters))
+  eq(
+    'OpenAI 往返名字一致',
+    back.tools.map((t) => t.name).join(','),
+    tools.map((t) => t.name).join(','),
+  )
+  eq(
+    'OpenAI 往返参数一致',
+    JSON.stringify(back.tools[1].parameters),
+    JSON.stringify(tools[1].parameters),
+  )
 
   const mcp = parseToolSchema(toMcpSpec(tools))
   eq('MCP 往返名字一致', mcp.tools.map((t) => t.name).join(','), tools.map((t) => t.name).join(','))
@@ -341,8 +361,27 @@ expectCode('不是工具的 JSON 报 NO_TOOL', () => parseToolSchema('42'), 'NO_
   const { tools } = parseToolSchema(
     JSON.stringify({
       tools: [
-        { name: 'base64_encode', description: 'Base64 编码', inputSchema: { type: 'object', properties: { text: { type: 'string', description: '文本' } }, required: ['text'] } },
-        { name: 'hash', description: '哈希', inputSchema: { type: 'object', properties: { text: { type: 'string', description: '文本' }, algorithm: { type: 'string', description: '算法', enum: ['MD5', 'SHA256'] } }, required: ['text'] } },
+        {
+          name: 'base64_encode',
+          description: 'Base64 编码',
+          inputSchema: {
+            type: 'object',
+            properties: { text: { type: 'string', description: '文本' } },
+            required: ['text'],
+          },
+        },
+        {
+          name: 'hash',
+          description: '哈希',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              text: { type: 'string', description: '文本' },
+              algorithm: { type: 'string', description: '算法', enum: ['MD5', 'SHA256'] },
+            },
+            required: ['text'],
+          },
+        },
       ],
     }),
   )

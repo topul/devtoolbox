@@ -52,9 +52,9 @@ export default defineConfig({
       minify: 'esbuild',
       sourcemap: false,
       rollupOptions: {
-        input: { index: resolve(__dirname, 'electron/main/index.ts') }
-      }
-    }
+        input: { index: resolve(__dirname, 'electron/main/index.ts') },
+      },
+    },
   },
   preload: {
     plugins: [externalizeDepsPlugin()],
@@ -66,9 +66,9 @@ export default defineConfig({
         // 必须产出 CJS：webPreferences.sandbox 为 true 时，Electron 把 preload 当经典脚本加载，
         // ESM 的 import 语句会直接 `SyntaxError: Cannot use import statement outside a module`，
         // 结果是 window.electronAPI 静默变成 undefined（typecheck/build 都发现不了）。
-        output: { format: 'cjs', entryFileNames: '[name].cjs' }
-      }
-    }
+        output: { format: 'cjs', entryFileNames: '[name].cjs' },
+      },
+    },
   },
   renderer: {
     root: '.',
@@ -80,14 +80,14 @@ export default defineConfig({
     },
     resolve: {
       alias: {
-        '@': resolve(__dirname, 'src')
-      }
+        '@': resolve(__dirname, 'src'),
+      },
     },
     build: {
       outDir: 'out/renderer',
       rollupOptions: {
-        input: resolve(__dirname, 'index.html')
-      }
-    }
-  }
+        input: resolve(__dirname, 'index.html'),
+      },
+    },
+  },
 })

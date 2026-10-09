@@ -31,7 +31,13 @@ const ID_B = 'sess-bbbbbbbb-2222'
 
 const turnsA = [
   { id: 't1', role: 'user', blocks: [{ kind: 'text', text: '你好' }], status: 'done' },
-  { id: 't2', role: 'assistant', blocks: [{ kind: 'text', text: '你好，有什么可以帮你' }], status: 'done', rounds: 1 },
+  {
+    id: 't2',
+    role: 'assistant',
+    blocks: [{ kind: 'text', text: '你好，有什么可以帮你' }],
+    status: 'done',
+    rounds: 1,
+  },
 ]
 
 /* ================= 空目录 ================= */
@@ -71,9 +77,14 @@ const turnsA = [
   const before = store.list().sessions[0]
   // 隔开一毫秒，避免 updatedAt 与 createdAt 相同导致断言失去意义
   const t0 = Date.now()
-  while (Date.now() === t0) { /* spin */ }
+  while (Date.now() === t0) {
+    /* spin */
+  }
 
-  const turnsA2 = [...turnsA, { id: 't3', role: 'user', blocks: [{ kind: 'text', text: '再来一句' }], status: 'done' }]
+  const turnsA2 = [
+    ...turnsA,
+    { id: 't3', role: 'user', blocks: [{ kind: 'text', text: '再来一句' }], status: 'done' },
+  ]
   store.save({ id: ID_A, title: '改过的标题', turns: turnsA2 })
 
   const after = store.list().sessions[0]
@@ -96,8 +107,14 @@ const turnsA = [
 {
   const store = createChatStore(dir)
   const t0 = Date.now()
-  while (Date.now() === t0) { /* spin */ }
-  store.save({ id: ID_B, title: '第二个会话', turns: [{ id: 'b1', role: 'user', blocks: [], status: 'done' }] })
+  while (Date.now() === t0) {
+    /* spin */
+  }
+  store.save({
+    id: ID_B,
+    title: '第二个会话',
+    turns: [{ id: 'b1', role: 'user', blocks: [], status: 'done' }],
+  })
 
   const list = store.list()
   eq('两个会话', list.sessions.length, 2)
@@ -130,12 +147,27 @@ const turnsA = [
 
 {
   const store = createChatStore(dir)
-  for (const bad of ['', 'x', '../../etc/passwd', 'a b c', 's'.repeat(80), null as unknown as string]) {
-    eq(`save 拒绝非法 id ${JSON.stringify(bad)}`, store.save({ id: bad, title: 'x', turns: [] }).ok, false)
+  for (const bad of [
+    '',
+    'x',
+    '../../etc/passwd',
+    'a b c',
+    's'.repeat(80),
+    null as unknown as string,
+  ]) {
+    eq(
+      `save 拒绝非法 id ${JSON.stringify(bad)}`,
+      store.save({ id: bad, title: 'x', turns: [] }).ok,
+      false,
+    )
     eq(`load 拒绝非法 id ${JSON.stringify(bad)}`, store.load(bad).ok, false)
     eq(`remove 拒绝非法 id ${JSON.stringify(bad)}`, store.remove(bad).ok, false)
   }
-  eq('save 拒绝非数组 turns', store.save({ id: ID_A, title: 'x', turns: 'nope' as unknown as unknown[] }).ok, false)
+  eq(
+    'save 拒绝非数组 turns',
+    store.save({ id: ID_A, title: 'x', turns: 'nope' as unknown as unknown[] }).ok,
+    false,
+  )
   eq('setActive 拒绝非法 id', store.setActive('../../x').ok, false)
   eq('非法操作后仍无会话', store.list().sessions.length, 0)
 }
@@ -145,7 +177,11 @@ const turnsA = [
 {
   const store = createChatStore(dir)
   const huge = 'x'.repeat(25 * 1024 * 1024)
-  const res = store.save({ id: 'sess-huge-0001', title: '巨无霸', turns: [{ id: 'h1', role: 'user', blocks: [huge], status: 'done' }] })
+  const res = store.save({
+    id: 'sess-huge-0001',
+    title: '巨无霸',
+    turns: [{ id: 'h1', role: 'user', blocks: [huge], status: 'done' }],
+  })
   eq('超过单文件上限时拒写', res.ok, false)
   eq('拒写带 tooLarge 标记', res.tooLarge, true)
   eq('拒写后列表仍为空（没写进去半个文件）', store.list().sessions.length, 0)
@@ -168,14 +204,22 @@ const turnsA = [
 
   const backups = fs.readdirSync(dir2).filter((n) => n.includes('.corrupt-'))
   eq('原件被旁置为备份', backups.length, 1)
-  eq('备份内容就是原始内容（没被覆盖）', fs.readFileSync(path.join(dir2, backups[0]), 'utf8'), garbage)
+  eq(
+    '备份内容就是原始内容（没被覆盖）',
+    fs.readFileSync(path.join(dir2, backups[0]), 'utf8'),
+    garbage,
+  )
 }
 
 {
   // 形状不对（sessions 不是数组）同样按损坏处理，且重建后能正常用
   const dir3 = path.join(tmpRoot, 'shape')
   fs.mkdirSync(dir3, { recursive: true })
-  fs.writeFileSync(path.join(dir3, CHAT_STORE_FILENAME), JSON.stringify({ version: 1, sessions: 'oops' }), 'utf8')
+  fs.writeFileSync(
+    path.join(dir3, CHAT_STORE_FILENAME),
+    JSON.stringify({ version: 1, sessions: 'oops' }),
+    'utf8',
+  )
 
   const store = createChatStore(dir3)
   eq('形状不对也按损坏处理', store.list().recovered, true)
@@ -231,7 +275,11 @@ const turnsA = [
   const dir6 = path.join(tmpRoot, 'cache')
   const store = createChatStore(dir6)
   for (let i = 0; i < 5; i++) {
-    store.save({ id: ID_A, title: `第 ${i} 次`, turns: new Array(i + 1).fill({ id: `t${i}`, role: 'user', blocks: [], status: 'done' }) })
+    store.save({
+      id: ID_A,
+      title: `第 ${i} 次`,
+      turns: new Array(i + 1).fill({ id: `t${i}`, role: 'user', blocks: [], status: 'done' }),
+    })
   }
   eq('连续写入后条数正确', store.list().sessions[0].turnCount, 5)
   eq('标题是最后一次写入的', store.list().sessions[0].title, '第 4 次')

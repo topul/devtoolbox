@@ -21,7 +21,10 @@ import {
 let pass = 0
 const fails: string[] = []
 function ok(cond: boolean, label: string): void {
-  if (cond) { pass++; return }
+  if (cond) {
+    pass++
+    return
+  }
   fails.push(label)
   console.error(`  ✗ ${label}`)
 }
@@ -45,7 +48,12 @@ const CHROME_HAR = {
     version: '1.2',
     creator: { name: 'Chrome DevTools', version: '120' },
     pages: [
-      { id: 'page_1', title: 'https://example.com/', startedDateTime: '2026-03-01T10:00:00.000Z', pageTimings: { onContentLoad: 800, onLoad: 1500 } },
+      {
+        id: 'page_1',
+        title: 'https://example.com/',
+        startedDateTime: '2026-03-01T10:00:00.000Z',
+        pageTimings: { onContentLoad: 800, onLoad: 1500 },
+      },
     ],
     entries: [
       {
@@ -244,12 +252,36 @@ const CHROME_HAR = {
 
 {
   // 转义URL（HAR 里url 字段是转义过的）
-  const esc = { log: { version: '1.2', entries: [{
-    startedDateTime: '2026-03-01T10:00:00.000Z', time: 10,
-    request: { method: 'GET', url: 'https://example.com/a%20b?q=%E4%B8%AD%E6%96%87', headers: [], queryString: [], cookies: [] },
-    response: { status: 200, statusText: 'OK', headers: [], cookies: [], content: { size: 0, mimeType: 'text/html' }, redirectURL: '', headersSize: 0, bodySize: 0 },
-    cache: {}, timings: { blocked: 0, dns: 1, connect: 1, send: 0, wait: 5, receive: 3, ssl: 0 },
-  }] } }
+  const esc = {
+    log: {
+      version: '1.2',
+      entries: [
+        {
+          startedDateTime: '2026-03-01T10:00:00.000Z',
+          time: 10,
+          request: {
+            method: 'GET',
+            url: 'https://example.com/a%20b?q=%E4%B8%AD%E6%96%87',
+            headers: [],
+            queryString: [],
+            cookies: [],
+          },
+          response: {
+            status: 200,
+            statusText: 'OK',
+            headers: [],
+            cookies: [],
+            content: { size: 0, mimeType: 'text/html' },
+            redirectURL: '',
+            headersSize: 0,
+            bodySize: 0,
+          },
+          cache: {},
+          timings: { blocked: 0, dns: 1, connect: 1, send: 0, wait: 5, receive: 3, ssl: 0 },
+        },
+      ],
+    },
+  }
   const s = parseHar(esc)
   eq(s.entries[0].path, '/a%20b', 'path 保留转义形态（不做二次解码）')
   ok(s.entries[0].url.includes('%E4%B8%AD'), 'url 原样保留')
@@ -308,12 +340,36 @@ const CHROME_HAR = {
 
 {
   // headers 为 null 而不是数组
-  const nullH = { log: { version: '1.2', entries: [{
-    startedDateTime: '2026-03-01T10:00:00.000Z', time: 1,
-    request: { method: 'GET', url: 'https://a.test/', headers: null, queryString: null, cookies: null },
-    response: { status: 200, statusText: 'OK', headers: null, cookies: null, content: { size: 0, mimeType: '' }, redirectURL: '', headersSize: 0, bodySize: 0 },
-    cache: {}, timings: { blocked: 0, dns: -1, connect: -1, send: 0, wait: 1, receive: 0, ssl: -1 },
-  }] } }
+  const nullH = {
+    log: {
+      version: '1.2',
+      entries: [
+        {
+          startedDateTime: '2026-03-01T10:00:00.000Z',
+          time: 1,
+          request: {
+            method: 'GET',
+            url: 'https://a.test/',
+            headers: null,
+            queryString: null,
+            cookies: null,
+          },
+          response: {
+            status: 200,
+            statusText: 'OK',
+            headers: null,
+            cookies: null,
+            content: { size: 0, mimeType: '' },
+            redirectURL: '',
+            headersSize: 0,
+            bodySize: 0,
+          },
+          cache: {},
+          timings: { blocked: 0, dns: -1, connect: -1, send: 0, wait: 1, receive: 0, ssl: -1 },
+        },
+      ],
+    },
+  }
   const s = parseHar(nullH)
   eq(s.entries[0].headerCount, 0, 'headers 为 null 时计数 0')
   ok(!Number.isNaN(s.entries[0].time), 'timings 全为 -1 时 time 不是 NaN')
@@ -339,12 +395,36 @@ const CHROME_HAR = {
 
 {
   // timings 全为 -1（HAR 规范允许，表示未采集）
-  const noTiming = { log: { version: '1.2', entries: [{
-    startedDateTime: '2026-03-01T10:00:00.000Z', time: 0,
-    request: { method: 'GET', url: 'https://a.test/', headers: [], queryString: [], cookies: [] },
-    response: { status: 204, statusText: 'No Content', headers: [], cookies: [], content: { size: 0, mimeType: '' }, redirectURL: '', headersSize: 0, bodySize: 0 },
-    cache: {}, timings: { blocked: -1, dns: -1, connect: -1, send: -1, wait: -1, receive: -1, ssl: -1 },
-  }] } }
+  const noTiming = {
+    log: {
+      version: '1.2',
+      entries: [
+        {
+          startedDateTime: '2026-03-01T10:00:00.000Z',
+          time: 0,
+          request: {
+            method: 'GET',
+            url: 'https://a.test/',
+            headers: [],
+            queryString: [],
+            cookies: [],
+          },
+          response: {
+            status: 204,
+            statusText: 'No Content',
+            headers: [],
+            cookies: [],
+            content: { size: 0, mimeType: '' },
+            redirectURL: '',
+            headersSize: 0,
+            bodySize: 0,
+          },
+          cache: {},
+          timings: { blocked: -1, dns: -1, connect: -1, send: -1, wait: -1, receive: -1, ssl: -1 },
+        },
+      ],
+    },
+  }
   const s = parseHar(noTiming)
   const w = buildWaterfall(s.entries)
   eq(w[0].time, 0, 'timings 全 -1 时 time 退化为 0 而不是负数相加')
@@ -354,7 +434,10 @@ const CHROME_HAR = {
 {
   const s = parseHar(CHROME_HAR)
   // 失败请求也要能进瀑布（它占了时间）
-  ok(buildWaterfall(s.entries).some(r => r.status === 0), '失败请求也在瀑布里')
+  ok(
+    buildWaterfall(s.entries).some((r) => r.status === 0),
+    '失败请求也在瀑布里',
+  )
 }
 
 /* ================= 3. 按域名汇总 ================= */
@@ -362,11 +445,11 @@ const CHROME_HAR = {
   const s = parseHar(CHROME_HAR)
   const byHost = summarizeByHost(s.entries)
   eq(byHost.length, 3, '3 个域名')
-  const ex = byHost.find(h => h.host === 'example.com')
+  const ex = byHost.find((h) => h.host === 'example.com')
   ok(!!ex, 'example.com 在汇总里')
   eq(ex!.count, 2, 'example.com 有 2 条')
   ok(ex!.bytes > 0, '字节数非 0')
-  const api = byHost.find(h => h.host === 'api.example.com')
+  const api = byHost.find((h) => h.host === 'api.example.com')
   eq(api!.count, 1, 'api.example.com 有 1 条')
   eq(api!.failed, 1, 'api.example.com 有 1 条失败')
   // 按字节数降序
@@ -379,7 +462,7 @@ const CHROME_HAR = {
   const total = byHost.reduce((n, h) => n + h.bytes, 0)
   ok(total > 0, '总字节数非 0')
   // 3xx 不算失败（是正常跳转）
-  const ex = byHost.find(h => h.host === 'example.com')!
+  const ex = byHost.find((h) => h.host === 'example.com')!
   eq(ex.failed, 0, '302 不算失败')
 }
 
@@ -419,23 +502,71 @@ const CHROME_HAR = {
 
 {
   // status 0 但没有 error 字段：也是失败（网络层没拿到响应）
-  const s = parseHar({ log: { version: '1.2', entries: [{
-    startedDateTime: '2026-03-01T10:00:00.000Z', time: 1,
-    request: { method: 'GET', url: 'https://a.test/', headers: [], queryString: [], cookies: [] },
-    response: { status: 0, statusText: '', headers: [], cookies: [], content: { size: 0, mimeType: '' }, redirectURL: '', headersSize: -1, bodySize: -1 },
-    cache: {}, timings: { blocked: 0, dns: -1, connect: -1, send: 0, wait: 0, receive: 0, ssl: -1 },
-  }] } })
+  const s = parseHar({
+    log: {
+      version: '1.2',
+      entries: [
+        {
+          startedDateTime: '2026-03-01T10:00:00.000Z',
+          time: 1,
+          request: {
+            method: 'GET',
+            url: 'https://a.test/',
+            headers: [],
+            queryString: [],
+            cookies: [],
+          },
+          response: {
+            status: 0,
+            statusText: '',
+            headers: [],
+            cookies: [],
+            content: { size: 0, mimeType: '' },
+            redirectURL: '',
+            headersSize: -1,
+            bodySize: -1,
+          },
+          cache: {},
+          timings: { blocked: 0, dns: -1, connect: -1, send: 0, wait: 0, receive: 0, ssl: -1 },
+        },
+      ],
+    },
+  })
   eq(s.entries[0].isFailed, true, 'status 0 即使无 error 也算失败')
 }
 
 {
   // 4xx/5xx 也算失败
-  const s = parseHar({ log: { version: '1.2', entries: [{
-    startedDateTime: '2026-03-01T10:00:00.000Z', time: 1,
-    request: { method: 'GET', url: 'https://a.test/', headers: [], queryString: [], cookies: [] },
-    response: { status: 500, statusText: 'Internal Server Error', headers: [], cookies: [], content: { size: 0, mimeType: '' }, redirectURL: '', headersSize: 0, bodySize: 0 },
-    cache: {}, timings: { blocked: 0, dns: 1, connect: 1, send: 0, wait: 1, receive: 0, ssl: 0 },
-  }] } })
+  const s = parseHar({
+    log: {
+      version: '1.2',
+      entries: [
+        {
+          startedDateTime: '2026-03-01T10:00:00.000Z',
+          time: 1,
+          request: {
+            method: 'GET',
+            url: 'https://a.test/',
+            headers: [],
+            queryString: [],
+            cookies: [],
+          },
+          response: {
+            status: 500,
+            statusText: 'Internal Server Error',
+            headers: [],
+            cookies: [],
+            content: { size: 0, mimeType: '' },
+            redirectURL: '',
+            headersSize: 0,
+            bodySize: 0,
+          },
+          cache: {},
+          timings: { blocked: 0, dns: 1, connect: 1, send: 0, wait: 1, receive: 0, ssl: 0 },
+        },
+      ],
+    },
+  })
   eq(s.entries[0].isFailed, true, '500 记为失败')
   eq(s.entries[0].isRedirect, false, '500 不是重定向')
 }

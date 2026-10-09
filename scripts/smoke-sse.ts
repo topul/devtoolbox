@@ -69,7 +69,14 @@ function eq(name: string, got: unknown, want: unknown): void {
   d.push('data: he')
   const frames = d.push('llo\n\ndata: x\n\nda')
   eq('一包两帧+半帧', frames.map((f) => f.data).join(','), 'hello,x')
-  eq('残留 data: 前缀在缓冲', d.push('ta: y\n\n').map((f) => f.data).join(','), 'y')
+  eq(
+    '残留 data: 前缀在缓冲',
+    d
+      .push('ta: y\n\n')
+      .map((f) => f.data)
+      .join(','),
+    'y',
+  )
 }
 {
   // chunk 劈在 \r 与 \n 中间：\r 先当行尾，下一包的 \n 是空行（等同分帧，不能当半行残留）
@@ -97,7 +104,14 @@ function eq(name: string, got: unknown, want: unknown): void {
   const d = new SseDecoder()
   eq('空输入无帧', d.push('').length, 0)
   d.push('data: tail')
-  eq('未完成帧 end 吐出', d.end().map((f) => f.data).join(','), 'tail')
+  eq(
+    '未完成帧 end 吐出',
+    d
+      .end()
+      .map((f) => f.data)
+      .join(','),
+    'tail',
+  )
   eq('end 后无残留', d.end().length, 0)
 }
 {
