@@ -37,7 +37,16 @@ export interface McpToolSpec {
   }
 }
 
-export const MCP_GROUPS: McpGroup[] = ['codec', 'crypto', 'data', 'text', 'time', 'net', 'gen', 'http']
+export const MCP_GROUPS: McpGroup[] = [
+  'codec',
+  'crypto',
+  'data',
+  'text',
+  'time',
+  'net',
+  'gen',
+  'http',
+]
 
 const p = (
   type: McpProp['type'],
@@ -72,7 +81,9 @@ export const MCP_TOOLS: McpToolSpec[] = [
       type: 'object',
       properties: {
         text: p('string', '要编码的原文', 'Text to encode'),
-        urlSafe: p('boolean', '是否输出 base64url 形式', 'Output base64url form', { default: false }),
+        urlSafe: p('boolean', '是否输出 base64url 形式', 'Output base64url form', {
+          default: false,
+        }),
       },
       required: ['text'],
     },
@@ -105,7 +116,10 @@ export const MCP_TOOLS: McpToolSpec[] = [
       type: 'object',
       properties: {
         text: p('string', '原文', 'Source text'),
-        mode: p('string', '编码方式', 'Encoding mode', { enum: ['component', 'full', 'double'], default: 'component' }),
+        mode: p('string', '编码方式', 'Encoding mode', {
+          enum: ['component', 'full', 'double'],
+          default: 'component',
+        }),
       },
       required: ['text'],
     },
@@ -121,7 +135,10 @@ export const MCP_TOOLS: McpToolSpec[] = [
       type: 'object',
       properties: {
         text: p('string', '待解码文本', 'Text to decode'),
-        mode: p('string', '解码方式', 'Decoding mode', { enum: ['component', 'full', 'double'], default: 'component' }),
+        mode: p('string', '解码方式', 'Decoding mode', {
+          enum: ['component', 'full', 'double'],
+          default: 'component',
+        }),
       },
       required: ['text'],
     },
@@ -139,7 +156,9 @@ export const MCP_TOOLS: McpToolSpec[] = [
       type: 'object',
       properties: {
         text: p('string', '原文或已编码文本', 'Source or encoded text'),
-        codec: p('string', '编码方式', 'Codec', { enum: ['url', 'doubleUrl', 'html', 'unicode', 'hex', 'base64'] }),
+        codec: p('string', '编码方式', 'Codec', {
+          enum: ['url', 'doubleUrl', 'html', 'unicode', 'hex', 'base64'],
+        }),
         mode: p('string', '方向', 'Direction', { enum: ['encode', 'decode'], default: 'encode' }),
       },
       required: ['text', 'codec'],
@@ -159,7 +178,9 @@ export const MCP_TOOLS: McpToolSpec[] = [
       properties: {
         text: p('string', '原文', 'Source text'),
         mode: p('string', '方向', 'Direction', { enum: ['encode', 'decode'], default: 'encode' }),
-        numeric: p('boolean', '编码时是否用 &#NN; 数字实体', 'Encode as &#NN; numeric entities', { default: false }),
+        numeric: p('boolean', '编码时是否用 &#NN; 数字实体', 'Encode as &#NN; numeric entities', {
+          default: false,
+        }),
       },
       required: ['text'],
     },
@@ -176,8 +197,41 @@ export const MCP_TOOLS: McpToolSpec[] = [
     inputSchema: {
       type: 'object',
       properties: {
-        input: p('string', '待转换的整数（可带 0x 前缀）', 'Integer to convert (0x prefix allowed)'),
+        input: p(
+          'string',
+          '待转换的整数（可带 0x 前缀）',
+          'Integer to convert (0x prefix allowed)',
+        ),
         from: p('number', '源进制，2-36', 'Source radix, 2-36', { default: 10 }),
+      },
+      required: ['input'],
+    },
+  },
+
+  {
+    name: 'float_bits',
+    title: 'IEEE 754 浮点位查看',
+    titleEn: 'IEEE 754 float bits',
+    description:
+      '把浮点数拆成 sign/exponent/mantissa 位型（16/32/64 位），或反向把位串还原成数值。排查浮点精度丢失、解读协议里的定长浮点字段时用。',
+    descriptionEn:
+      'Decompose a float into sign/exponent/mantissa bits at 16/32/64-bit width, or reassemble a bit pattern back into a number.',
+    group: 'codec',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        input: p(
+          'string',
+          'encode 传数字（0.1、NaN、Infinity），decode 传位串（0x3DCCCCCD 或 0b0111…）',
+          'Number for encode (0.1, NaN, Infinity), or bit pattern for decode (0x3DCCCCCD / 0b0111...)',
+        ),
+        width: p('string', '位宽', 'Bit width', { enum: ['16', '32', '64'], default: '32' }),
+        op: p(
+          'string',
+          'encode=数值→位型，decode=位型→数值',
+          'encode=number to bits, decode=bits to number',
+          { enum: ['encode', 'decode'], default: 'encode' },
+        ),
       },
       required: ['input'],
     },
@@ -197,7 +251,9 @@ export const MCP_TOOLS: McpToolSpec[] = [
       type: 'object',
       properties: {
         text: p('string', '原文', 'Source text'),
-        algorithm: p('string', '算法', 'Algorithm', { enum: ['MD5', 'SHA1', 'SHA256', 'SHA512', 'SHA3', 'RIPEMD160'] }),
+        algorithm: p('string', '算法', 'Algorithm', {
+          enum: ['MD5', 'SHA1', 'SHA256', 'SHA512', 'SHA3', 'RIPEMD160'],
+        }),
       },
       required: ['text'],
     },
@@ -207,14 +263,18 @@ export const MCP_TOOLS: McpToolSpec[] = [
     title: 'HMAC 签名',
     titleEn: 'HMAC',
     description: 'HMAC 消息认证码，支持 MD5 / SHA1 / SHA256 / SHA512。接口签名验签、回调校验常用。',
-    descriptionEn: 'HMAC over MD5 / SHA1 / SHA256 / SHA512 — for API signatures and webhook verification.',
+    descriptionEn:
+      'HMAC over MD5 / SHA1 / SHA256 / SHA512 — for API signatures and webhook verification.',
     group: 'crypto',
     inputSchema: {
       type: 'object',
       properties: {
         text: p('string', '消息内容', 'Message'),
         key: p('string', '密钥', 'Secret key'),
-        algorithm: p('string', '算法', 'Algorithm', { enum: ['MD5', 'SHA1', 'SHA256', 'SHA512'], default: 'SHA256' }),
+        algorithm: p('string', '算法', 'Algorithm', {
+          enum: ['MD5', 'SHA1', 'SHA256', 'SHA512'],
+          default: 'SHA256',
+        }),
       },
       required: ['text', 'key'],
     },
@@ -252,7 +312,10 @@ export const MCP_TOOLS: McpToolSpec[] = [
       type: 'object',
       properties: {
         op: p('string', '操作', 'Operation', { enum: ['sign', 'verify'], default: 'sign' }),
-        algo: p('string', '签名算法', 'Signing algorithm', { enum: ['HS256', 'HS384', 'HS512'], default: 'HS256' }),
+        algo: p('string', '签名算法', 'Signing algorithm', {
+          enum: ['HS256', 'HS384', 'HS512'],
+          default: 'HS256',
+        }),
         key: p('string', 'HMAC 密钥', 'HMAC secret'),
         payload: p('string', 'Payload（JSON 字符串）', 'Payload (JSON string)'),
         token: p('string', '要校验的 JWT', 'JWT to verify'),
@@ -277,7 +340,10 @@ export const MCP_TOOLS: McpToolSpec[] = [
         code: p('string', '要校验的验证码', 'Code to verify'),
         digits: p('number', '位数', 'Digits', { default: 6 }),
         period: p('number', '时间步长（秒）', 'Time step (seconds)', { default: 30 }),
-        algo: p('string', '摘要算法', 'Digest algorithm', { enum: ['SHA1', 'SHA256', 'SHA512'], default: 'SHA1' }),
+        algo: p('string', '摘要算法', 'Digest algorithm', {
+          enum: ['SHA1', 'SHA256', 'SHA512'],
+          default: 'SHA1',
+        }),
       },
       required: ['op', 'secret'],
     },
@@ -287,7 +353,8 @@ export const MCP_TOOLS: McpToolSpec[] = [
     name: 'jwt_decode',
     title: 'JWT 解码',
     titleEn: 'JWT decode',
-    description: '解码 JWT 的 header 与 payload 并展开为标准 JSON，同时标出是否已过期。只解码不验签。',
+    description:
+      '解码 JWT 的 header 与 payload 并展开为标准 JSON，同时标出是否已过期。只解码不验签。',
     descriptionEn:
       'Decode a JWT header and payload into plain JSON and report whether it is expired. Decodes only — no signature verification.',
     group: 'crypto',
@@ -295,6 +362,57 @@ export const MCP_TOOLS: McpToolSpec[] = [
       type: 'object',
       properties: { token: p('string', 'JWT 字符串', 'JWT string') },
       required: ['token'],
+    },
+  },
+
+  {
+    name: 'sri_hash',
+    title: 'SRI integrity 生成',
+    titleEn: 'SRI integrity',
+    description:
+      '为文本内容生成 Subresource Integrity 值（sha256/sha384/sha512 全算），输出形如 sha384-<base64>，可直接粘进 <script integrity> 属性校验 CDN 资源。',
+    descriptionEn:
+      'Compute Subresource Integrity values (sha256/sha384/sha512) for text content, formatted as sha384-<base64> for the integrity attribute.',
+    group: 'crypto',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        text: p('string', '要计算的资源内容', 'Resource content to hash'),
+        algorithm: p(
+          'string',
+          '只要一个算法时指定，省略则三个都输出',
+          'Single algorithm; omit to output all three',
+          { enum: ['sha256', 'sha384', 'sha512'] },
+        ),
+      },
+      required: ['text'],
+    },
+  },
+  {
+    name: 'bcrypt',
+    title: 'bcrypt 哈希与密码强度',
+    titleEn: 'bcrypt hash & strength',
+    description:
+      'op=hash 生成 bcrypt 哈希（rounds 4-15，越高的 cost 越抗暴力破解）；op=verify 校验密码与哈希是否匹配；op=strength 评估密码强度（熵估算 + 改进建议）。全部本地计算。',
+    descriptionEn:
+      'op=hash produces a bcrypt hash (rounds 4-15); op=verify checks a password against a hash; op=strength scores password entropy with improvement hints. All computed locally.',
+    group: 'crypto',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        op: p('string', '操作', 'Operation', {
+          enum: ['hash', 'verify', 'strength'],
+          default: 'hash',
+        }),
+        password: p('string', '密码', 'Password'),
+        hash: p(
+          'string',
+          'bcrypt 哈希（op=verify 时必填）',
+          'bcrypt hash (required when op=verify)',
+        ),
+        rounds: p('number', 'cost 因子 4-15', 'Cost factor 4-15', { default: 10 }),
+      },
+      required: ['password'],
     },
   },
 
@@ -312,7 +430,10 @@ export const MCP_TOOLS: McpToolSpec[] = [
       type: 'object',
       properties: {
         text: p('string', 'JSON 文本', 'JSON text'),
-        mode: p('string', '处理方式', 'Operation', { enum: ['format', 'minify', 'sort'], default: 'format' }),
+        mode: p('string', '处理方式', 'Operation', {
+          enum: ['format', 'minify', 'sort'],
+          default: 'format',
+        }),
         indent: p('number', '缩进空格数', 'Indent width', { default: 2 }),
       },
       required: ['text'],
@@ -323,7 +444,8 @@ export const MCP_TOOLS: McpToolSpec[] = [
     title: 'JSON 校验',
     titleEn: 'JSON validate',
     description: '校验 JSON 语法，返回是否合法；不合法时给出解析器的原始报错信息与位置。',
-    descriptionEn: 'Validate JSON syntax and surface the parser error verbatim when it is malformed.',
+    descriptionEn:
+      'Validate JSON syntax and surface the parser error verbatim when it is malformed.',
     group: 'data',
     inputSchema: {
       type: 'object',
@@ -344,7 +466,11 @@ export const MCP_TOOLS: McpToolSpec[] = [
       type: 'object',
       properties: {
         json: p('string', 'JSON 文本', 'JSON text'),
-        path: p('string', '表达式，如 $.store.book[*].price', 'Expression, e.g. $.store.book[*].price'),
+        path: p(
+          'string',
+          '表达式，如 $.store.book[*].price',
+          'Expression, e.g. $.store.book[*].price',
+        ),
       },
       required: ['json', 'path'],
     },
@@ -362,9 +488,72 @@ export const MCP_TOOLS: McpToolSpec[] = [
       type: 'object',
       properties: {
         text: p('string', '源文本', 'Source text'),
-        mode: p('string', '方向', 'Direction', { enum: ['yaml2json', 'json2yaml'], default: 'yaml2json' }),
+        mode: p('string', '方向', 'Direction', {
+          enum: ['yaml2json', 'json2yaml'],
+          default: 'yaml2json',
+        }),
       },
       required: ['text'],
+    },
+  },
+
+  {
+    name: 'json_diff',
+    title: 'JSON Diff',
+    titleEn: 'JSON diff',
+    description:
+      '结构化比较两段 JSON：差异定位到 JSON Pointer 路径（/user/name、/tags/2），数组按 LCS 对齐而不是逐下标硬比，返回新增/删除/修改三类差异。',
+    descriptionEn:
+      'Structurally compare two JSON documents: diffs located by JSON Pointer paths, arrays aligned by LCS. Returns added/removed/changed entries.',
+    group: 'data',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        left: p('string', '左侧 JSON', 'Left JSON'),
+        right: p('string', '右侧 JSON', 'Right JSON'),
+      },
+      required: ['left', 'right'],
+    },
+  },
+  {
+    name: 'unit_convert',
+    title: '数据单位换算',
+    titleEn: 'Data unit convert',
+    description:
+      'bit/Byte 与 KB(1000)、KiB(1024) 两套前缀互转：传 to 换单个目标单位，省略则输出全部单位对照。回答「1536 B 是 1.5 KiB 还是 1.5 KB」这类问题。',
+    descriptionEn:
+      'Convert between bit/byte and the KB(1000) vs KiB(1024) prefixes. Pass `to` for one target unit, or omit it to list every unit.',
+    group: 'data',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        value: p('number', '数值', 'Value', { default: 1 }),
+        from: p('string', '源单位', 'Source unit', {
+          enum: ['bit', 'B', 'KB', 'KiB', 'MB', 'MiB', 'GB', 'GiB', 'TB', 'TiB', 'PB', 'PiB'],
+        }),
+        to: p('string', '目标单位（省略则列出全部）', 'Target unit (omit to list all)', {
+          enum: ['bit', 'B', 'KB', 'KiB', 'MB', 'MiB', 'GB', 'GiB', 'TB', 'TiB', 'PB', 'PiB'],
+        }),
+      },
+      required: ['from'],
+    },
+  },
+  {
+    name: 'docker2compose',
+    title: 'docker run → compose',
+    titleEn: 'docker run to compose',
+    description:
+      '把 docker run 命令转成 docker-compose 的 services 片段（YAML）：端口、卷、环境变量、restart、network 等常用 flag 都能识别，尾部命令原样保留；不认识的 flag 丢弃而不报错。',
+    descriptionEn:
+      'Convert a docker run command into a docker-compose services snippet (YAML): ports, volumes, env, restart, networks and the trailing command are recognized; unknown flags are dropped silently.',
+    group: 'data',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        command: p('string', '完整 docker run 命令', 'Full docker run command'),
+        name: p('string', '服务名', 'Service name', { default: 'app' }),
+      },
+      required: ['command'],
     },
   },
 
@@ -383,7 +572,15 @@ export const MCP_TOOLS: McpToolSpec[] = [
       properties: {
         text: p('string', '原始标识符或短语', 'Identifier or phrase'),
         style: p('string', '目标风格', 'Target style', {
-          enum: ['camelCase', 'PascalCase', 'snake_case', 'SCREAMING_SNAKE', 'kebab-case', 'UPPERCASE', 'lowercase'],
+          enum: [
+            'camelCase',
+            'PascalCase',
+            'snake_case',
+            'SCREAMING_SNAKE',
+            'kebab-case',
+            'UPPERCASE',
+            'lowercase',
+          ],
         }),
       },
       required: ['text'],
@@ -403,7 +600,19 @@ export const MCP_TOOLS: McpToolSpec[] = [
       properties: {
         text: p('string', '多行文本', 'Multi-line text'),
         op: p('string', '操作', 'Operation', {
-          enum: ['dedupe', 'removeEmpty', 'trim', 'sortAsc', 'sortDesc', 'sortNumeric', 'shuffle', 'reverse', 'number', 'quote', 'join'],
+          enum: [
+            'dedupe',
+            'removeEmpty',
+            'trim',
+            'sortAsc',
+            'sortDesc',
+            'sortNumeric',
+            'shuffle',
+            'reverse',
+            'number',
+            'quote',
+            'join',
+          ],
         }),
         separator: p('string', 'op=join 时的连接符', 'Separator when op=join', { default: ',' }),
       },
@@ -438,7 +647,11 @@ export const MCP_TOOLS: McpToolSpec[] = [
       type: 'object',
       properties: {
         text: p('string', '单段文本；与 messages 二选一', 'Plain text; alternative to messages'),
-        messages: p('string', '对话消息的 JSON 数组，如 [{"role":"user","content":"hi"}]', 'JSON array of chat messages, e.g. [{"role":"user","content":"hi"}]'),
+        messages: p(
+          'string',
+          '对话消息的 JSON 数组，如 [{"role":"user","content":"hi"}]',
+          'JSON array of chat messages, e.g. [{"role":"user","content":"hi"}]',
+        ),
       },
     },
   },
@@ -483,6 +696,27 @@ export const MCP_TOOLS: McpToolSpec[] = [
     },
   },
   {
+    name: 'glob_match',
+    title: 'Glob 模式测试',
+    titleEn: 'Glob pattern test',
+    description:
+      '用 minimatch（bash 风格）批量测试路径是否命中 glob 模式，返回每条路径的命中结果与命中的模式。排查 .gitignore 为什么没生效、CI path filter 是否匹配时用。',
+    descriptionEn:
+      'Batch-test paths against bash-style glob patterns (minimatch), returning per-path hits and which pattern matched.',
+    group: 'text',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        patterns: p('string', 'glob 模式，每行一条', 'Glob patterns, one per line'),
+        paths: p('string', '待测路径，每行一条', 'Paths to test, one per line'),
+        basename: p('boolean', '只用路径最后一段匹配', 'Match on the basename only', {
+          default: false,
+        }),
+      },
+      required: ['patterns', 'paths'],
+    },
+  },
+  {
     name: 'regex_test',
     title: '正则测试',
     titleEn: 'Regex test',
@@ -515,9 +749,18 @@ export const MCP_TOOLS: McpToolSpec[] = [
       type: 'object',
       properties: {
         pattern: p('string', '正则表达式（不含首尾斜杠）', 'Pattern without surrounding slashes'),
-        replacement: p('string', '替换串，支持 $1 / $<name> 引用捕获组', 'Replacement string; $1 / $<name> reference capture groups'),
+        replacement: p(
+          'string',
+          '替换串，支持 $1 / $<name> 引用捕获组',
+          'Replacement string; $1 / $<name> reference capture groups',
+        ),
         text: p('string', '待处理的原文', 'Source text to process'),
-        flags: p('string', '标志位（不含 g 时只替换第一处）', 'Flags (without g only the first match is replaced)', { default: 'g' }),
+        flags: p(
+          'string',
+          '标志位（不含 g 时只替换第一处）',
+          'Flags (without g only the first match is replaced)',
+          { default: 'g' },
+        ),
       },
       required: ['pattern', 'replacement', 'text'],
     },
@@ -537,7 +780,11 @@ export const MCP_TOOLS: McpToolSpec[] = [
     inputSchema: {
       type: 'object',
       properties: {
-        payload: p('string', 'introspection 响应（JSON 文本或已解析的对象）', 'Introspection response (JSON text or an already-parsed object)'),
+        payload: p(
+          'string',
+          'introspection 响应（JSON 文本或已解析的对象）',
+          'Introspection response (JSON text or an already-parsed object)',
+        ),
       },
       required: ['payload'],
     },
@@ -555,7 +802,9 @@ export const MCP_TOOLS: McpToolSpec[] = [
       type: 'object',
       properties: {
         har: p('string', 'HAR 文件内容（JSON 文本）', 'HAR file content (JSON text)'),
-        limit: p('number', '最多列出多少条请求明细', 'How many request rows to list', { default: 30 }),
+        limit: p('number', '最多列出多少条请求明细', 'How many request rows to list', {
+          default: 30,
+        }),
       },
       required: ['har'],
     },
@@ -608,8 +857,15 @@ export const MCP_TOOLS: McpToolSpec[] = [
     inputSchema: {
       type: 'object',
       properties: {
-        explain: p('string', 'EXPLAIN 的输出（JSON 或文本表格）', 'EXPLAIN output (JSON or text table)'),
-        dialect: p('string', '数据库方言', 'Database dialect', { default: 'mysql', enum: ['mysql', 'postgres'] }),
+        explain: p(
+          'string',
+          'EXPLAIN 的输出（JSON 或文本表格）',
+          'EXPLAIN output (JSON or text table)',
+        ),
+        dialect: p('string', '数据库方言', 'Database dialect', {
+          default: 'mysql',
+          enum: ['mysql', 'postgres'],
+        }),
       },
       required: ['explain'],
     },
@@ -629,8 +885,15 @@ export const MCP_TOOLS: McpToolSpec[] = [
       type: 'object',
       properties: {
         timestamp: p('string', '时间戳数字', 'Numeric timestamp'),
-        date: p('string', '日期串，如 2026-08-13 12:00:00', 'Date string, e.g. 2026-08-13 12:00:00'),
-        unit: p('string', '时间戳单位', 'Timestamp unit', { enum: ['auto', 's', 'ms', 'us', 'ns'], default: 'auto' }),
+        date: p(
+          'string',
+          '日期串，如 2026-08-13 12:00:00',
+          'Date string, e.g. 2026-08-13 12:00:00',
+        ),
+        unit: p('string', '时间戳单位', 'Timestamp unit', {
+          enum: ['auto', 's', 'ms', 'us', 'ns'],
+          default: 'auto',
+        }),
       },
     },
   },
@@ -639,7 +902,8 @@ export const MCP_TOOLS: McpToolSpec[] = [
     title: '日期差值',
     titleEn: 'Date difference',
     description: '计算两个日期之间相差的天/周/时/分/秒，并给出先后方向。',
-    descriptionEn: 'Difference between two dates in days, weeks, hours, minutes and seconds, plus the direction.',
+    descriptionEn:
+      'Difference between two dates in days, weeks, hours, minutes and seconds, plus the direction.',
     group: 'time',
     inputSchema: {
       type: 'object',
@@ -705,7 +969,8 @@ export const MCP_TOOLS: McpToolSpec[] = [
     title: 'chmod 互转',
     titleEn: 'chmod convert',
     description: '八进制权限（755）与符号权限（rwxr-xr-x）互转，输入任一种即可。',
-    descriptionEn: 'Convert between octal (755) and symbolic (rwxr-xr-x) permission notation, either direction.',
+    descriptionEn:
+      'Convert between octal (755) and symbolic (rwxr-xr-x) permission notation, either direction.',
     group: 'net',
     inputSchema: {
       type: 'object',
@@ -718,7 +983,8 @@ export const MCP_TOOLS: McpToolSpec[] = [
     title: 'URL 拆解',
     titleEn: 'URL parse',
     description: '拆解 URL 为协议、认证信息、主机、端口、路径、查询参数列表、锚点。',
-    descriptionEn: 'Split a URL into protocol, credentials, host, port, path, query parameters and fragment.',
+    descriptionEn:
+      'Split a URL into protocol, credentials, host, port, path, query parameters and fragment.',
     group: 'net',
     inputSchema: {
       type: 'object',
@@ -746,7 +1012,8 @@ export const MCP_TOOLS: McpToolSpec[] = [
     title: 'User-Agent 解析',
     titleEn: 'User-Agent parse',
     description: '识别浏览器与版本、操作系统、设备类型，并标注是否为爬虫/扫描器/命令行工具。',
-    descriptionEn: 'Identify browser and version, OS and device type, and flag crawlers, scanners and CLI tools.',
+    descriptionEn:
+      'Identify browser and version, OS and device type, and flag crawlers, scanners and CLI tools.',
     group: 'net',
     inputSchema: {
       type: 'object',
@@ -760,7 +1027,8 @@ export const MCP_TOOLS: McpToolSpec[] = [
     name: 'uuid_generate',
     title: '生成 UUID',
     titleEn: 'Generate UUID',
-    description: '生成真随机的 UUID v4，可选大写、去连字符、批量条数（1-500）。顺带一提：需要唯一 ID 时自己别猜。',
+    description:
+      '生成真随机的 UUID v4，可选大写、去连字符、批量条数（1-500）。顺带一提：需要唯一 ID 时自己别猜。',
     descriptionEn:
       'Generate cryptographically random UUID v4 values, optionally uppercased, dash-stripped and batched (1-500).',
     group: 'gen',
@@ -788,7 +1056,9 @@ export const MCP_TOOLS: McpToolSpec[] = [
         upper: p('boolean', '包含大写', 'Include uppercase', { default: true }),
         digit: p('boolean', '包含数字', 'Include digits', { default: true }),
         symbol: p('boolean', '包含符号', 'Include symbols', { default: true }),
-        excludeAmbiguous: p('boolean', '剔除易混淆字符 Il1O0', 'Drop ambiguous characters Il1O0', { default: false }),
+        excludeAmbiguous: p('boolean', '剔除易混淆字符 Il1O0', 'Drop ambiguous characters Il1O0', {
+          default: false,
+        }),
       },
     },
   },
@@ -806,7 +1076,10 @@ export const MCP_TOOLS: McpToolSpec[] = [
       properties: {
         count: p('number', '条数 1-100', 'Rows 1-100', { default: 10 }),
         locale: p('string', '数据风格', 'Data style', { enum: ['zh', 'en'], default: 'zh' }),
-        format: p('string', '输出格式', 'Output format', { enum: ['json', 'csv'], default: 'json' }),
+        format: p('string', '输出格式', 'Output format', {
+          enum: ['json', 'csv'],
+          default: 'json',
+        }),
       },
     },
   },
@@ -826,12 +1099,25 @@ export const MCP_TOOLS: McpToolSpec[] = [
       properties: {
         url: p('string', '完整 URL', 'Full URL'),
         method: p('string', 'HTTP 方法', 'HTTP method', { default: 'GET' }),
-        headers: p('string', '请求头，每行一条 `Name: value`', 'Headers, one `Name: value` per line'),
+        headers: p(
+          'string',
+          '请求头，每行一条 `Name: value`',
+          'Headers, one `Name: value` per line',
+        ),
         body: p('string', '请求体（文本）', 'Request body (text)'),
         timeoutMs: p('number', '超时毫秒', 'Timeout in ms', { default: 30000 }),
         followRedirects: p('boolean', '是否跟随重定向', 'Follow redirects', { default: true }),
-        rejectUnauthorized: p('boolean', '是否校验 TLS 证书（自签内网可置 false）', 'Verify TLS certificates (false for self-signed)', { default: true }),
-        proxy: p('string', '上游代理，如 http://127.0.0.1:7890 或 socks5://user:pass@host:1080', 'Upstream proxy, e.g. http://127.0.0.1:7890 or socks5://user:pass@host:1080'),
+        rejectUnauthorized: p(
+          'boolean',
+          '是否校验 TLS 证书（自签内网可置 false）',
+          'Verify TLS certificates (false for self-signed)',
+          { default: true },
+        ),
+        proxy: p(
+          'string',
+          '上游代理，如 http://127.0.0.1:7890 或 socks5://user:pass@host:1080',
+          'Upstream proxy, e.g. http://127.0.0.1:7890 or socks5://user:pass@host:1080',
+        ),
       },
       required: ['url'],
     },
@@ -850,7 +1136,10 @@ export interface ProtocolTool {
   description: string
   inputSchema: {
     type: 'object'
-    properties: Record<string, { type: string; description: string; default?: string | number | boolean; enum?: string[] }>
+    properties: Record<
+      string,
+      { type: string; description: string; default?: string | number | boolean; enum?: string[] }
+    >
     required?: string[]
   }
 }
@@ -864,7 +1153,12 @@ export function toProtocolTools(): ProtocolTool[] {
       properties: Object.fromEntries(
         Object.entries(t.inputSchema.properties).map(([k, v]) => [
           k,
-          { type: v.type, description: v.description, ...(v.default === undefined ? {} : { default: v.default }), ...(v.enum ? { enum: v.enum } : {}) },
+          {
+            type: v.type,
+            description: v.description,
+            ...(v.default === undefined ? {} : { default: v.default }),
+            ...(v.enum ? { enum: v.enum } : {}),
+          },
         ]),
       ),
       ...(t.inputSchema.required ? { required: t.inputSchema.required } : {}),

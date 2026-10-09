@@ -29,7 +29,8 @@ export const proxyL = {
       portHint: '监听 127.0.0.1，仅本机可访问。',
       mitmLabel: '解密 HTTPS',
       mitmHint: '开启后需要把根证书加入系统信任，才能看到 HTTPS 明文；关闭则只做隧道转发。',
-      mitmTrustWarn: '注意：根证书还没加入系统信任时，浏览器打开 HTTPS 站点会直接报证书错误（不是「看不到明文」那么温和）。请先导出并信任根证书，或关闭「解密 HTTPS」只做隧道转发。',
+      mitmTrustWarn:
+        '注意：根证书还没加入系统信任时，浏览器打开 HTTPS 站点会直接报证书错误（不是「看不到明文」那么温和）。请先导出并信任根证书，或关闭「解密 HTTPS」只做隧道转发。',
       clear: '清空会话',
       clearConfirm: '确认清空全部会话记录？',
       export: '导出',
@@ -57,11 +58,15 @@ export const proxyL = {
       resetConfirm: '重新生成后旧的根证书立即失效，需要重新在系统里信任。确认继续？',
       exported: (p: string) => `已导出到 ${p}`,
       installTitle: '让系统信任根证书',
-      installMac: 'macOS：双击导出的 ca.crt，在「钥匙串访问」中把它拖到「系统」钥匙串，然后双击该证书 → 信任 → 「使用此证书时」选「始终信任」。',
-      installWin: 'Windows：双击导出的 ca.crt → 安装证书 → 本地计算机 → 放入「受信任的根证书颁发机构」。',
-      installLinux: 'Linux：sudo cp ca.crt /usr/local/share/ca-certificates/devtoolbox.crt && sudo update-ca-certificates（Firefox 需在设置里单独导入）。',
+      installMac:
+        'macOS：双击导出的 ca.crt，在「钥匙串访问」中把它拖到「系统」钥匙串，然后双击该证书 → 信任 → 「使用此证书时」选「始终信任」。',
+      installWin:
+        'Windows：双击导出的 ca.crt → 安装证书 → 本地计算机 → 放入「受信任的根证书颁发机构」。',
+      installLinux:
+        'Linux：sudo cp ca.crt /usr/local/share/ca-certificates/devtoolbox.crt && sudo update-ca-certificates（Firefox 需在设置里单独导入）。',
       installNote: '只信任一次即可；调试结束后建议移除，避免长期存在中间人风险。',
-      warning: '根证书私钥保存在本机 userData 目录，不会外传。它具备解密本机 HTTPS 流量的能力，请勿分享该文件。',
+      warning:
+        '根证书私钥保存在本机 userData 目录，不会外传。它具备解密本机 HTTPS 流量的能力，请勿分享该文件。',
     },
     system: {
       title: '系统代理',
@@ -73,7 +78,8 @@ export const proxyL = {
       unsupported: '当前平台不支持自动设置',
       managed: '由本工具设置',
       hint: '设置后系统与浏览器的流量会经过本机代理；关闭工具时会自动还原。',
-      authHint: 'macOS：写入系统代理需要管理员授权，点击后会弹出一次系统密码框（设置与还原各一次）。',
+      authHint:
+        'macOS：写入系统代理需要管理员授权，点击后会弹出一次系统密码框（设置与还原各一次）。',
       done: '已把系统代理指向本机',
       restoreTip: '如果忘了还原，点这里恢复原状。',
     },
@@ -254,8 +260,10 @@ export const proxyL = {
       portLabel: 'Port',
       portHint: 'Binds to 127.0.0.1 so only this machine can reach it.',
       mitmLabel: 'Decrypt HTTPS',
-      mitmHint: 'Requires trusting the root CA to read HTTPS plaintext; when off, CONNECT is tunneled only.',
-      mitmTrustWarn: 'Heads-up: while the root CA is not trusted, browsers will fail HTTPS sites with a certificate error — not merely hide the plaintext. Trust the exported root CA first, or turn decryption off and tunnel only.',
+      mitmHint:
+        'Requires trusting the root CA to read HTTPS plaintext; when off, CONNECT is tunneled only.',
+      mitmTrustWarn:
+        'Heads-up: while the root CA is not trusted, browsers will fail HTTPS sites with a certificate error — not merely hide the plaintext. Trust the exported root CA first, or turn decryption off and tunnel only.',
       clear: 'Clear sessions',
       clearConfirm: 'Clear all captured sessions?',
       export: 'Export',
@@ -280,14 +288,19 @@ export const proxyL = {
       exportCrt: 'Export CRT (DER)',
       openFolder: 'Open folder',
       reset: 'Regenerate',
-      resetConfirm: 'Regenerating invalidates the old root CA immediately and requires trusting it again. Continue?',
+      resetConfirm:
+        'Regenerating invalidates the old root CA immediately and requires trusting it again. Continue?',
       exported: (p: string) => `Exported to ${p}`,
       installTitle: 'Trust the root CA',
-      installMac: 'macOS: double-click the exported ca.crt, add it to the System keychain, then open it → Trust → "When using this certificate" → Always Trust.',
-      installWin: 'Windows: double-click ca.crt → Install Certificate → Local Machine → place it in "Trusted Root Certification Authorities".',
-      installLinux: 'Linux: sudo cp ca.crt /usr/local/share/ca-certificates/devtoolbox.crt && sudo update-ca-certificates (Firefox needs a separate import in Settings).',
+      installMac:
+        'macOS: double-click the exported ca.crt, add it to the System keychain, then open it → Trust → "When using this certificate" → Always Trust.',
+      installWin:
+        'Windows: double-click ca.crt → Install Certificate → Local Machine → place it in "Trusted Root Certification Authorities".',
+      installLinux:
+        'Linux: sudo cp ca.crt /usr/local/share/ca-certificates/devtoolbox.crt && sudo update-ca-certificates (Firefox needs a separate import in Settings).',
       installNote: 'Trust it once; remove it after debugging to avoid a permanent MITM foothold.',
-      warning: 'The CA private key stays in your local userData directory and never leaves the machine. It can decrypt local HTTPS traffic — do not share the file.',
+      warning:
+        'The CA private key stays in your local userData directory and never leaves the machine. It can decrypt local HTTPS traffic — do not share the file.',
     },
     system: {
       title: 'System proxy',
@@ -299,7 +312,8 @@ export const proxyL = {
       unsupported: 'Automatic setup unsupported on this platform',
       managed: 'Set by this tool',
       hint: 'System and browser traffic will route through the local proxy; it is restored automatically when the app quits.',
-      authHint: 'macOS: writing the system proxy requires administrator authorization — a system password prompt appears once (again when restoring).',
+      authHint:
+        'macOS: writing the system proxy requires administrator authorization — a system password prompt appears once (again when restoring).',
       done: 'System proxy now points to this machine',
       restoreTip: 'If it was left behind, click to restore the original settings.',
     },
@@ -307,7 +321,8 @@ export const proxyL = {
       title: 'Sessions',
       filterPlaceholder: 'Filter by host / path / method',
       empty: 'No traffic captured yet',
-      emptyHint: 'Start the proxy and point a system or app proxy at 127.0.0.1 — traffic appears here live.',
+      emptyHint:
+        'Start the proxy and point a system or app proxy at 127.0.0.1 — traffic appears here live.',
       method: 'Method',
       host: 'Host',
       path: 'Path',
@@ -326,7 +341,8 @@ export const proxyL = {
       notFollowed: 'Scroll paused',
       pause: 'Pause stream',
       resume: 'Resume stream',
-      pausedHint: (n: number) => `Stream paused — ${n} new session(s) captured (shown after resuming)`,
+      pausedHint: (n: number) =>
+        `Stream paused — ${n} new session(s) captured (shown after resuming)`,
       clear: 'Clear',
       clearAsk: (n: number) => `Clear ${n} session(s)?`,
       confirmYes: 'Confirm',
@@ -360,13 +376,15 @@ export const proxyL = {
       send: 'Send',
       sending: 'Sending…',
       resendResult: 'Resend result',
-      tunnelNotice: 'This session is an undecrypted CONNECT tunnel: only host and port are visible.',
+      tunnelNotice:
+        'This session is an undecrypted CONNECT tunnel: only host and port are visible.',
       cookieNone: 'No cookies',
     },
     intercept: {
       title: 'Breakpoint',
       badge: 'pending',
-      notice: 'This request is paused by a rule. Edit it and press Forward; it auto-forwards after 120s.',
+      notice:
+        'This request is paused by a rule. Edit it and press Forward; it auto-forwards after 120s.',
       method: 'Method',
       url: 'URL',
       headers: 'Headers',
@@ -380,10 +398,12 @@ export const proxyL = {
     },
     rules: {
       title: 'Interception rules',
-      subtitle: 'Rewrite request/response in order; breakpoint, mock and block come from the first match.',
+      subtitle:
+        'Rewrite request/response in order; breakpoint, mock and block come from the first match.',
       add: 'New rule',
       empty: 'No rules yet',
-      emptyHint: 'Rules can rewrite headers, replace bodies, mock responses, block requests, or pause a request for manual editing.',
+      emptyHint:
+        'Rules can rewrite headers, replace bodies, mock responses, block requests, or pause a request for manual editing.',
       enabled: 'Enabled',
       name: 'Name',
       namePlaceholder: 'e.g. Inject token for staging',
@@ -434,13 +454,16 @@ export const proxyL = {
       toggleAll: 'Enable / disable all',
     },
     errors: {
-      desktopOnly: 'This tool must run inside the desktop app: browsers cannot listen on a local port or change the system proxy.',
+      desktopOnly:
+        'This tool must run inside the desktop app: browsers cannot listen on a local port or change the system proxy.',
       startFailed: (m: string) => `Failed to start proxy: ${m}`,
       caFailed: 'Failed to generate the root CA',
       exportFailed: (m: string) => `Export failed: ${m}`,
-      systemUnsupported: 'Automatic system proxy setup is unsupported here — point HTTP/HTTPS proxy at 127.0.0.1 manually.',
+      systemUnsupported:
+        'Automatic system proxy setup is unsupported here — point HTTP/HTTPS proxy at 127.0.0.1 manually.',
       systemFailed: 'The system proxy was not applied — see the status line below.',
-      manualProxy: 'Manual setup: set both HTTP and HTTPS proxy to 127.0.0.1 with the port shown above.',
+      manualProxy:
+        'Manual setup: set both HTTP and HTTPS proxy to 127.0.0.1 with the port shown above.',
     },
     misc: {
       apply: 'Apply',

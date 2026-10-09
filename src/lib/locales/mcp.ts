@@ -21,7 +21,8 @@ export const mcpL = {
     notBuilt: '未找到',
     notBuiltHint: '脚本还没生成。先在项目里执行 npm run build:mcp，或重新安装最新版本。',
     configTitle: '客户端配置片段',
-    configHint: '把下面这段并进对应客户端的 MCP 配置，重启客户端即可。路径是按本机实际情况算好的，不用改。',
+    configHint:
+      '把下面这段并进对应客户端的 MCP 配置，重启客户端即可。路径是按本机实际情况算好的，不用改。',
     copy: '复制',
     hintTitle: '各客户端配置文件位置',
     hintNotes: {
@@ -45,7 +46,8 @@ export const mcpL = {
     optionalLabel: '可选',
     copyToolsJson: '复制工具清单 JSON',
     cliTitle: '命令行直接调用',
-    cliHint: '不走 MCP 也可以：直接跑服务端脚本即可，--call 的返回结果打到标准输出，方便脚本或 Agent 的 shell 使用。',
+    cliHint:
+      '不走 MCP 也可以：直接跑服务端脚本即可，--call 的返回结果打到标准输出，方便脚本或 Agent 的 shell 使用。',
     usageTitle: '接入步骤',
     usage: [
       '确认上面的状态是「已就绪」；没就绪先构建一次。',
@@ -77,9 +79,11 @@ export const mcpL = {
     devMode: 'Development',
     ready: 'Ready',
     notBuilt: 'Not found',
-    notBuiltHint: 'The script has not been built yet. Run npm run build:mcp in the project, or reinstall the latest release.',
+    notBuiltHint:
+      'The script has not been built yet. Run npm run build:mcp in the project, or reinstall the latest release.',
     configTitle: 'Client config snippet',
-    configHint: 'Merge this into the client MCP config and restart the client. Paths are resolved for this machine — no edits needed.',
+    configHint:
+      'Merge this into the client MCP config and restart the client. Paths are resolved for this machine — no edits needed.',
     copy: 'Copy',
     hintTitle: 'Where client configs live',
     hintNotes: {
@@ -103,7 +107,8 @@ export const mcpL = {
     optionalLabel: 'optional',
     copyToolsJson: 'Copy tools JSON',
     cliTitle: 'Call from the command line',
-    cliHint: 'No MCP needed: run the server script directly. --call writes the result to stdout, ready for scripts or an agent shell.',
+    cliHint:
+      'No MCP needed: run the server script directly. --call writes the result to stdout, ready for scripts or an agent shell.',
     usageTitle: 'Setup steps',
     usage: [
       'Make sure the status above says "Ready"; if not, build it first.',
@@ -113,6 +118,7 @@ export const mcpL = {
     ],
     httpNote:
       'http_request supports upstream HTTP / SOCKS5 proxies, disabling TLS verification, controlled redirects and automatic decompression — far more capable than built-in fetch when probing internal services.',
-    noDesktop: 'Open the desktop app to see machine-specific paths; the capability list below still works.',
+    noDesktop:
+      'Open the desktop app to see machine-specific paths; the capability list below still works.',
   },
 }

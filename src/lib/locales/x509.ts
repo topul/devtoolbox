@@ -39,7 +39,8 @@ export const x509L = {
     parse: 'Parse',
     sample: 'Load test cert',
     clear: 'Clear',
-    errNoPem: 'No PEM certificate block found (-----BEGIN CERTIFICATE----- … -----END CERTIFICATE-----)',
+    errNoPem:
+      'No PEM certificate block found (-----BEGIN CERTIFICATE----- … -----END CERTIFICATE-----)',
     errParse: 'Parse failed: ',
     subject: 'Subject',
     issuer: 'Issuer',

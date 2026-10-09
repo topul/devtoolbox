@@ -120,7 +120,8 @@ export const networkL = {
       cookieTitle: 'Cookie',
       name: 'Name',
       value: 'Value',
-      notNameValue: 'First segment is not a name=value structure; you may have pasted only the attributes part.',
+      notNameValue:
+        'First segment is not a name=value structure; you may have pasted only the attributes part.',
       attrsTitle: 'Attributes',
       securityTitle: 'Security Check',
       riskHttponly: 'Missing: stealable via XSS',

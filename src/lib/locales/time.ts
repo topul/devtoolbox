@@ -99,7 +99,8 @@ export const timeL = {
       localeStr: 'en-US',
       errNeed5: 'Requires 5 fields: min hour day month week',
       fieldParse: (f: string) => `Cannot parse field "${f}"`,
-      fieldRange: (f: string, min: number, max: number) => `Field "${f}" out of range ${min}-${max}`,
+      fieldRange: (f: string, min: number, max: number) =>
+        `Field "${f}" out of range ${min}-${max}`,
       fieldAll: (name: string) => `Every ${name}`,
       fieldStep: (step: string, name: string) => `Every ${step} ${name}`,
       fieldList: (name: string, field: string) => `${name} is ${field}`,

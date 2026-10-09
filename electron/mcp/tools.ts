@@ -9,26 +9,34 @@
 import {
   applyLineOp,
   base64ToUtf8,
+  bcryptHash,
+  bcryptVerify,
+  bitsToFloat,
   chainDecode,
   chainEncode,
   chmodConvert,
   cidrInfo,
   convertCase,
   convertCaseAll,
+  convertDataUnit,
   cronNextRuns,
+  DATA_UNITS,
   dateDiff,
   dateToTimestamp,
   diffAsText,
   digest,
   digestAll,
+  diffJson,
   estimateMessages,
   estimateTokens,
   evalJsonPath,
   fakeRowsToCsv,
+  floatToBits,
   formatLocal,
   generateFakeRows,
   generatePassword,
   generateUuids,
+  globMatch,
   hmacDigest,
   aesDecrypt,
   aesEncrypt,
@@ -50,9 +58,11 @@ import {
   parseOtpauth,
   lineDiff,
   parseCookie,
+  parseDockerRun,
   parseToolSchema,
   parseUrl,
   parseUserAgent,
+  passwordStrength,
   radixConvert,
   buildWaterfall,
   extractTable,
@@ -69,12 +79,18 @@ import {
   renderSchema,
   SCHEMA_TARGETS,
   summarizeIssues,
+  sriFromBytes,
+  SRI_ALGOS,
+  stringifyValue,
   textStats,
   timestampToDate,
+  toComposeYaml,
+  unitConvertAll,
   utf8ToBase64,
   yamlToJson,
   type CaseStyle,
   type ChainCodec,
+  type FloatWidth,
   type HashAlgo,
   type HmacAlgo,
   type LineOp,
@@ -122,7 +138,12 @@ function bool(args: ToolArgs, key: string, fallback: boolean): boolean {
   throw new Error(`参数 ${key} 应为布尔值`)
 }
 
-function enumArg<T extends string>(args: ToolArgs, key: string, allowed: readonly T[], fallback?: T): T {
+function enumArg<T extends string>(
+  args: ToolArgs,
+  key: string,
+  allowed: readonly T[],
+  fallback?: T,
+): T {
   const v = args[key]
   if (v === undefined || v === null || v === '') {
     if (fallback === undefined) throw new Error(`缺少参数 ${key}`)
@@ -135,7 +156,11 @@ function enumArg<T extends string>(args: ToolArgs, key: string, allowed: readonl
 }
 
 /** 可选枚举：没传返回 undefined，让调用方决定「缺省时输出全部」 */
-function optEnum<T extends string>(args: ToolArgs, key: string, allowed: readonly T[]): T | undefined {
+function optEnum<T extends string>(
+  args: ToolArgs,
+  key: string,
+  allowed: readonly T[],
+): T | undefined {
   const v = args[key]
   if (v === undefined || v === null || v === '') return undefined
   return enumArg(args, key, allowed)
@@ -145,13 +170,30 @@ function optEnum<T extends string>(args: ToolArgs, key: string, allowed: readonl
 
 const CODECS: ChainCodec[] = ['url', 'doubleUrl', 'html', 'unicode', 'hex', 'base64']
 const CASE_STYLES: CaseStyle[] = [
-  'camelCase', 'PascalCase', 'snake_case', 'SCREAMING_SNAKE', 'kebab-case', 'UPPERCASE', 'lowercase',
+  'camelCase',
+  'PascalCase',
+  'snake_case',
+  'SCREAMING_SNAKE',
+  'kebab-case',
+  'UPPERCASE',
+  'lowercase',
 ]
 const LINE_OPS: LineOp[] = [
-  'dedupe', 'removeEmpty', 'trim', 'sortAsc', 'sortDesc', 'sortNumeric', 'shuffle', 'reverse', 'number', 'quote', 'join',
+  'dedupe',
+  'removeEmpty',
+  'trim',
+  'sortAsc',
+  'sortDesc',
+  'sortNumeric',
+  'shuffle',
+  'reverse',
+  'number',
+  'quote',
+  'join',
 ]
 const HASH_ALGOS: HashAlgo[] = ['MD5', 'SHA1', 'SHA256', 'SHA512', 'SHA3', 'RIPEMD160']
 const HMAC_ALGOS: HmacAlgo[] = ['MD5', 'SHA1', 'SHA256', 'SHA512']
+const UNIT_IDS = DATA_UNITS.map((u) => u.id)
 
 const q = (s: string): string => JSON.stringify(s)
 
@@ -186,7 +228,9 @@ export const HANDLERS: Record<string, ToolHandler> = {
   escape_convert: (a) => {
     const codec = enumArg(a, 'codec', CODECS)
     const mode = enumArg(a, 'mode', ['encode', 'decode'] as const, 'encode')
-    return mode === 'encode' ? chainEncode(codec, str(a, 'text')) : chainDecode(codec, str(a, 'text'))
+    return mode === 'encode'
+      ? chainEncode(codec, str(a, 'text'))
+      : chainDecode(codec, str(a, 'text'))
   },
 
   html_entity: (a) => {
@@ -201,12 +245,43 @@ export const HANDLERS: Record<string, ToolHandler> = {
     return { dec: r.dec, hex: r.hex, oct: r.oct, bin: r.bin }
   },
 
+  float_bits: (a) => {
+    const width = Number(enumArg(a, 'width', ['16', '32', '64'] as const, '32')) as FloatWidth
+    const op = enumArg(a, 'op', ['encode', 'decode'] as const, 'encode')
+    const input = str(a, 'input')
+    if (op === 'decode') {
+      const v = bitsToFloat(input, width)
+      if (v === null) throw new Error('无法解析位型：需要 0x/0b 前缀的十六进制/二进制，或纯位串')
+      return `${input.trim()}（${width} 位）→ ${v}`
+    }
+    const value = Number(input)
+    if (Number.isNaN(value) && !/^\s*(nan|[+-]?inf(inity)?)\s*$/i.test(input)) {
+      throw new Error(`参数 input 应为数字，收到 ${input}`)
+    }
+    const r = floatToBits(value, width)
+    const label = {
+      normal: '常规数',
+      zero: '零',
+      subnormal: '次正规数',
+      inf: '无穷大',
+      nan: 'NaN',
+    }[r.isSpecial]
+    return [
+      `${r.hex}（${width} 位 hex）`,
+      `位串: ${r.bin}`,
+      `sign: ${r.sign}  exponent: ${r.expBits}  mantissa: ${r.mantissaBits}`,
+      `实际指数: ${r.expValue}  类型: ${label}`,
+    ].join('\n')
+  },
+
   /* ---------- crypto ---------- */
   hash: (a) => {
     const text = str(a, 'text')
     const algo = optEnum(a, 'algorithm', HASH_ALGOS)
     if (!algo) {
-      return digestAll(text).map((x) => `${x.label}: ${x.value}`).join('\n')
+      return digestAll(text)
+        .map((x) => `${x.label}: ${x.value}`)
+        .join('\n')
     }
     return digest(algo, text)
   },
@@ -235,7 +310,8 @@ export const HANDLERS: Record<string, ToolHandler> = {
     let body: Record<string, unknown>
     try {
       const parsed: unknown = JSON.parse(str(a, 'payload'))
-      if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) throw new Error('BAD_PAYLOAD')
+      if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed))
+        throw new Error('BAD_PAYLOAD')
       body = parsed as Record<string, unknown>
     } catch {
       throw new Error('BAD_PAYLOAD')
@@ -286,9 +362,47 @@ export const HANDLERS: Record<string, ToolHandler> = {
       `header:\n${d.header}`,
       `payload:\n${d.payload}`,
       `signature: ${d.signed ? d.signature : '(无签名段)'}`,
-      expired === null ? 'exp: 未声明，无法判断是否过期' : `是否过期: ${expired ? '已过期' : '未过期'}`,
+      expired === null
+        ? 'exp: 未声明，无法判断是否过期'
+        : `是否过期: ${expired ? '已过期' : '未过期'}`,
       ...claims,
     ].join('\n\n')
+  },
+
+  sri_hash: (a) => {
+    const algo = optEnum(a, 'algorithm', SRI_ALGOS)
+    const bytes = new TextEncoder().encode(str(a, 'text'))
+    const results = sriFromBytes(bytes, algo ? [algo] : SRI_ALGOS)
+    return results.map((r) => r.integrity).join('\n')
+  },
+
+  bcrypt: (a) => {
+    const op = enumArg(a, 'op', ['hash', 'verify', 'strength'] as const, 'hash')
+    const password = str(a, 'password')
+    if (op === 'verify') {
+      const ok = bcryptVerify(password, str(a, 'hash'))
+      return ok ? '校验通过：密码与哈希匹配' : '校验未通过：密码与哈希不匹配（或哈希格式不合法）'
+    }
+    if (op === 'strength') {
+      const s = passwordStrength(password)
+      const level = ['很弱', '弱', '一般', '强', '很强'][s.score]
+      const hints: Record<string, string> = {
+        length: '加长到 12 位以上',
+        upper: '加入大写字母',
+        lower: '加入小写字母',
+        digit: '加入数字',
+        symbol: '加入符号',
+        common: '包含常见弱密码词，直接换掉',
+      }
+      return [
+        `强度: ${level}（${s.score}/4）`,
+        `熵估算: ${s.bits} bit（字符池 ${s.poolSize} 个）`,
+        s.suggestions.length ? `建议: ${s.suggestions.map((x) => hints[x]).join('；')}` : '',
+      ]
+        .filter(Boolean)
+        .join('\n')
+    }
+    return bcryptHash(password, num(a, 'rounds', 10))
   },
 
   /* ---------- data ---------- */
@@ -296,7 +410,8 @@ export const HANDLERS: Record<string, ToolHandler> = {
     const mode = enumArg(a, 'mode', ['format', 'minify', 'sort'] as const, 'format')
     const text = str(a, 'text')
     if (mode === 'minify') return JSON.stringify(JSON.parse(text))
-    if (mode === 'sort') return JSON.stringify(jsonSortKeys(JSON.parse(text)), null, num(a, 'indent', 2))
+    if (mode === 'sort')
+      return JSON.stringify(jsonSortKeys(JSON.parse(text)), null, num(a, 'indent', 2))
     return jsonFormat(text, num(a, 'indent', 2))
   },
 
@@ -319,12 +434,55 @@ export const HANDLERS: Record<string, ToolHandler> = {
     return mode === 'yaml2json' ? yamlToJson(text, 2) : jsonToYaml(text)
   },
 
+  json_diff: (a) => {
+    const r = diffJson(str(a, 'left'), str(a, 'right'))
+    if (!r.ok) throw new Error(r.error)
+    if (r.entries.length === 0) return '两个 JSON 深度相等，没有差异'
+    const LIMIT = 200
+    const rows = r.entries.slice(0, LIMIT).map((e) => {
+      const where = e.path === '' ? '/' : e.path
+      const kind = e.kind === 'added' ? '新增' : e.kind === 'removed' ? '删除' : '修改'
+      const detail =
+        e.kind === 'added'
+          ? stringifyValue(e.right)
+          : e.kind === 'removed'
+            ? stringifyValue(e.left)
+            : `${stringifyValue(e.left)} → ${stringifyValue(e.right)}`
+      return `${kind}  ${where}  ${detail}`
+    })
+    const more =
+      r.entries.length > LIMIT ? `\n…（共 ${r.entries.length} 处差异，只显示前 ${LIMIT} 处）` : ''
+    return `共 ${r.entries.length} 处差异：\n${rows.join('\n')}${more}`
+  },
+
+  unit_convert: (a) => {
+    const from = enumArg(a, 'from', UNIT_IDS)
+    const value = num(a, 'value', 1)
+    const to = optEnum(a, 'to', UNIT_IDS)
+    if (to) {
+      const out = convertDataUnit(value, from, to)
+      if (out === null) throw new Error('单位不认识') // enumArg 已校验，这里只为类型收窄
+      return `${value} ${from} = ${out} ${to}`
+    }
+    return unitConvertAll(value, from)
+      .map((x) => `${x.unit}: ${x.value}`)
+      .join('\n')
+  },
+
+  docker2compose: (a) => {
+    const r = parseDockerRun(str(a, 'command'))
+    if ('error' in r) throw new Error(r.error)
+    return toComposeYaml([{ name: optStr(a, 'name', 'app'), image: r.image, service: r.service }])
+  },
+
   /* ---------- text ---------- */
   text_case: (a) => {
     const text = str(a, 'text')
     const style = optEnum(a, 'style', CASE_STYLES)
     if (!style) {
-      return convertCaseAll(text).map((x) => `${x.style}: ${x.value}`).join('\n')
+      return convertCaseAll(text)
+        .map((x) => `${x.style}: ${x.value}`)
+        .join('\n')
     }
     return convertCase(text, style)
   },
@@ -349,13 +507,21 @@ export const HANDLERS: Record<string, ToolHandler> = {
 
   check_tool_schema: (a) => {
     const raw = str(a, 'schema')
-    const target = enumArg({ target: str(a, 'target', false) }, 'target', SCHEMA_TARGETS, 'typescript')
+    const target = enumArg(
+      { target: str(a, 'target', false) },
+      'target',
+      SCHEMA_TARGETS,
+      'typescript',
+    )
     const { tools, issues } = parseToolSchema(raw)
     const code = renderSchema(tools, target as SchemaTarget)
     const { errors, warns } = summarizeIssues(issues)
     const names = tools.map((t) => t.name || '(未命名)').join(', ')
     const rows = issues.length
-      ? issues.map((i) => `  [${i.level === 'error' ? '错误' : '建议'}] ${i.code} @ ${i.path}${i.detail === undefined ? '' : `（${i.detail}）`}`)
+      ? issues.map(
+          (i) =>
+            `  [${i.level === 'error' ? '错误' : '建议'}] ${i.code} @ ${i.path}${i.detail === undefined ? '' : `（${i.detail}）`}`,
+        )
       : ['  （无问题）']
     return [
       `工具：${names}（共 ${tools.length} 个）`,
@@ -412,6 +578,25 @@ export const HANDLERS: Record<string, ToolHandler> = {
     return `+${add} 行 / -${del} 行\n\n` + diffAsText(a1, b1)
   },
 
+  glob_match: (a) => {
+    const patterns = str(a, 'patterns')
+      .split('\n')
+      .map((s) => s.trim())
+      .filter(Boolean)
+    const paths = str(a, 'paths')
+      .split('\n')
+      .map((s) => s.trim())
+      .filter(Boolean)
+    if (patterns.length === 0) throw new Error('patterns 至少要有一条')
+    const rows = globMatch(patterns, paths, { basename: bool(a, 'basename', false) })
+    return rows
+      .map(
+        (r) =>
+          `${r.matched ? '✓' : '✗'} ${r.path}${r.matchedBy.length ? `  ← ${r.matchedBy.join(', ')}` : ''}`,
+      )
+      .join('\n')
+  },
+
   /* ---------- GraphQL / HAR / TLS / SQL ---------- */
 
   graphql_parse_schema: (a) => {
@@ -432,24 +617,30 @@ export const HANDLERS: Record<string, ToolHandler> = {
     const fieldLines = (title: string, fields: typeof schema.queryFields): string =>
       fields.length === 0
         ? `${title}:（无）`
-        : `${title}:\n` + fields
-            .map(f => {
+        : `${title}:\n` +
+          fields
+            .map((f) => {
               const args = f.args.length
-                ? `(${f.args.map(x => `${x.name}: ${x.type}`).join(', ')})`
+                ? `(${f.args.map((x) => `${x.name}: ${x.type}`).join(', ')})`
                 : '()'
               return `  ${f.name}${args}: ${f.type}${f.desc ? `  // ${f.desc}` : ''}`
             })
             .join('\n')
-    const enums = schema.types.filter(t => t.enumValues.length > 0)
-    const enumText = enums.length === 0
-      ? ''
-      : '\n\n枚举:\n' + enums.map(t => `  ${t.name}: ${t.enumValues.join(' | ')}`).join('\n')
-    const others = schema.types.filter(t => t.name !== 'Query' && t.name !== 'Mutation' && t.enumValues.length === 0)
-    const otherText = others.length === 0
-      ? ''
-      : '\n\n其他类型:\n' + others
-          .map(t => `  ${t.name}${t.desc ? `  // ${t.desc}` : ''} (${t.fields.length} 字段)`)
-          .join('\n')
+    const enums = schema.types.filter((t) => t.enumValues.length > 0)
+    const enumText =
+      enums.length === 0
+        ? ''
+        : '\n\n枚举:\n' + enums.map((t) => `  ${t.name}: ${t.enumValues.join(' | ')}`).join('\n')
+    const others = schema.types.filter(
+      (t) => t.name !== 'Query' && t.name !== 'Mutation' && t.enumValues.length === 0,
+    )
+    const otherText =
+      others.length === 0
+        ? ''
+        : '\n\n其他类型:\n' +
+          others
+            .map((t) => `  ${t.name}${t.desc ? `  // ${t.desc}` : ''} (${t.fields.length} 字段)`)
+            .join('\n')
     return [
       `共 ${schema.types.length} 个类型（原始 ${schema.typeCount} 个，已过滤内置标量）`,
       '',
@@ -469,24 +660,39 @@ export const HANDLERS: Record<string, ToolHandler> = {
     } catch {
       return '不是合法的 HAR（需要 HAR 1.x 结构：log.entries）'
     }
-    const failed = sum.entries.filter(e => e.isFailed)
+    const failed = sum.entries.filter((e) => e.isFailed)
     const hosts = summarizeByHost(sum.entries)
     const waterfall = buildWaterfall(sum.entries)
-    const totalBytes = sum.entries.reduce((n, e) => n + (e.transferSize > 0 ? e.transferSize : 0), 0)
+    const totalBytes = sum.entries.reduce(
+      (n, e) => n + (e.transferSize > 0 ? e.transferSize : 0),
+      0,
+    )
     const head = [
       `HAR ${sum.version || '(未标注版本)'} · ${sum.creator || '未知导出工具'} · ${sum.pageCount} 页`,
       `共 ${sum.entries.length} 个请求，传输 ${formatBytes(totalBytes)}，失败 ${failed.length} 个`,
       '',
       '按域名占用:',
-      ...hosts.map(h => `  ${h.host}  ${h.count} 个  ${formatBytes(h.bytes)}${h.failed ? `  失败 ${h.failed}` : ''}`),
+      ...hosts.map(
+        (h) =>
+          `  ${h.host}  ${h.count} 个  ${formatBytes(h.bytes)}${h.failed ? `  失败 ${h.failed}` : ''}`,
+      ),
     ]
-    const rows = waterfall.slice(0, limit).map(r =>
-      `${String(r.status || 'ERR').padStart(3)} ${String(r.time + 'ms').padStart(8)}  ${r.method.padEnd(4)} ${r.host}${r.isFailed ? '  ✗' : ''}`,
-    )
+    const rows = waterfall
+      .slice(0, limit)
+      .map(
+        (r) =>
+          `${String(r.status || 'ERR').padStart(3)} ${String(r.time + 'ms').padStart(8)}  ${r.method.padEnd(4)} ${r.host}${r.isFailed ? '  ✗' : ''}`,
+      )
     if (rows.length === 0) return head.join('\n')
-    const more = waterfall.length > rows.length ? `\n…（共 ${waterfall.length} 条，此处显示前 ${rows.length} 条）` : ''
+    const more =
+      waterfall.length > rows.length
+        ? `\n…（共 ${waterfall.length} 条，此处显示前 ${rows.length} 条）`
+        : ''
     const failText = failed.length
-      ? `\n\n失败请求:\n${failed.slice(0, 10).map(e => `  ${e.status || 'ERR'} ${e.url}${e.error ? `  ${e.error}` : ''}`).join('\n')}`
+      ? `\n\n失败请求:\n${failed
+          .slice(0, 10)
+          .map((e) => `  ${e.status || 'ERR'} ${e.url}${e.error ? `  ${e.error}` : ''}`)
+          .join('\n')}`
       : ''
     return [...head, '', '请求明细（按开始时间）:', ...rows, more, failText].join('\n')
   },
@@ -519,7 +725,9 @@ export const HANDLERS: Record<string, ToolHandler> = {
         `  类型: ${c.isCa ? 'CA 证书' : '终端证书'}${c.keyBits ? ` · ${c.pubkeyAlg} ${c.keyBits} 位` : ''}`,
         c.sigAlg ? `  签名算法: ${c.sigAlg}` : '',
         c.fingerprint256 ? `  SHA-256: ${c.fingerprint256}` : '',
-      ].filter(Boolean).join('\n')
+      ]
+        .filter(Boolean)
+        .join('\n')
     })
     return [
       `${host}:${r.port} 握手成功（${r.elapsedMs}ms）`,
@@ -541,14 +749,15 @@ export const HANDLERS: Record<string, ToolHandler> = {
     const order = { error: 0, warn: 1, info: 2 } as const
     const sorted = [...issues].sort((x, y) => order[x.severity] - order[y.severity])
     const body = sorted
-      .map(i => {
-        const sev = i.severity === 'error' ? '[会失效索引]' : i.severity === 'warn' ? '[值得关注]' : '[提示]'
+      .map((i) => {
+        const sev =
+          i.severity === 'error' ? '[会失效索引]' : i.severity === 'warn' ? '[值得关注]' : '[提示]'
         return `${sev} L${i.line} ${i.message}\n  ${i.hint}`
       })
       .join('\n\n')
     const idx = suggestIndex(extractTable(sql), whereColumns(sql), issues)
     const idxText = idx.length
-      ? `\n\n索引建议:\n${idx.map(x => `  ${x.sql}\n  理由: ${x.reason}`).join('\n')}`
+      ? `\n\n索引建议:\n${idx.map((x) => `  ${x.sql}\n  理由: ${x.reason}`).join('\n')}`
       : ''
     return `发现 ${issues.length} 个问题:\n\n${body}${idxText}`
   },
@@ -561,13 +770,23 @@ export const HANDLERS: Record<string, ToolHandler> = {
     }
     const head = `共 ${r.tables.length} 个访问节点：`
     const body = r.tables
-      .map(t => `[${t.risk === 'high' ? '高风险' : t.risk === 'mid' ? '中等' : '低风险'}] ${t.name}  ${t.type || '—'}  扫描 ${t.rows} 行  索引 ${t.key || '未走'}${!t.key && t.possibleKeys ? `（可用：${t.possibleKeys}）` : ''}${t.filtered > 0 ? `  过滤率 ${t.filtered}%` : ''}${t.extra ? `  ${t.extra}` : ''}`)
+      .map(
+        (t) =>
+          `[${t.risk === 'high' ? '高风险' : t.risk === 'mid' ? '中等' : '低风险'}] ${t.name}  ${t.type || '—'}  扫描 ${t.rows} 行  索引 ${t.key || '未走'}${!t.key && t.possibleKeys ? `（可用：${t.possibleKeys}）` : ''}${t.filtered > 0 ? `  过滤率 ${t.filtered}%` : ''}${t.extra ? `  ${t.extra}` : ''}`,
+      )
       .join('\n')
     const total = r.tables.reduce((n, t) => n + t.rows, 0)
-    const high = r.tables.filter(t => t.risk === 'high')
-    const advice = high.length === 0
-      ? '\n\n没有明显的全表扫描。'
-      : '\n\n优化方向:\n' + high.map(t => `  ${t.name}: ${t.type === 'ALL' || t.type === 'Seq Scan' ? '全表扫描，加 WHERE 条件并给过滤字段建索引' : '检查索引是否被用上'}`).join('\n')
+    const high = r.tables.filter((t) => t.risk === 'high')
+    const advice =
+      high.length === 0
+        ? '\n\n没有明显的全表扫描。'
+        : '\n\n优化方向:\n' +
+          high
+            .map(
+              (t) =>
+                `  ${t.name}: ${t.type === 'ALL' || t.type === 'Seq Scan' ? '全表扫描，加 WHERE 条件并给过滤字段建索引' : '检查索引是否被用上'}`,
+            )
+            .join('\n')
     return `${head}\n${body}\n\n合计扫描 ${total} 行${advice}`
   },
 
@@ -587,9 +806,10 @@ export const HANDLERS: Record<string, ToolHandler> = {
     const head = `共替换 ${r.count} 处：\n`
     // 输出太长时截断并说明 —— 直接甩几万行给模型既费token 又淹没重点
     const LIMIT = 8000
-    const body = r.output.length > LIMIT
-      ? r.output.slice(0, LIMIT) + `\n…（输出共 ${r.output.length} 字符，已截断）`
-      : r.output
+    const body =
+      r.output.length > LIMIT
+        ? r.output.slice(0, LIMIT) + `\n…（输出共 ${r.output.length} 字符，已截断）`
+        : r.output
     return head + body
   },
 
@@ -613,7 +833,11 @@ export const HANDLERS: Record<string, ToolHandler> = {
     const ts = str(a, 'timestamp', false)
     const date = str(a, 'date', false)
     const unit = enumArg(a, 'unit', ['auto', 's', 'ms', 'us', 'ns'] as const, 'auto')
-    const parts = ts ? timestampToDate(ts, unit) : date ? dateToTimestamp(date) : timestampToDate(Date.now(), 'ms')
+    const parts = ts
+      ? timestampToDate(ts, unit)
+      : date
+        ? dateToTimestamp(date)
+        : timestampToDate(Date.now(), 'ms')
     return [
       `本地时间: ${parts.local}`,
       `UTC: ${parts.utc}`,
@@ -639,7 +863,9 @@ export const HANDLERS: Record<string, ToolHandler> = {
       if (e.code === 'BAD_FIELD') throw new Error(`无法解析字段：${e.field}`)
       throw new Error(`字段 ${e.field} 超出取值范围 ${e.min}-${e.max}`)
     }
-    return r.dates.map((d, i) => `#${i + 1}  ${formatLocal(d)}  周${'日一二三四五六'[d.getDay()]}`).join('\n')
+    return r.dates
+      .map((d, i) => `#${i + 1}  ${formatLocal(d)}  周${'日一二三四五六'[d.getDay()]}`)
+      .join('\n')
   },
 
   /* ---------- net ---------- */
@@ -741,16 +967,20 @@ export const HANDLERS: Record<string, ToolHandler> = {
     const locale = enumArg(a, 'locale', ['zh', 'en'] as const, 'zh')
     const format = enumArg(a, 'format', ['json', 'csv'] as const, 'json')
     const src = genL[locale].fakeData
-    const rows = generateFakeRows(locale, {
-      surnames: src.surnames,
-      givens: src.givens,
-      phonePrefixes: src.phonePrefixes,
-      domains: src.domains,
-      areas: src.areas,
-      firstNames: src.firstNames,
-      lastNames: src.lastNames,
-      enDomains: src.enDomains,
-    }, num(a, 'count', 10))
+    const rows = generateFakeRows(
+      locale,
+      {
+        surnames: src.surnames,
+        givens: src.givens,
+        phonePrefixes: src.phonePrefixes,
+        domains: src.domains,
+        areas: src.areas,
+        firstNames: src.firstNames,
+        lastNames: src.lastNames,
+        enDomains: src.enDomains,
+      },
+      num(a, 'count', 10),
+    )
     return format === 'csv' ? fakeRowsToCsv(rows) : JSON.stringify(rows, null, 2)
   },
 
@@ -782,10 +1012,16 @@ export const HANDLERS: Record<string, ToolHandler> = {
       `状态: ${res.status} ${res.statusText}  HTTP/${res.httpVersion}`,
       `远端: ${res.remoteAddress}${res.viaProxy ? '（经代理）' : ''}`,
       `耗时: 总计 ${res.timings.totalMs}ms（连接 ${res.timings.connectMs} / TLS ${res.timings.tlsMs} / 首字节 ${res.timings.ttfbMs}）`,
-      res.contentEncoding ? `内容编码: ${res.contentEncoding}${res.decompressed ? '（已解压）' : ''}` : '',
+      res.contentEncoding
+        ? `内容编码: ${res.contentEncoding}${res.decompressed ? '（已解压）' : ''}`
+        : '',
       res.truncated ? `注意: 响应体超过上限，已截断（原始 ${res.rawBytes} 字节）` : '',
-      res.redirects.length ? `重定向链: ${res.redirects.map((r) => `${r.status}→${r.location}`).join(' , ')}` : '',
-      res.tls ? `TLS: ${res.tls.protocol} ${res.tls.cipher}${res.tls.authorized ? '' : `（证书未通过校验: ${res.tls.authorizationError}）`}` : '',
+      res.redirects.length
+        ? `重定向链: ${res.redirects.map((r) => `${r.status}→${r.location}`).join(' , ')}`
+        : '',
+      res.tls
+        ? `TLS: ${res.tls.protocol} ${res.tls.cipher}${res.tls.authorized ? '' : `（证书未通过校验: ${res.tls.authorizationError}）`}`
+        : '',
       '',
       '响应头:',
       ...res.headers.map(([k, v]) => `  ${k}: ${v}`),

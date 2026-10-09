@@ -68,7 +68,8 @@ export const tlsInfoL = {
     port: 'Port',
     probe: 'Probe',
     probing: 'Connecting…',
-    desktopOnly: 'TLS probing requires the desktop app (browsers cannot expose the certificate chain).',
+    desktopOnly:
+      'TLS probing requires the desktop app (browsers cannot expose the certificate chain).',
     handshake: 'Handshake',
     protocol: 'Protocol',
     cipher: 'Cipher suite',
@@ -107,7 +108,8 @@ export const tlsInfoL = {
       ENOTFOUND: 'DNS resolution failed',
       CERT_HAS_EXPIRED: 'Certificate has expired',
       DEPTH_ZERO_SELF_SIGNED_CERT: 'Self-signed certificate, not trusted',
-      UNABLE_TO_VERIFY_LEAF_SIGNATURE: 'Cannot verify the certificate signature (usually a missing intermediate)',
+      UNABLE_TO_VERIFY_LEAF_SIGNATURE:
+        'Cannot verify the certificate signature (usually a missing intermediate)',
       ERR_TLS_CERT_ALTNAME_INVALID: 'Certificate hostname does not match the target',
       PROTOCOL_VERSION: 'Protocol version mismatch',
       CONN_FAILED: 'Connection failed',

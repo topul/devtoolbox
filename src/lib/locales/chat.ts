@@ -23,8 +23,10 @@ export const chatL = {
     settingsTitle: '对话设置',
     roundsRange: '1–20',
     skillsTitle: '技能预设（Skill）',
-    skillsHint: '把系统提示词、采样参数与工具配置打包成命名预设，一键应用。适合沉淀常用工作流，如「代码审查」「翻译润色」。',
-    skillScope: '保存范围：系统提示词、温度、maxTokens、topP、工具开关、工具白名单。不包含：模型、API Key、代理、请求头。',
+    skillsHint:
+      '把系统提示词、采样参数与工具配置打包成命名预设，一键应用。适合沉淀常用工作流，如「代码审查」「翻译润色」。',
+    skillScope:
+      '保存范围：系统提示词、温度、maxTokens、topP、工具开关、工具白名单。不包含：模型、API Key、代理、请求头。',
     skillSnapshot: '将保存',
     skillSaveAs: '存当前设置为预设',
     skillNamePh: '预设名称，如：代码审查',
@@ -55,7 +57,8 @@ export const chatL = {
     manageModels: '在设置中管理',
     addModel: '添加模型',
     pickModel: '选择模型',
-    modelsHint: '一条档案 = 接口地址 + API Key + 模型名。对话里切换只换这三件套，温度、系统提示、工具开关等参数保持不变。',
+    modelsHint:
+      '一条档案 = 接口地址 + API Key + 模型名。对话里切换只换这三件套，温度、系统提示、工具开关等参数保持不变。',
     modelNamePh: '给这个模型起个名（留空就用模型名）',
     modelIncomplete: '未填齐',
     modelActive: '当前',
@@ -145,7 +148,8 @@ export const chatL = {
     noUsageNote: '服务端未返回 usage，下面的 token 与费用是按输出字符估算的',
     noPriceNote: '价格表里没有这个模型，费用无法计算 —— 在下面补一条即可',
     priceTitle: '价格表',
-    priceNote: '单价为「元 / 百万 token」。这里只是本机参考值，请以服务商官网为准；改完立即生效并记住。',
+    priceNote:
+      '单价为「元 / 百万 token」。这里只是本机参考值，请以服务商官网为准；改完立即生效并记住。',
     priceModel: '模型（支持前缀）',
     priceIn: '输入',
     priceOut: '输出',
@@ -155,10 +159,12 @@ export const chatL = {
     costLabel: '本次费用',
     costDetail: '输入 {in} + 输出 {out}',
     toolsEnable: '让模型调用本机工具',
-    toolsHint: '开启后会把 {x} 的工具清单发给模型，由它自己决定调哪些。注意 http_request 会发起真实请求。',
+    toolsHint:
+      '开启后会把 {x} 的工具清单发给模型，由它自己决定调哪些。注意 http_request 会发起真实请求。',
     toolsReady: '工具服务端就绪',
     toolsNotBuilt: '内置工具服务端还没构建（先执行 npm run build:mcp）',
-    toolsWebOnly: '浏览器版无法启动本机进程：内置本机工具与 stdio 服务端不可用，仅「HTTP」工具源可用。',
+    toolsWebOnly:
+      '浏览器版无法启动本机进程：内置本机工具与 stdio 服务端不可用，仅「HTTP」工具源可用。',
     toolsEnableWeb: '让模型调用工具（HTTP 服务端）',
     toolSelfLabel: '本机 DevToolbox',
     maxRounds: '最多轮数',
@@ -223,8 +229,10 @@ export const chatL = {
     settingsTitle: 'Chat settings',
     roundsRange: '1–20',
     skillsTitle: 'Skill presets',
-    skillsHint: 'Bundle the system prompt, sampling parameters and tool configuration into named presets and apply them in one click. Good for saving recurring workflows such as "code review" or "polish translation".',
-    skillScope: 'Saved fields: system prompt, temperature, maxTokens, topP, tools on/off, tool allow-list. Not included: model, API key, proxy, extra headers.',
+    skillsHint:
+      'Bundle the system prompt, sampling parameters and tool configuration into named presets and apply them in one click. Good for saving recurring workflows such as "code review" or "polish translation".',
+    skillScope:
+      'Saved fields: system prompt, temperature, maxTokens, topP, tools on/off, tool allow-list. Not included: model, API key, proxy, extra headers.',
     skillSnapshot: 'Will save',
     skillSaveAs: 'Save current settings as preset',
     skillNamePh: 'Preset name, e.g. Code review',
@@ -241,7 +249,8 @@ export const chatL = {
     skillConfirmDel: 'Click again to confirm',
     toolAllow: 'Tool allow-list',
     toolAllowPh: 'Empty allows all tools',
-    toolAllowNote: 'Comma- or newline-separated original tool names; tools outside the list are never shown to the model.',
+    toolAllowNote:
+      'Comma- or newline-separated original tool names; tools outside the list are never shown to the model.',
     probeBtn: 'Test connection',
     probeTesting: 'Testing…',
     probeOkCount: (n: number) => `Connected · ${n} tools`,
@@ -249,13 +258,15 @@ export const chatL = {
     probeFail: 'Connection failed',
     probeIncomplete: 'Fill in the URL or launch command first',
     traceArchive: 'Archived',
-    emptyHint: 'The model can call local tools directly, and custom MCP servers can be attached in settings.',
+    emptyHint:
+      'The model can call local tools directly, and custom MCP servers can be attached in settings.',
     modelsTitle: 'Models',
     emptyProfiles: 'No models yet — add one below to start chatting',
     manageModels: 'Manage in settings',
     addModel: 'Add model',
     pickModel: 'Pick a model',
-    modelsHint: 'One profile = base URL + API key + model name. Switching only swaps these three; temperature, system prompt and tool settings stay as they are.',
+    modelsHint:
+      'One profile = base URL + API key + model name. Switching only swaps these three; temperature, system prompt and tool settings stay as they are.',
     modelNamePh: 'Name this model (falls back to the model id)',
     modelIncomplete: 'incomplete',
     modelActive: 'active',
@@ -278,7 +289,8 @@ export const chatL = {
     msgCount: (n: number) => `${n} msg`,
     savedHint: 'Chats are stored on this machine and survive a restart',
     storeTooLarge: 'Chat data hit the size limit — saving stopped. Start a new chat to continue.',
-    storeRecovered: 'The previous chat file was corrupt; the original was kept as .corrupt-*.json and the list restarted empty.',
+    storeRecovered:
+      'The previous chat file was corrupt; the original was kept as .corrupt-*.json and the list restarted empty.',
     storeFailed: 'Failed to save chat',
     guideTitle: 'How to use it',
     guideSteps: [
@@ -341,11 +353,14 @@ export const chatL = {
     finishReason: 'Finish reason',
     exact: 'exact',
     estimated: 'estimated',
-    estimateNote: 'Estimated from characters before sending (±20%); the server usage is authoritative',
-    noUsageNote: 'The server returned no usage; tokens and cost below are estimated from output length',
+    estimateNote:
+      'Estimated from characters before sending (±20%); the server usage is authoritative',
+    noUsageNote:
+      'The server returned no usage; tokens and cost below are estimated from output length',
     noPriceNote: 'No price entry matches this model, so cost cannot be computed — add one below',
     priceTitle: 'Price table',
-    priceNote: 'Unit is currency per 1M tokens. This is a local reference only — check your provider. Edits apply immediately and are remembered.',
+    priceNote:
+      'Unit is currency per 1M tokens. This is a local reference only — check your provider. Edits apply immediately and are remembered.',
     priceModel: 'Model (prefix match)',
     priceIn: 'Input',
     priceOut: 'Output',
@@ -355,10 +370,12 @@ export const chatL = {
     costLabel: 'Cost',
     costDetail: 'input {in} + output {out}',
     toolsEnable: 'Let the model call local tools',
-    toolsHint: 'Sends the tool list of {x} to the model and lets it decide what to call. Note that http_request performs real requests.',
+    toolsHint:
+      'Sends the tool list of {x} to the model and lets it decide what to call. Note that http_request performs real requests.',
     toolsReady: 'Tool server ready',
     toolsNotBuilt: 'The built-in tool server is not built yet (run npm run build:mcp)',
-    toolsWebOnly: 'The browser build cannot spawn local processes: built-in tools and stdio servers are unavailable — only "HTTP" servers work.',
+    toolsWebOnly:
+      'The browser build cannot spawn local processes: built-in tools and stdio servers are unavailable — only "HTTP" servers work.',
     toolsEnableWeb: 'Let the model call tools (HTTP servers)',
     toolSelfLabel: 'this DevToolbox',
     maxRounds: 'Max rounds',
@@ -378,7 +395,8 @@ export const chatL = {
     finishMaxRounds: 'max rounds reached',
     traceOpen: 'View call trace',
     traceTitle: 'Call trace',
-    traceMissing: 'No trace for this turn: traces live in memory for the current run only — restarted or older chats have none.',
+    traceMissing:
+      'No trace for this turn: traces live in memory for the current run only — restarted or older chats have none.',
     traceRound: 'Round {n}',
     traceHeaders: 'Request headers',
     traceRequestBody: 'Request body',
@@ -389,7 +407,8 @@ export const chatL = {
     preflight: 'About {n} tokens will be sent',
     empty: 'No messages yet. Set the base URL and model, then send something.',
     heroTitle: 'What are we making today?',
-    noDesktop: 'Streaming chat needs main-process capabilities (proxies, raw stream access); use the desktop app.',
+    noDesktop:
+      'Streaming chat needs main-process capabilities (proxies, raw stream access); use the desktop app.',
     hint: 'Notes',
     hintItems: [
       'While streaming the button becomes Stop — anything already received is kept.',

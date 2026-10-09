@@ -11,7 +11,14 @@
  */
 import readline from 'node:readline'
 import { MCP_TOOLS, MCP_GROUPS, toProtocolTools } from '../../src/lib/mcp-catalog'
-import { callTool, encodeMessage, handleMessage, LATEST_PROTOCOL, SERVER_NAME, type ServerMeta } from './server'
+import {
+  callTool,
+  encodeMessage,
+  handleMessage,
+  LATEST_PROTOCOL,
+  SERVER_NAME,
+  type ServerMeta,
+} from './server'
 
 // 版本号由构建脚本用 esbuild --define 注入，避免为了读 package.json 打开 resolveJsonModule
 const VERSION = process.env.DTB_VERSION ?? 'dev'
@@ -150,5 +157,9 @@ async function main(): Promise<number | null> {
 }
 
 void main().then((code) => {
-  if (code !== null) process.exit(code)
+  if (code === null) return
+  // 不能直接 process.exit：stdout 对管道是异步写，exit 会把没刷出去的输出
+  // （--list 有几 KB）随机截断在多字节字符中间。先排空流再退；
+  // 回调按写入顺序触发，所以空 write 会排在之前所有缓冲数据之后。
+  process.stdout.write('', (err) => process.exit(err ? 1 : code))
 })

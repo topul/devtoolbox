@@ -34,7 +34,8 @@ export const formatL = {
     markdown: {
       sourceTitle: 'markdown 源',
       previewTitle: '实时预览',
-      sample: '# Hello\n\n输入 **Markdown**，右侧实时预览。\n\n- 支持标题 / 列表 / 代码\n- `inline code`\n\n```js\nconsole.log("hack the planet")\n```',
+      sample:
+        '# Hello\n\n输入 **Markdown**，右侧实时预览。\n\n- 支持标题 / 列表 / 代码\n- `inline code`\n\n```js\nconsole.log("hack the planet")\n```',
     },
   },
   en: {
@@ -72,7 +73,8 @@ export const formatL = {
     markdown: {
       sourceTitle: 'Markdown Source',
       previewTitle: 'Live Preview',
-      sample: '# Hello\n\nType **Markdown**, live preview on the right.\n\n- Supports headings / lists / code\n- `inline code`\n\n```js\nconsole.log("hack the planet")\n```',
+      sample:
+        '# Hello\n\nType **Markdown**, live preview on the right.\n\n- Supports headings / lists / code\n- `inline code`\n\n```js\nconsole.log("hack the planet")\n```',
     },
   },
 }

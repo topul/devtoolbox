@@ -84,7 +84,8 @@ export const authToolsL = {
       reason: {
         OK: 'Signature is valid',
         BAD_FORMAT: 'Malformed (expected three base64url segments)',
-        ALG_MISMATCH: 'Declared algorithm differs from the expected one (possible algorithm-confusion attack)',
+        ALG_MISMATCH:
+          'Declared algorithm differs from the expected one (possible algorithm-confusion attack)',
         SIG_MISMATCH: 'Signature does not match the secret',
         NO_SIG: 'No signature segment (alg=none, or it was truncated)',
       } as Record<string, string>,
@@ -98,7 +99,8 @@ export const authToolsL = {
       addIat: 'Fill iat automatically',
       addExp: 'Fill exp from the TTL',
       note: '**Only HMAC (HS256/384/512) and none are supported.** RS/ES/PS need a private key, and generating a key pair in the browser is both slow and unsafe (the private key lands in memory) — that belongs on your server. `none` is fine against an internal test endpoint you own, but shipping it to a public API means shipping no authentication at all.',
-      unsupported: 'This tool does not sign RS/ES/PS — that needs a private key, so use a server-side SDK',
+      unsupported:
+        'This tool does not sign RS/ES/PS — that needs a private key, so use a server-side SDK',
     },
     totp: {
       secret: 'Base32 secret',

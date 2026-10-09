@@ -59,8 +59,10 @@ export const chatcompareL = {
     costLabel: 'cost ~',
     noPrice: 'cost unknown (model not in price table)',
     copyCol: 'Copy column',
-    noProfiles: 'Nothing to compare: at least one ready profile is required (one alone is hardly a comparison, though)',
+    noProfiles:
+      'Nothing to compare: at least one ready profile is required (one alone is hardly a comparison, though)',
     pickOne: 'Pick at least one model',
-    pureNote: 'Comparison runs without tools or system prompt; test tool abilities on the Chat page.',
+    pureNote:
+      'Comparison runs without tools or system prompt; test tool abilities on the Chat page.',
   },
 }

@@ -65,9 +65,15 @@ export const UI: Record<Locale, UIStrings> = {
     noMatchHome: (q: string) => <>没有找到匹配「{q}」的工具</>,
     disclaimer: '仅供授权测试与学习研究',
     localCompute: '所有计算均在本地完成',
-    hero: (n: number) => <>一个站点装下程序员与安全研究员的日常弹药库 — <span className="text-bright">{n} 个工具</span>，从 AI 对话调试、MCP 接入到 JSON 格式化与反弹 Shell。全部本地运算，数据不出浏览器。</>,
+    hero: (n: number) => (
+      <>
+        一个站点装下程序员与安全研究员的日常弹药库 — <span className="text-bright">{n} 个工具</span>
+        ，从 AI 对话调试、MCP 接入到 JSON 格式化与反弹 Shell。全部本地运算，数据不出浏览器。
+      </>
+    ),
     legalTitle: '[!] 法律与道德声明：',
-    legalBody: '本站渗透测试类工具（反弹 Shell、Payload 速查等）仅供安全研究、CTF 竞赛、授权渗透测试与防御学习使用。未经授权对他人系统发起测试属违法行为。所有运算均在本地浏览器完成，本站不收集任何输入数据。',
+    legalBody:
+      '本站渗透测试类工具（反弹 Shell、Payload 速查等）仅供安全研究、CTF 竞赛、授权渗透测试与防御学习使用。未经授权对他人系统发起测试属违法行为。所有运算均在本地浏览器完成，本站不收集任何输入数据。',
     toolsCount: (n: number) => `${n} 个工具`,
     langSwitch: 'EN',
     switchLangTip: '切换到英文',
@@ -110,9 +116,16 @@ export const UI: Record<Locale, UIStrings> = {
     noMatchHome: (q: string) => <>No tools matching "{q}"</>,
     disclaimer: 'For authorized testing & research only',
     localCompute: 'All computation happens locally',
-    hero: (n: number) => <>An everyday arsenal for developers & security researchers — <span className="text-bright">{n} tools</span>, from AI chat debugging and MCP wiring to JSON formatting and reverse shells. 100% local, data never leaves your machine.</>,
+    hero: (n: number) => (
+      <>
+        An everyday arsenal for developers & security researchers —{' '}
+        <span className="text-bright">{n} tools</span>, from AI chat debugging and MCP wiring to
+        JSON formatting and reverse shells. 100% local, data never leaves your machine.
+      </>
+    ),
     legalTitle: '[!] Legal & Ethics Notice:',
-    legalBody: 'Offensive tools (reverse shells, payload cheat sheets) are provided for security research, CTF, authorized pentesting and defensive education only. Testing others\' systems without authorization is illegal. All computation runs locally; no input data is collected.',
+    legalBody:
+      "Offensive tools (reverse shells, payload cheat sheets) are provided for security research, CTF, authorized pentesting and defensive education only. Testing others' systems without authorization is illegal. All computation runs locally; no input data is collected.",
     toolsCount: (n: number) => `${n} tools`,
     langSwitch: '中',
     switchLangTip: 'Switch to Chinese',
@@ -150,23 +163,26 @@ export const UI: Record<Locale, UIStrings> = {
 }
 
 /** Shared button labels used by src/components/ui.tsx primitives */
-export const COMMON: Record<Locale, {
-  copy: string
-  copied: string
-  /** Markdown 外链：点开走系统浏览器（应用窗口本身不导航） */
-  openInBrowser: string
-  /** Markdown 里的外链图片：CSP 只允许本地资源，外链一律不加载 */
-  imageBlocked: string
-  /** 抽屉 / 弹层关闭按钮的无障碍标签 */
-  close: string
-  /** 危险操作的行内二次确认（如「清空」点一次变「确认清空 / 取消」） */
-  confirm: string
-  cancel: string
-  /** 结果区被截断时的提示：已显示多少、共多少 */
-  showingOf: (shown: number, total: number) => string
-  /** 结果区空状态的引导：告诉用户这里该放什么 */
-  emptyResult: string
-}> = {
+export const COMMON: Record<
+  Locale,
+  {
+    copy: string
+    copied: string
+    /** Markdown 外链：点开走系统浏览器（应用窗口本身不导航） */
+    openInBrowser: string
+    /** Markdown 里的外链图片：CSP 只允许本地资源，外链一律不加载 */
+    imageBlocked: string
+    /** 抽屉 / 弹层关闭按钮的无障碍标签 */
+    close: string
+    /** 危险操作的行内二次确认（如「清空」点一次变「确认清空 / 取消」） */
+    confirm: string
+    cancel: string
+    /** 结果区被截断时的提示：已显示多少、共多少 */
+    showingOf: (shown: number, total: number) => string
+    /** 结果区空状态的引导：告诉用户这里该放什么 */
+    emptyResult: string
+  }
+> = {
   zh: {
     copy: '复制',
     copied: '✓ 已复制',

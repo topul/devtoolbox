@@ -26,9 +26,11 @@ export const jwtcrackL = {
     crackedTitle: '命中弱密钥',
     crackedDesc: '内置词表命中，密钥已泄露 —— 拿到它就能伪造任意身份的 token：',
     notCrackedTitle: '未命中内置词表',
-    notCrackedDesc: (n: number) => `内置的 ${n} 个常见弱密钥均不匹配。不代表密钥安全，只是不在常见词表里。`,
+    notCrackedDesc: (n: number) =>
+      `内置的 ${n} 个常见弱密钥均不匹配。不代表密钥安全，只是不在常见词表里。`,
     confusionTitle: '算法混淆风险',
-    confusionDesc: '非对称算法（RS/ES/PS）站点若校验不严、把公钥当 HMAC 密钥使用，攻击者可用公钥伪造 token。请确认服务端按 header.alg 白名单严格校验。',
+    confusionDesc:
+      '非对称算法（RS/ES/PS）站点若校验不严、把公钥当 HMAC 密钥使用，攻击者可用公钥伪造 token。请确认服务端按 header.alg 白名单严格校验。',
     notesTitle: '其他提示',
     noteAlgNone: 'header 声明 alg=none，签名为空',
     noteKidSuspicious: 'kid 含路径字符（. / \\），存在路径遍历 / 文件读取注入面',
@@ -66,17 +68,23 @@ export const jwtcrackL = {
     yes: 'Yes',
     no: 'No',
     noneAlgTitle: 'alg=none: unsigned',
-    noneAlgDesc: 'This token has no signature segment — anyone can forge an arbitrary payload. Servers must reject alg=none.',
+    noneAlgDesc:
+      'This token has no signature segment — anyone can forge an arbitrary payload. Servers must reject alg=none.',
     crackedTitle: 'Weak secret found',
-    crackedDesc: 'A built-in wordlist secret matched — the key is compromised and any identity can be forged:',
+    crackedDesc:
+      'A built-in wordlist secret matched — the key is compromised and any identity can be forged:',
     notCrackedTitle: 'No wordlist match',
-    notCrackedDesc: (n: number) => `None of the ${n} built-in common secrets matched. That does not mean the secret is strong — only that it is not a common one.`,
+    notCrackedDesc: (n: number) =>
+      `None of the ${n} built-in common secrets matched. That does not mean the secret is strong — only that it is not a common one.`,
     confusionTitle: 'Algorithm confusion risk',
-    confusionDesc: 'Servers using asymmetric algs (RS/ES/PS) can be tricked if they accept the public key as an HMAC secret. Verify the server enforces a strict header.alg allowlist.',
+    confusionDesc:
+      'Servers using asymmetric algs (RS/ES/PS) can be tricked if they accept the public key as an HMAC secret. Verify the server enforces a strict header.alg allowlist.',
     notesTitle: 'Other hints',
     noteAlgNone: 'header declares alg=none with an empty signature',
-    noteKidSuspicious: 'kid contains path characters (. / \\) — path traversal / file-read injection surface',
-    noteJkuPresent: 'header carries jku (JWK Set URL); a server that fetches keys from it can be hijacked',
+    noteKidSuspicious:
+      'kid contains path characters (. / \\) — path traversal / file-read injection surface',
+    noteJkuPresent:
+      'header carries jku (JWK Set URL); a server that fetches keys from it can be hijacked',
     noteX5uPresent: 'header carries x5u (X.509 cert URL); same risk as jku',
     noteWeakKey: 'the signature can be reproduced with a weak secret',
     forgeTitle: 'Forge demo',

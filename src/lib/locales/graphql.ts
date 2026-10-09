@@ -53,13 +53,15 @@ export const graphqlL = {
     endpoint: 'Endpoint',
     endpointPh: 'https://api.example.com/graphql',
     headers: 'Headers',
-    headersHint: 'One per line, formatted as `Name: value`. Credentials stay local and are never persisted.',
+    headersHint:
+      'One per line, formatted as `Name: value`. Credentials stay local and are never persisted.',
     fetchSchema: 'Fetch schema',
     fetching: 'Fetching…',
     schemaReady: 'Schema ready: {n} types',
     schemaFailed: 'Fetch failed: {msg}',
     noSchema: 'Schema not fetched yet',
-    noSchemaHint: 'Fill in the endpoint and click “Fetch schema” to see available fields and arguments.',
+    noSchemaHint:
+      'Fill in the endpoint and click “Fetch schema” to see available fields and arguments.',
     query: 'Query',
     queryPh: 'query GetUser($id: ID!) {\n  user(id: $id) {\n    id\n    email\n  }\n}',
     variables: 'Variables',
@@ -90,6 +92,7 @@ export const graphqlL = {
     noFields: '(no fields)',
     insertField: 'Insert',
     schemaTitle: 'Schema',
-    desktopNote: 'Requests go through the main process and share the engine with the HTTP client (proxy & timeout settings included).',
+    desktopNote:
+      'Requests go through the main process and share the engine with the HTTP client (proxy & timeout settings included).',
   },
 }

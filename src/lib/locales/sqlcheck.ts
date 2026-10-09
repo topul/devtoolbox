@@ -8,7 +8,7 @@ export const sqlCheckL = {
     tabLint: '静态检查',
     tabExplain: 'EXPLAIN 解读',
     sql: 'SQL',
-    sqlPh: 'SELECT id, name\nFROM users\nWHERE name LIKE \'%a%\'\nLIMIT 20',
+    sqlPh: "SELECT id, name\nFROM users\nWHERE name LIKE '%a%'\nLIMIT 20",
     check: '检查',
     checking: '检查中…',
     clear: '清空',
@@ -42,9 +42,11 @@ export const sqlCheckL = {
     },
     indexSuggest: '索引建议',
     noSuggest: '暂不需要额外索引',
-    limitation: '局限：静态分析看不到表结构，无法确定某列是数字还是字符串。因此隐式转换只按命名约定提示，可能漏报—— 真实执行计划请看 EXPLAIN 页签。',
+    limitation:
+      '局限：静态分析看不到表结构，无法确定某列是数字还是字符串。因此隐式转换只按命名约定提示，可能漏报—— 真实执行计划请看 EXPLAIN 页签。',
     explainInput: 'EXPLAIN 输出',
-    explainPh: '把 EXPLAIN 的结果粘进来：\n\n· MySQL 8：EXPLAIN FORMAT=JSON <query>\n· PostgreSQL：EXPLAIN (FORMAT JSON) <query>\n· 或直接贴 CLI 的文本表格',
+    explainPh:
+      '把 EXPLAIN 的结果粘进来：\n\n· MySQL 8：EXPLAIN FORMAT=JSON <query>\n· PostgreSQL：EXPLAIN (FORMAT JSON) <query>\n· 或直接贴 CLI 的文本表格',
     dialect: '数据库',
     parse: '解读',
     parsing: '解读中…',
@@ -91,21 +93,30 @@ export const sqlCheckL = {
       LARGE_OFFSET: 'Large OFFSET',
     },
     hints: {
-      SELECT_STAR: 'List the columns you actually need: more columns change cache-invalidation behaviour, fewer reduce I/O',
-      LIKE_PREFIX: 'A leading % defeats B-Tree indexes entirely. Use full-text search, or index the frequent prefixes separately',
-      NOT_IN: 'NOT IN returns nothing when the list contains NULL, and optimizers often rewrite it into a slower plan. Use NOT EXISTS',
+      SELECT_STAR:
+        'List the columns you actually need: more columns change cache-invalidation behaviour, fewer reduce I/O',
+      LIKE_PREFIX:
+        'A leading % defeats B-Tree indexes entirely. Use full-text search, or index the frequent prefixes separately',
+      NOT_IN:
+        'NOT IN returns nothing when the list contains NULL, and optimizers often rewrite it into a slower plan. Use NOT EXISTS',
       OR: 'Each OR branch struggles to use an index. Confirm every branch is indexed, otherwise consider UNION ALL',
-      CROSS_JOIN: 'Comma joins easily miss the join condition and become cartesian products. Use explicit JOIN ... ON',
-      FUNCTION_ON_COLUMN: 'Wrapping a column in a function defeats the index. Rewrite as a range condition',
+      CROSS_JOIN:
+        'Comma joins easily miss the join condition and become cartesian products. Use explicit JOIN ... ON',
+      FUNCTION_ON_COLUMN:
+        'Wrapping a column in a function defeats the index. Rewrite as a range condition',
       IMPLICIT_CONVERSION: 'Type mismatch defeats the index and may trigger a full scan',
-      BIG_LIMIT: 'Fetching that many rows at once is rarely the real need. Check whether you want pagination',
-      LARGE_OFFSET: 'A large OFFSET forces the database to scan and discard earlier rows. Use keyset pagination',
+      BIG_LIMIT:
+        'Fetching that many rows at once is rarely the real need. Check whether you want pagination',
+      LARGE_OFFSET:
+        'A large OFFSET forces the database to scan and discard earlier rows. Use keyset pagination',
     },
     indexSuggest: 'Index suggestions',
     noSuggest: 'No extra index needed',
-    limitation: 'Limitation: static analysis has no schema access, so it cannot tell numeric columns from string ones. Implicit-conversion hints rely on naming conventions and may miss cases — check the EXPLAIN tab for the real plan.',
+    limitation:
+      'Limitation: static analysis has no schema access, so it cannot tell numeric columns from string ones. Implicit-conversion hints rely on naming conventions and may miss cases — check the EXPLAIN tab for the real plan.',
     explainInput: 'EXPLAIN output',
-    explainPh: 'Paste an EXPLAIN result:\n\n· MySQL 8: EXPLAIN FORMAT=JSON <query>\n· PostgreSQL: EXPLAIN (FORMAT JSON) <query>\n· or the text table straight from the CLI',
+    explainPh:
+      'Paste an EXPLAIN result:\n\n· MySQL 8: EXPLAIN FORMAT=JSON <query>\n· PostgreSQL: EXPLAIN (FORMAT JSON) <query>\n· or the text table straight from the CLI',
     dialect: 'Database',
     parse: 'Read plan',
     parsing: 'Reading…',
@@ -119,7 +130,8 @@ export const sqlCheckL = {
     filtered: 'Filtered',
     extra: 'Extra',
     risk: { high: 'High', mid: 'Medium', low: 'Low' },
-    unparsed: "Couldn't recognise this output. Make sure you pasted an EXPLAIN result (JSON or text table), not the SQL itself.",
+    unparsed:
+      "Couldn't recognise this output. Make sure you pasted an EXPLAIN result (JSON or text table), not the SQL itself.",
     totalRows: '{n} rows scanned in total',
     noExplain: 'No plan parsed yet',
     localOnly: 'Everything is computed locally; no database connection.',

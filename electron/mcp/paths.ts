@@ -77,12 +77,22 @@ export function configHints(home: string, platform: NodeJS.Platform): ConfigHint
   if (platform === 'darwin') {
     hints.push({
       client: 'Claude Desktop',
-      path: path.join(home, 'Library', 'Application Support', 'Claude', 'claude_desktop_config.json'),
+      path: path.join(
+        home,
+        'Library',
+        'Application Support',
+        'Claude',
+        'claude_desktop_config.json',
+      ),
     })
   } else if (platform === 'win32') {
     hints.push({
       client: 'Claude Desktop',
-      path: path.join(process.env.APPDATA ?? path.join(home, 'AppData', 'Roaming'), 'Claude', 'claude_desktop_config.json'),
+      path: path.join(
+        process.env.APPDATA ?? path.join(home, 'AppData', 'Roaming'),
+        'Claude',
+        'claude_desktop_config.json',
+      ),
     })
   } else {
     hints.push({

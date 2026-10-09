@@ -44,7 +44,12 @@ function ok(id: string | number | null, result: unknown): JsonRpcMessage {
   return { jsonrpc: '2.0', id, result }
 }
 
-function fail(id: string | number | null, code: number, message: string, data?: unknown): JsonRpcMessage {
+function fail(
+  id: string | number | null,
+  code: number,
+  message: string,
+  data?: unknown,
+): JsonRpcMessage {
   return { jsonrpc: '2.0', id, error: { code, message, ...(data === undefined ? {} : { data }) } }
 }
 
@@ -53,8 +58,13 @@ function listTools(): { tools: ReturnType<typeof toProtocolTools> } {
   return { tools: toProtocolTools() }
 }
 
-function contentText(text: string, isError = false): { content: { type: 'text'; text: string }[]; isError?: boolean } {
-  return isError ? { content: [{ type: 'text', text }], isError: true } : { content: [{ type: 'text', text }] }
+function contentText(
+  text: string,
+  isError = false,
+): { content: { type: 'text'; text: string }[]; isError?: boolean } {
+  return isError
+    ? { content: [{ type: 'text', text }], isError: true }
+    : { content: [{ type: 'text', text }] }
 }
 
 function stringify(result: ToolResult): string {

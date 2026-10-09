@@ -7,7 +7,14 @@ export const httpClientL = {
     send: '发送',
     sending: '请求中…',
     cancel: '取消',
-    tabs: { params: '参数', headers: '请求头', body: '请求体', auth: '认证', options: '选项', cookies: 'Cookie' },
+    tabs: {
+      params: '参数',
+      headers: '请求头',
+      body: '请求体',
+      auth: '认证',
+      options: '选项',
+      cookies: 'Cookie',
+    },
     kv: {
       name: '名称',
       value: '值',
@@ -28,7 +35,8 @@ export const httpClientL = {
       presetNoCache: '禁用缓存',
       presetCors: 'CORS 预检',
       presetAuth: 'Bearer 占位',
-      autoNote: '发送时会自动补充 Host、Content-Length、Accept-Encoding（可在选项里关闭自动补头）。',
+      autoNote:
+        '发送时会自动补充 Host、Content-Length、Accept-Encoding（可在选项里关闭自动补头）。',
       cookieAdded: '已写入 Cookie 请求头（同名自动替换），切到「请求头」页签可查看',
     },
     body: {
@@ -56,7 +64,8 @@ export const httpClientL = {
       badJson: 'JSON 语法错误，已按原文发送',
       contentType: 'Content-Type',
       fieldsTitle: '表单字段',
-      fileNote: 'multipart 的文件字段会在发送时用占位文件名，便于调试接口校验；需要真实文件请用 curl 或桌面端脚本。',
+      fileNote:
+        'multipart 的文件字段会在发送时用占位文件名，便于调试接口校验；需要真实文件请用 curl 或桌面端脚本。',
       byteNote: (n: number) => `正文 ${n} 字节`,
     },
     auth: {
@@ -83,7 +92,8 @@ export const httpClientL = {
       proxyTitle: '代理设置',
       proxyDirect: '直连',
       proxyPlaceholder: '127.0.0.1:7890',
-      proxyHint: '支持 http:// 、https:// 、socks5://，可带账号密码（http://user:pass@host:port）；直连不通时填这里。',
+      proxyHint:
+        '支持 http:// 、https:// 、socks5://，可带账号密码（http://user:pass@host:port）；直连不通时填这里。',
       proxyRemember: '代理设置会随请求历史一起保留。',
       useCaptured: '用内置抓包代理',
       capturedUnavailable: '内置抓包代理未运行',
@@ -138,7 +148,8 @@ export const httpClientL = {
       savePrompt: '收藏名称',
       remove: '删除',
       noSaved: '暂无收藏',
-      bodyTrimmed: (n: number) => `该记录的大正文已按存储上限截断，回填的是前 ${Math.round(n / 1000)}k 字符，请确认后再发送`,
+      bodyTrimmed: (n: number) =>
+        `该记录的大正文已按存储上限截断，回填的是前 ${Math.round(n / 1000)}k 字符，请确认后再发送`,
     },
     code: {
       title: '生成代码',
@@ -159,8 +170,10 @@ export const httpClientL = {
       title: '导入 / 导出',
       open: '导入 / 粘贴请求',
       pasteLabel: '粘贴请求',
-      pasteHint: '支持 Chrome DevTools 的「Copy as cURL」、PowerShell 的 curl.exe 命令，以及本工具导出的 JSON。单条请求会直接填进表单，多条会并入收藏。',
-      pastePlaceholder: 'curl \'https://api.example.com/v1/users\' \\\n  -H \'Accept: application/json\'',
+      pasteHint:
+        '支持 Chrome DevTools 的「Copy as cURL」、PowerShell 的 curl.exe 命令，以及本工具导出的 JSON。单条请求会直接填进表单，多条会并入收藏。',
+      pastePlaceholder:
+        "curl 'https://api.example.com/v1/users' \\\n  -H 'Accept: application/json'",
       detect: '识别并导入',
       clear: '清空',
       copyJson: '复制当前 JSON',
@@ -170,7 +183,8 @@ export const httpClientL = {
       exportTitle: '导出请求',
       importTitle: '导入请求',
       loaded: (headers: number) => `已填入表单（识别到 ${headers} 个请求头）`,
-      imported: (added: number, skipped: number) => `已导入 ${added} 条${skipped > 0 ? `，跳过重复 ${skipped} 条` : ''}`,
+      imported: (added: number, skipped: number) =>
+        `已导入 ${added} 条${skipped > 0 ? `，跳过重复 ${skipped} 条` : ''}`,
       savedTo: (path: string) => `已保存到 ${path}`,
       canceled: '已取消',
       noSaved: '还没有收藏可以导出',
@@ -206,7 +220,8 @@ export const httpClientL = {
       compare: '与当前对比',
       remove: '删除',
       close: '关闭对比',
-      diffWith: (method: string, url: string, time: string) => `对比：${method} ${url}（${time}）vs 当前响应`,
+      diffWith: (method: string, url: string, time: string) =>
+        `对比：${method} ${url}（${time}）vs 当前响应`,
       truncatedNote: (n: number) => `正文过长，diff 只取两侧前 ${n} 行`,
     },
     envs: {
@@ -229,7 +244,8 @@ export const httpClientL = {
       emptyUrl: '请先填写请求 URL',
       requestFailed: '请求失败',
       badProxy: '代理地址无法解析',
-      missingVars: (names: string[]) => `当前环境缺少变量：${names.join('、')}，请在「环境变量」里补齐`,
+      missingVars: (names: string[]) =>
+        `当前环境缺少变量：${names.join('、')}，请在「环境变量」里补齐`,
       storageFull: '本地存储写入失败（配额已满或隐私模式），最近的更改可能没有保存',
     },
     misc: {
@@ -259,7 +275,14 @@ export const httpClientL = {
     send: 'Send',
     sending: 'Sending…',
     cancel: 'Cancel',
-    tabs: { params: 'Params', headers: 'Headers', body: 'Body', auth: 'Auth', options: 'Options', cookies: 'Cookies' },
+    tabs: {
+      params: 'Params',
+      headers: 'Headers',
+      body: 'Body',
+      auth: 'Auth',
+      options: 'Options',
+      cookies: 'Cookies',
+    },
     kv: {
       name: 'Name',
       value: 'Value',
@@ -280,7 +303,8 @@ export const httpClientL = {
       presetNoCache: 'No cache',
       presetCors: 'CORS preflight',
       presetAuth: 'Bearer placeholder',
-      autoNote: 'Host, Content-Length and Accept-Encoding are added automatically when sending (can be disabled in Options).',
+      autoNote:
+        'Host, Content-Length and Accept-Encoding are added automatically when sending (can be disabled in Options).',
       cookieAdded: 'Cookie header written (same-name replaced) — check the Headers tab',
     },
     body: {
@@ -300,7 +324,8 @@ export const httpClientL = {
       replaceFile: 'Replace file',
       clearFile: 'Remove file',
       fileTooLarge: 'File too large (8MB limit)',
-      fileNotPersisted: 'File content lives in memory only — reselect after switching tools or restarting',
+      fileNotPersisted:
+        'File content lives in memory only — reselect after switching tools or restarting',
       fileFieldsTitle: 'File fields (byte-appended into multipart at send time)',
       addFileField: 'Add file field',
       placeholder: 'Request payload',
@@ -308,7 +333,8 @@ export const httpClientL = {
       badJson: 'Invalid JSON, will be sent as-is',
       contentType: 'Content-Type',
       fieldsTitle: 'Form fields',
-      fileNote: 'Multipart file fields are sent with a placeholder filename to probe server-side validation. Use curl or a script for real files.',
+      fileNote:
+        'Multipart file fields are sent with a placeholder filename to probe server-side validation. Use curl or a script for real files.',
       byteNote: (n: number) => `${n} bytes of payload`,
     },
     auth: {
@@ -335,12 +361,15 @@ export const httpClientL = {
       proxyTitle: 'Proxy',
       proxyDirect: 'direct',
       proxyPlaceholder: '127.0.0.1:7890',
-      proxyHint: 'Accepts http://, https:// and socks5://, optionally with credentials (http://user:pass@host:port). Use it when direct connections are blocked.',
+      proxyHint:
+        'Accepts http://, https:// and socks5://, optionally with credentials (http://user:pass@host:port). Use it when direct connections are blocked.',
       proxyRemember: 'The proxy setting is kept with your request history.',
       useCaptured: 'Use built-in capture proxy',
       capturedUnavailable: 'Capture proxy is not running',
-      capturedTip: 'Send this request through the capture proxy so it also shows up in Traffic Analysis.',
-      tlsNote: 'Disabling verification lets you reach dev servers with self-signed certs, at the cost of MITM protection.',
+      capturedTip:
+        'Send this request through the capture proxy so it also shows up in Traffic Analysis.',
+      tlsNote:
+        'Disabling verification lets you reach dev servers with self-signed certs, at the cost of MITM protection.',
     },
     response: {
       empty: 'No response yet — fill in the request and hit Send.',
@@ -390,7 +419,8 @@ export const httpClientL = {
       savePrompt: 'Saved name',
       remove: 'Remove',
       noSaved: 'Nothing saved',
-      bodyTrimmed: (n: number) => `The large body in this entry was truncated to the first ${Math.round(n / 1000)}k chars for storage — review it before sending`,
+      bodyTrimmed: (n: number) =>
+        `The large body in this entry was truncated to the first ${Math.round(n / 1000)}k chars for storage — review it before sending`,
     },
     code: {
       title: 'Generate code',
@@ -411,8 +441,10 @@ export const httpClientL = {
       title: 'Import / Export',
       open: 'Import / paste request',
       pasteLabel: 'Paste a request',
-      pasteHint: 'Accepts Chrome DevTools “Copy as cURL”, PowerShell curl.exe commands, and JSON exported by this tool. A single request is loaded into the form; multiple requests are merged into Saved.',
-      pastePlaceholder: 'curl \'https://api.example.com/v1/users\' \\\n  -H \'Accept: application/json\'',
+      pasteHint:
+        'Accepts Chrome DevTools “Copy as cURL”, PowerShell curl.exe commands, and JSON exported by this tool. A single request is loaded into the form; multiple requests are merged into Saved.',
+      pastePlaceholder:
+        "curl 'https://api.example.com/v1/users' \\\n  -H 'Accept: application/json'",
       detect: 'Detect & import',
       clear: 'Clear',
       copyJson: 'Copy current JSON',
@@ -422,7 +454,8 @@ export const httpClientL = {
       exportTitle: 'Export request',
       importTitle: 'Import request',
       loaded: (headers: number) => `Loaded into the form (${headers} headers found)`,
-      imported: (added: number, skipped: number) => `Imported ${added}${skipped > 0 ? `, skipped ${skipped} duplicate(s)` : ''}`,
+      imported: (added: number, skipped: number) =>
+        `Imported ${added}${skipped > 0 ? `, skipped ${skipped} duplicate(s)` : ''}`,
       savedTo: (path: string) => `Saved to ${path}`,
       canceled: 'Canceled',
       noSaved: 'Nothing saved to export yet',
@@ -436,7 +469,8 @@ export const httpClientL = {
         HEADER_NO_COLON: (h: string) => `Header “${h}” has no colon; treated as an empty value`,
       },
       err: {
-        desktopOnly: 'File import/export needs the desktop app; copy the JSON and save it manually instead.',
+        desktopOnly:
+          'File import/export needs the desktop app; copy the JSON and save it manually instead.',
         emptyInput: 'Paste something first',
         noUrl: 'No URL found — check the command is complete',
         unsupported: 'PowerShell Invoke-WebRequest is not supported; use a curl command instead',
@@ -454,12 +488,15 @@ export const httpClientL = {
       saved: 'Snapshot saved — compare it with a later response in "Snapshots"',
       saveBinary: 'Binary responses cannot be snapshotted',
       hint: 'Snapshots store the decoded body text only (latest 8, up to 300k chars each). Send a new request, then hit "Compare" below to see the diff.',
-      empty: 'No snapshots yet — send a request first, then click "Save snapshot" in the response header.',
+      empty:
+        'No snapshots yet — send a request first, then click "Save snapshot" in the response header.',
       compare: 'Compare with current',
       remove: 'Delete',
       close: 'Close diff',
-      diffWith: (method: string, url: string, time: string) => `Diff: ${method} ${url} (${time}) vs current response`,
-      truncatedNote: (n: number) => `Body too long — diff limited to the first ${n} lines on each side`,
+      diffWith: (method: string, url: string, time: string) =>
+        `Diff: ${method} ${url} (${time}) vs current response`,
+      truncatedNote: (n: number) =>
+        `Body too long — diff limited to the first ${n} lines on each side`,
     },
     envs: {
       title: 'Environments',
@@ -477,32 +514,43 @@ export const httpClientL = {
       varCount: (n: number) => `${n} variable${n === 1 ? '' : 's'}`,
     },
     errors: {
-      desktopOnly: 'This tool must run inside the desktop app (browsers cannot bypass cross-origin restrictions).',
+      desktopOnly:
+        'This tool must run inside the desktop app (browsers cannot bypass cross-origin restrictions).',
       emptyUrl: 'Enter a request URL first',
       requestFailed: 'Request failed',
       badProxy: 'Proxy URL cannot be parsed',
-      missingVars: (names: string[]) => `Missing variables in the active environment: ${names.join(', ')}`,
-      storageFull: 'Failed to write local storage (quota full or private mode) — recent changes may not be saved',
+      missingVars: (names: string[]) =>
+        `Missing variables in the active environment: ${names.join(', ')}`,
+      storageFull:
+        'Failed to write local storage (quota full or private mode) — recent changes may not be saved',
     },
     misc: {
       sendTip: 'Press Ctrl/⌘ + Enter to send',
       clearResponse: 'Clear response',
-      repeatTip: 'Repeat count (1-20): sends sequentially, stops on first failure, summary shown below',
+      repeatTip:
+        'Repeat count (1-20): sends sequentially, stops on first failure, summary shown below',
       repeatDone: (n: number, line: string) => `Sent ${n} times: ${line}`,
     },
     errHints: {
-      ECONNREFUSED: 'Connection refused: nothing is listening on the target port — check host and port.',
+      ECONNREFUSED:
+        'Connection refused: nothing is listening on the target port — check host and port.',
       ENOTFOUND: 'DNS resolution failed: check the URL spelling or your DNS settings.',
       EAI_AGAIN: 'DNS temporarily unavailable: retry later or check network connectivity.',
-      ETIMEDOUT: 'Connection timed out: check firewall, reachability, or whether the service is overloaded.',
-      ECONNRESET: 'Connection reset by peer: the service may have crashed, or a middlebox blocked the request.',
+      ETIMEDOUT:
+        'Connection timed out: check firewall, reachability, or whether the service is overloaded.',
+      ECONNRESET:
+        'Connection reset by peer: the service may have crashed, or a middlebox blocked the request.',
       EHOSTUNREACH: 'Host unreachable: check routing or VPN configuration.',
       ENETUNREACH: 'Network unreachable: check your network connection.',
       EPROTO: 'Protocol error: usually https against a plain-http port (or the reverse).',
-      CERT_HAS_EXPIRED: 'Certificate expired: for debugging only, disable TLS verification in Options.',
-      DEPTH_ZERO_SELF_SIGNED_CERT: 'Self-signed certificate: fine for local debugging, never disable TLS checks in production.',
-      UNABLE_TO_VERIFY_LEAF_SIGNATURE: 'Certificate chain verification failed: intermediate certificate may be missing.',
-      EMAXREDIRECT: 'Too many redirects: the server may be redirecting in a loop — check URL and auth.',
+      CERT_HAS_EXPIRED:
+        'Certificate expired: for debugging only, disable TLS verification in Options.',
+      DEPTH_ZERO_SELF_SIGNED_CERT:
+        'Self-signed certificate: fine for local debugging, never disable TLS checks in production.',
+      UNABLE_TO_VERIFY_LEAF_SIGNATURE:
+        'Certificate chain verification failed: intermediate certificate may be missing.',
+      EMAXREDIRECT:
+        'Too many redirects: the server may be redirecting in a loop — check URL and auth.',
       EBADPROTOCOL: 'Only http/https protocols are supported.',
     } as Record<string, string>,
   },

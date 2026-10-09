@@ -56,7 +56,8 @@ export function parseProxyUrl(raw: string | null | undefined): URL | null {
   if (!s) return null
   try {
     const u = new URL(s.includes('://') ? s : `http://${s}`)
-    if (!u.port) u.port = /^socks/i.test(u.protocol) ? '1080' : u.protocol === 'https:' ? '443' : '80'
+    if (!u.port)
+      u.port = /^socks/i.test(u.protocol) ? '1080' : u.protocol === 'https:' ? '443' : '80'
     return u
   } catch {
     return null
@@ -73,17 +74,31 @@ function socks5ConnectRequest(host: string, port: number): Buffer {
   const isIpv4 = /^\d{1,3}(\.\d{1,3}){3}$/.test(host)
   const head = Buffer.from([0x05, 0x01, 0x00, isIpv4 ? 0x01 : 0x03])
   if (isIpv4) {
-    return Buffer.concat([head, Buffer.from(host.split('.').map((n) => Number(n))), Buffer.from([(port >> 8) & 0xff, port & 0xff])])
+    return Buffer.concat([
+      head,
+      Buffer.from(host.split('.').map((n) => Number(n))),
+      Buffer.from([(port >> 8) & 0xff, port & 0xff]),
+    ])
   }
   const name = Buffer.from(host, 'utf8')
-  return Buffer.concat([head, Buffer.from([name.length]), name, Buffer.from([(port >> 8) & 0xff, port & 0xff])])
+  return Buffer.concat([
+    head,
+    Buffer.from([name.length]),
+    name,
+    Buffer.from([(port >> 8) & 0xff, port & 0xff]),
+  ])
 }
 
 /**
  * SOCKS5 握手（无认证或用户名密码认证），返回已连到目标的裸 socket。
  * 连上之后这个 socket 对上层就是「透明 TCP 通道」——http 直接写报文，https 再套一层 TLS。
  */
-function openSocksTunnel(proxy: URL, host: string, port: number, timeoutMs: number): Promise<net.Socket> {
+function openSocksTunnel(
+  proxy: URL,
+  host: string,
+  port: number,
+  timeoutMs: number,
+): Promise<net.Socket> {
   return new Promise((resolve, reject) => {
     const socket = net.connect({ host: proxy.hostname, port: Number(proxy.port) })
     const user = decodeURIComponent(proxy.username || '')
@@ -117,7 +132,9 @@ function openSocksTunnel(proxy: URL, host: string, port: number, timeoutMs: numb
           stage = 'auth'
           const u = Buffer.from(user, 'utf8')
           const p = Buffer.from(pass, 'utf8')
-          socket.write(Buffer.concat([Buffer.from([0x01, u.length]), u, Buffer.from([p.length]), p]))
+          socket.write(
+            Buffer.concat([Buffer.from([0x01, u.length]), u, Buffer.from([p.length]), p]),
+          )
           return
         }
         stage = 'connect'
@@ -136,7 +153,18 @@ function openSocksTunnel(proxy: URL, host: string, port: number, timeoutMs: numb
       // connect 应答：VER REP RSV ATYP BND.ADDR BND.PORT
       if (buf.length < 5) return
       if (buf[1] !== 0x00) {
-        const reason = ['成功', '一般性失败', '规则不允许', '网络不可达', '主机不可达', '连接被拒', 'TTL 过期', '命令不支持', '地址类型不支持'][buf[1]] ?? `代码 ${buf[1]}`
+        const reason =
+          [
+            '成功',
+            '一般性失败',
+            '规则不允许',
+            '网络不可达',
+            '主机不可达',
+            '连接被拒',
+            'TTL 过期',
+            '命令不支持',
+            '地址类型不支持',
+          ][buf[1]] ?? `代码 ${buf[1]}`
         return fail(new Error(`SOCKS 代理无法连接目标：${reason}`))
       }
       const atyp = buf[3]
@@ -178,7 +206,8 @@ function toHeaderObject(list: [string, string][]): Record<string, string | strin
 }
 
 function specBody(spec: HttpRequestSpec): Buffer | null {
-  if (spec.bodyBase64 != null && spec.bodyBase64 !== '') return Buffer.from(spec.bodyBase64, 'base64')
+  if (spec.bodyBase64 != null && spec.bodyBase64 !== '')
+    return Buffer.from(spec.bodyBase64, 'base64')
   if (spec.bodyText != null && spec.bodyText !== '') return Buffer.from(spec.bodyText, 'utf8')
   return null
 }
@@ -243,7 +272,9 @@ function describeTls(s: tls.TLSSocket, err?: Error): TlsInfo | null {
       protocol: s.getProtocol?.() ?? '',
       cipher: s.getCipher?.()?.name ?? '',
       authorized: !!s.authorized,
-      authorizationError: s.authorizationError ? String(s.authorizationError) : (err?.message ?? null),
+      authorizationError: s.authorizationError
+        ? String(s.authorizationError)
+        : (err?.message ?? null),
       subject: cert?.subject ? Object.values(cert.subject).join(', ') : '',
       issuer: cert?.issuer ? Object.values(cert.issuer).join(', ') : '',
       validTo: cert?.valid_to ?? '',
@@ -338,7 +369,9 @@ function openTunnel(
         reject(Object.assign(err, { tls: describeTls(tlsSocket, err) }))
       })
     })
-    req.on('timeout', () => { req.destroy(new Error(`代理连接超时 (${timeoutMs}ms)`)) })
+    req.on('timeout', () => {
+      req.destroy(new Error(`代理连接超时 (${timeoutMs}ms)`))
+    })
     req.on('error', reject)
     req.end()
   })
@@ -349,7 +382,10 @@ function tunnelAgent(socket: net.Socket): http.Agent {
   const agent = new http.Agent({ keepAlive: false, maxSockets: 1 })
   // createConnection 是 node 内部约定回调，类型声明与实现签名不一致，这里显式改写
   const patched = agent as unknown as {
-    createConnection: (options: unknown, callback: (err: Error | null, stream?: net.Socket) => void) => void
+    createConnection: (
+      options: unknown,
+      callback: (err: Error | null, stream?: net.Socket) => void,
+    ) => void
   }
   patched.createConnection = (_options, callback) => callback(null, socket)
   return agent
@@ -379,7 +415,10 @@ function sendHop(o: HopOptions): Promise<HopResult> {
     const onSocket = (socket: net.Socket): void => {
       socketRef = socket
       if (connectMs === 0) connectMs = socket.connecting ? 0 : -1
-      if (socket.connecting) socket.once('connect', () => { connectMs = Date.now() - started })
+      if (socket.connecting)
+        socket.once('connect', () => {
+          connectMs = Date.now() - started
+        })
       else connectMs = Date.now() - started
       const s = socket as tls.TLSSocket
       if (typeof s.getPeerCertificate === 'function') {
@@ -391,7 +430,9 @@ function sendHop(o: HopOptions): Promise<HopResult> {
     }
 
     const finish = (req: http.ClientRequest) => {
-      req.on('response', () => { ttfbMs = Date.now() - started })
+      req.on('response', () => {
+        ttfbMs = Date.now() - started
+      })
       o.stream?.onRequest?.(req)
       if (body && body.length) req.write(body)
       req.end()
@@ -407,10 +448,14 @@ function sendHop(o: HopOptions): Promise<HopResult> {
       }
       const chunks: Buffer[] = []
       let size = 0
-      res.on('data', (c: Buffer) => { chunks.push(c); size += c.length })
+      res.on('data', (c: Buffer) => {
+        chunks.push(c)
+        size += c.length
+      })
       res.on('end', () => {
         const headers: [string, string][] = []
-        for (let i = 0; i < res.rawHeaders.length; i += 2) headers.push([res.rawHeaders[i], res.rawHeaders[i + 1]])
+        for (let i = 0; i < res.rawHeaders.length; i += 2)
+          headers.push([res.rawHeaders[i], res.rawHeaders[i + 1]])
         resolve({
           status: res.statusCode ?? 0,
           statusText: statusTextOf(res.statusCode ?? 0, res.statusMessage),
@@ -455,7 +500,11 @@ function sendHop(o: HopOptions): Promise<HopResult> {
               timeout: o.timeoutMs,
               setHost: true,
             })
-            req.on('timeout', () => req.destroy(Object.assign(new Error(`请求超时 (${o.timeoutMs}ms)`), { code: 'ETIMEDOUT' })))
+            req.on('timeout', () =>
+              req.destroy(
+                Object.assign(new Error(`请求超时 (${o.timeoutMs}ms)`), { code: 'ETIMEDOUT' }),
+              ),
+            )
             req.on('error', handleError)
             req.on('response', collect)
             finish(req)
@@ -486,7 +535,10 @@ function sendHop(o: HopOptions): Promise<HopResult> {
       // 明文 http 经代理：请求行使用绝对 URI
       const headersWithHost = { ...headers }
       const auth = proxyAuthHeader(proxy)
-      if (auth && !Object.keys(headersWithHost).some((k) => k.toLowerCase() === auth[0].toLowerCase())) {
+      if (
+        auth &&
+        !Object.keys(headersWithHost).some((k) => k.toLowerCase() === auth[0].toLowerCase())
+      ) {
         headersWithHost[auth[0]] = auth[1]
       }
       if (!Object.keys(headersWithHost).some((k) => k.toLowerCase() === 'host')) {
@@ -503,7 +555,9 @@ function sendHop(o: HopOptions): Promise<HopResult> {
         setHost: false,
       })
       req.on('socket', onSocket)
-      req.on('timeout', () => req.destroy(Object.assign(new Error(`请求超时 (${o.timeoutMs}ms)`), { code: 'ETIMEDOUT' })))
+      req.on('timeout', () =>
+        req.destroy(Object.assign(new Error(`请求超时 (${o.timeoutMs}ms)`), { code: 'ETIMEDOUT' })),
+      )
       req.on('error', handleError)
       req.on('response', collect)
       finish(req)
@@ -512,7 +566,14 @@ function sendHop(o: HopOptions): Promise<HopResult> {
 
     if (proxy && isHttps) {
       // 密文 https 经代理：先 CONNECT 隧道，再在同一条 socket 上跑 HTTP/1.1
-      openTunnel(proxy, url.hostname, Number(url.port || 443), url.hostname, o.rejectUnauthorized, o.timeoutMs)
+      openTunnel(
+        proxy,
+        url.hostname,
+        Number(url.port || 443),
+        url.hostname,
+        o.rejectUnauthorized,
+        o.timeoutMs,
+      )
         .then(({ socket, connectMs: cMs, tlsMs: tMs }) => {
           connectMs = cMs
           tlsMs = tMs
@@ -528,7 +589,11 @@ function sendHop(o: HopOptions): Promise<HopResult> {
             setHost: true,
             createConnection: undefined,
           })
-          req.on('timeout', () => req.destroy(Object.assign(new Error(`请求超时 (${o.timeoutMs}ms)`), { code: 'ETIMEDOUT' })))
+          req.on('timeout', () =>
+            req.destroy(
+              Object.assign(new Error(`请求超时 (${o.timeoutMs}ms)`), { code: 'ETIMEDOUT' }),
+            ),
+          )
           req.on('error', handleError)
           req.on('response', collect)
           finish(req)
@@ -550,7 +615,9 @@ function sendHop(o: HopOptions): Promise<HopResult> {
       rejectUnauthorized: o.rejectUnauthorized,
     })
     req.on('socket', onSocket)
-    req.on('timeout', () => req.destroy(Object.assign(new Error(`请求超时 (${o.timeoutMs}ms)`), { code: 'ETIMEDOUT' })))
+    req.on('timeout', () =>
+      req.destroy(Object.assign(new Error(`请求超时 (${o.timeoutMs}ms)`), { code: 'ETIMEDOUT' })),
+    )
     req.on('error', handleError)
     req.on('response', collect)
     finish(req)
@@ -563,7 +630,10 @@ function sendHop(o: HopOptions): Promise<HopResult> {
  * 区别只是把响应体交还给调用方边收边处理 —— SSE、逐字输出这类场景用。
  * 返回的 abort() 用于中途取消（例如用户点了「停止」）。
  */
-export function streamHop(o: Omit<HopOptions, 'stream'>, hooks: HopStreamHooks): { abort: () => void } {
+export function streamHop(
+  o: Omit<HopOptions, 'stream'>,
+  hooks: HopStreamHooks,
+): { abort: () => void } {
   let reqRef: http.ClientRequest | null = null
   void sendHop({
     ...o,
@@ -632,15 +702,26 @@ export async function performRequest(spec: HttpRequestSpec): Promise<HttpRequest
     const raw = (spec.url || '').trim()
     current = new URL(raw.includes('://') ? raw : `http://${raw}`)
   } catch {
-    return { ...base, error: `URL 无法解析: ${spec.url}`, errorCode: 'EBADURL', timings: { ...base.timings, totalMs: Date.now() - t0 } }
+    return {
+      ...base,
+      error: `URL 无法解析: ${spec.url}`,
+      errorCode: 'EBADURL',
+      timings: { ...base.timings, totalMs: Date.now() - t0 },
+    }
   }
   if (current.protocol !== 'http:' && current.protocol !== 'https:') {
-    return { ...base, error: `仅支持 http/https，当前为 ${current.protocol}`, errorCode: 'EBADPROTOCOL' }
+    return {
+      ...base,
+      error: `仅支持 http/https，当前为 ${current.protocol}`,
+      errorCode: 'EBADPROTOCOL',
+    }
   }
 
   let method = method0
   let body = specBody(spec)
-  const rawHeaderList: [string, string][] = (spec.headers ?? []).filter(([k]) => String(k ?? '').trim() !== '')
+  const rawHeaderList: [string, string][] = (spec.headers ?? []).filter(
+    ([k]) => String(k ?? '').trim() !== '',
+  )
   const redirects: { status: number; location: string }[] = []
 
   for (let hop = 0; hop <= maxRedirects; hop++) {
@@ -652,7 +733,8 @@ export async function performRequest(spec: HttpRequestSpec): Promise<HttpRequest
       } else if (method !== 'GET' && method !== 'HEAD' && !('Content-Length' in headers)) {
         headers['Content-Length'] = '0'
       }
-      if (!Object.keys(headers).some((k) => k.toLowerCase() === 'connection')) headers.Connection = 'close'
+      if (!Object.keys(headers).some((k) => k.toLowerCase() === 'connection'))
+        headers.Connection = 'close'
       if (!Object.keys(headers).some((k) => k.toLowerCase() === 'accept-encoding')) {
         headers['Accept-Encoding'] = 'gzip, deflate, br'
       }
@@ -696,13 +778,15 @@ export async function performRequest(spec: HttpRequestSpec): Promise<HttpRequest
         }
         redirects.push({ status: res.status, location: next.href })
         // 303 一律改 GET；301/302 对 POST 按浏览器习惯改 GET；307/308 保留
-        const downgrade = res.status === 303 || ((res.status === 301 || res.status === 302) && method === 'POST')
+        const downgrade =
+          res.status === 303 || ((res.status === 301 || res.status === 302) && method === 'POST')
         if (downgrade) {
           method = 'GET'
           body = null
           for (let i = rawHeaderList.length - 1; i >= 0; i--) {
             const n = rawHeaderList[i][0].toLowerCase()
-            if (n === 'content-length' || n === 'content-type' || n === 'transfer-encoding') rawHeaderList.splice(i, 1)
+            if (n === 'content-length' || n === 'content-type' || n === 'transfer-encoding')
+              rawHeaderList.splice(i, 1)
           }
         }
         current = next
@@ -737,5 +821,10 @@ export async function performRequest(spec: HttpRequestSpec): Promise<HttpRequest
     }
   }
 
-  return { ...base, url: current.href, error: `重定向次数超过上限 (${maxRedirects})`, errorCode: 'EMAXREDIRECT' }
+  return {
+    ...base,
+    url: current.href,
+    error: `重定向次数超过上限 (${maxRedirects})`,
+    errorCode: 'EMAXREDIRECT',
+  }
 }

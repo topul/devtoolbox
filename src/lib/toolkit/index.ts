@@ -35,3 +35,11 @@ export * from './yaml'
 /* 新增：JWT 签发、TOTP（零依赖纯实现，渲染进程与 MCP 共用同一份） */
 export * from './jwt-sign'
 export * from './totp'
+/* 新增：MCP 侧补充绑定的纯函数模块 */
+export * from './glob'
+export * from './jsondiff'
+export * from './units'
+export * from './floatbits'
+export * from './sri'
+export * from './docker2compose'
+export * from './bcrypt'

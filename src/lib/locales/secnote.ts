@@ -11,7 +11,8 @@ export const secnoteL = {
         '评估密钥强度：RSA 模长 / EC 曲线是否达到当前安全基线',
         '确认证书用途：是不是 CA 证书（Basic Constraints）、能用来签名还是仅加密',
       ],
-      caution: '「解析通过」不等于「证书可信」。信任链是否完整、是否被吊销，需要交给系统信任库或 openssl verify 判断。',
+      caution:
+        '「解析通过」不等于「证书可信」。信任链是否完整、是否被吊销，需要交给系统信任库或 openssl verify 判断。',
     },
     jwtcrack: {
       title: '适用场景说明',
@@ -35,7 +36,8 @@ export const secnoteL = {
         '确认域名配置：邮件 MX 记录、CDN CNAME 指向、TXT 验证记录是否生效',
         '安全分析：识别域名真实指向的 IP，辅助判断钓鱼 / 抢注',
       ],
-      caution: '查询会发送到第三方 DoH 服务商（Google / Cloudflare / 阿里 / DNSPod），查询记录本身会暴露给服务商。',
+      caution:
+        '查询会发送到第三方 DoH 服务商（Google / Cloudflare / 阿里 / DNSPod），查询记录本身会暴露给服务商。',
     },
     audit: {
       title: '适用场景说明',
@@ -47,7 +49,8 @@ export const secnoteL = {
         '合规基线：满足安全扫描项里的响应头要求',
         '对比参考：看看主流站点配了哪些头，作为自己配置的参照',
       ],
-      caution: '只检查响应头，不替代渗透测试；且审计结果依赖目标站点的真实响应（可能因 CDN / WAF 返回不同结果）。',
+      caution:
+        '只检查响应头，不替代渗透测试；且审计结果依赖目标站点的真实响应（可能因 CDN / WAF 返回不同结果）。',
     },
   },
   en: {
@@ -62,7 +65,8 @@ export const secnoteL = {
         'Key strength: RSA modulus / EC curve against current baselines',
         'Intended use: is it a CA (Basic Constraints), signing vs encryption only',
       ],
-      caution: 'A successful parse does not mean the certificate is trusted. Chain completeness and revocation belong to the system trust store or openssl verify.',
+      caution:
+        'A successful parse does not mean the certificate is trusted. Chain completeness and revocation belong to the system trust store or openssl verify.',
     },
     jwtcrack: {
       title: 'When to use this',
@@ -74,7 +78,8 @@ export const secnoteL = {
         'CTF / pentest: quickly tell whether a JWT is offline-crackable or confusion-prone',
         'Code review aid: verify JWT library config (alg allowlist, secret strength)',
       ],
-      caution: 'Use only on systems you own or are authorized to test in writing. Brute-forcing secrets on systems you do not own is unauthorized.',
+      caution:
+        'Use only on systems you own or are authorized to test in writing. Brute-forcing secrets on systems you do not own is unauthorized.',
     },
     dns: {
       title: 'When to use this',
@@ -86,7 +91,8 @@ export const secnoteL = {
         'Verify domain config: MX for mail, CNAME for CDN, TXT verification records',
         'Security analysis: find where a domain really points, spot phishing / typosquatting',
       ],
-      caution: 'Queries go to third-party DoH providers (Google / Cloudflare / Aliyun / DNSPod) — your lookups are visible to them.',
+      caution:
+        'Queries go to third-party DoH providers (Google / Cloudflare / Aliyun / DNSPod) — your lookups are visible to them.',
     },
     audit: {
       title: 'When to use this',
@@ -98,7 +104,8 @@ export const secnoteL = {
         'Compliance baselines: satisfy scanner requirements for response headers',
         'Reference: see which headers major sites set, as a baseline for your own config',
       ],
-      caution: 'Header checks only — not a substitute for pentesting; results depend on the live response (CDN / WAF may alter them).',
+      caution:
+        'Header checks only — not a substitute for pentesting; results depend on the live response (CDN / WAF may alter them).',
     },
   },
 }

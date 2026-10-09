@@ -33,7 +33,12 @@ export const encodingL = {
         { value: '10', label: '十进制' },
         { value: '16', label: '十六进制 (0x)' },
       ],
-      bases: [['二进制', 'bin'], ['八进制', 'oct'], ['十进制', 'dec'], ['十六进制', 'hex']] as [string, string][],
+      bases: [
+        ['二进制', 'bin'],
+        ['八进制', 'oct'],
+        ['十进制', 'dec'],
+        ['十六进制', 'hex'],
+      ] as [string, string][],
       err: '无法解析为数字，请检查输入与源进制是否匹配。',
     },
     htmlEntity: {
@@ -84,7 +89,12 @@ export const encodingL = {
         { value: '10', label: 'Decimal' },
         { value: '16', label: 'Hexadecimal (0x)' },
       ],
-      bases: [['Binary', 'bin'], ['Octal', 'oct'], ['Decimal', 'dec'], ['Hexadecimal', 'hex']] as [string, string][],
+      bases: [
+        ['Binary', 'bin'],
+        ['Octal', 'oct'],
+        ['Decimal', 'dec'],
+        ['Hexadecimal', 'hex'],
+      ] as [string, string][],
       err: 'Cannot parse as a number. Check the input and the source base.',
     },
     htmlEntity: {

@@ -1,9 +1,17 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type { HttpRequestResult, HttpRequestSpec, HttpTransferAPI } from '../../src/lib/http-types'
+import type { PortLookupResult } from '../../src/lib/portlookup-types'
 import type { TlsAPI } from '../../src/lib/tls-types'
 import type { SseAPI } from '../../src/lib/sse-types'
 import type { WsAPI } from '../../src/lib/ws-types'
-import type { ChatEvent, ChatSendResult, ChatSendSpec, ChatToolServer, ChatTraceResult, McpProbeResult } from '../../src/lib/chat-types'
+import type {
+  ChatEvent,
+  ChatSendResult,
+  ChatSendSpec,
+  ChatToolServer,
+  ChatTraceResult,
+  McpProbeResult,
+} from '../../src/lib/chat-types'
 import type { McpInfo } from '../../src/lib/mcp-types'
 import type {
   ChatStoreListResult,
@@ -46,6 +54,11 @@ export interface HttpAPI extends HttpTransferAPI {
 export interface McpAPI {
   /** 取本机 MCP 启动配置（路径、启动命令、可粘贴的配置片段与各客户端位置提示） */
   info: () => Promise<McpInfo>
+}
+
+export interface PortLookupAPI {
+  /** 查询本机端口占用（lsof / netstat 在主进程执行） */
+  lookup: (port: number) => Promise<PortLookupResult>
 }
 
 export interface ChatAPI {
@@ -110,13 +123,17 @@ export interface ProxyAPI {
   rulesRemove: (id: string) => Promise<ProxyRule[]>
   rulesClear: () => Promise<ProxyRule[]>
   caInfo: () => Promise<CaInfo | null>
-  caExport: (format: 'pem' | 'crt') => Promise<{ ok: boolean; path: string; canceled?: boolean; error?: string }>
+  caExport: (
+    format: 'pem' | 'crt',
+  ) => Promise<{ ok: boolean; path: string; canceled?: boolean; error?: string }>
   caOpen: () => Promise<string>
   caReset: () => Promise<CaInfo | null>
   systemGet: () => Promise<SystemProxyState>
   systemSet: () => Promise<SystemProxyState>
   systemRestore: () => Promise<SystemProxyState>
-  exportSessions: (format: 'json' | 'har') => Promise<{ ok: boolean; path: string; count: number; canceled?: boolean; error?: string }>
+  exportSessions: (
+    format: 'json' | 'har',
+  ) => Promise<{ ok: boolean; path: string; count: number; canceled?: boolean; error?: string }>
   onEvent: (callback: (evt: ProxyEvent) => void) => () => void
 }
 
@@ -133,6 +150,7 @@ export interface ElectronAPI {
   onUpdaterEvent: (callback: (evt: UpdaterEvent) => void) => () => void
   http: HttpAPI
   tls: TlsAPI
+  port: PortLookupAPI
   sse: SseAPI
   ws: WsAPI
   proxy: ProxyAPI
@@ -149,7 +167,8 @@ const api: ElectronAPI = {
   getTheme: () => ipcRenderer.invoke('theme:get'),
   setTheme: (theme) => ipcRenderer.invoke('theme:set', theme),
   onThemeChanged: (callback) => {
-    const listener = (_event: Electron.IpcRendererEvent, theme: 'dark' | 'light'): void => callback(theme)
+    const listener = (_event: Electron.IpcRendererEvent, theme: 'dark' | 'light'): void =>
+      callback(theme)
     ipcRenderer.on('theme:changed', listener)
     return () => ipcRenderer.removeListener('theme:changed', listener)
   },
@@ -169,11 +188,17 @@ const api: ElectronAPI = {
   tls: {
     probe: (host, port, timeoutMs) => ipcRenderer.invoke('tls:probe', host, port, timeoutMs),
   },
+  port: {
+    lookup: (port) => ipcRenderer.invoke('port:lookup', port),
+  },
   sse: {
     send: (spec) => ipcRenderer.invoke('sse:send', spec),
     abort: (id) => ipcRenderer.invoke('sse:abort', id),
     onEvent: (callback) => {
-      const listener = (_event: Electron.IpcRendererEvent, evt: Parameters<typeof callback>[0]): void => callback(evt)
+      const listener = (
+        _event: Electron.IpcRendererEvent,
+        evt: Parameters<typeof callback>[0],
+      ): void => callback(evt)
       ipcRenderer.on('sse:event', listener)
       return () => ipcRenderer.removeListener('sse:event', listener)
     },
@@ -183,7 +208,10 @@ const api: ElectronAPI = {
     send: (id, data) => ipcRenderer.invoke('ws:send', id, data),
     close: (id, code, reason) => ipcRenderer.invoke('ws:close', id, code, reason),
     onEvent: (callback) => {
-      const listener = (_event: Electron.IpcRendererEvent, evt: Parameters<typeof callback>[0]): void => callback(evt)
+      const listener = (
+        _event: Electron.IpcRendererEvent,
+        evt: Parameters<typeof callback>[0],
+      ): void => callback(evt)
       ipcRenderer.on('ws:event', listener)
       return () => ipcRenderer.removeListener('ws:event', listener)
     },
@@ -210,7 +238,8 @@ const api: ElectronAPI = {
     ping: () => ipcRenderer.invoke('mcpclient:ping'),
     disconnect: () => ipcRenderer.invoke('mcpclient:disconnect'),
     onEvent: (callback) => {
-      const listener = (_event: Electron.IpcRendererEvent, evt: McpClientEvent): void => callback(evt)
+      const listener = (_event: Electron.IpcRendererEvent, evt: McpClientEvent): void =>
+        callback(evt)
       ipcRenderer.on('mcpclient:event', listener)
       return () => ipcRenderer.removeListener('mcpclient:event', listener)
     },

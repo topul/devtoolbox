@@ -14,7 +14,8 @@ export const mcpclientL = {
     transportHttp: 'HTTP（Streamable HTTP）',
     presetLabel: '预设',
     presetSelf: '本机 DevToolbox（自检）',
-    presetSelfNote: '用本应用自带的可执行文件启动内置 MCP 服务端，直接验证「AI 能调用我们自己的工具」',
+    presetSelfNote:
+      '用本应用自带的可执行文件启动内置 MCP 服务端，直接验证「AI 能调用我们自己的工具」',
     presetFilesystem: '第三方示例：filesystem',
     presetFilesystemNote: '需要本机有 npx 且能联网，填入后自行确认参数',
     commandLabel: '启动命令',
@@ -91,7 +92,7 @@ export const mcpclientL = {
   },
   en: {
     intro:
-      'Connect to an MCP server the way a client does: handshake, list what it declares, call tools directly, and watch every raw JSON-RPC frame. The default preset is this app\'s own server, so you can call everything the toolbox exposes — or point it at any third-party server.',
+      "Connect to an MCP server the way a client does: handshake, list what it declares, call tools directly, and watch every raw JSON-RPC frame. The default preset is this app's own server, so you can call everything the toolbox exposes — or point it at any third-party server.",
     guideTitle: 'How to use it',
     guideSteps: [
       'Hit the "This DevToolbox" preset to connect in one click — it talks to this very app, no command to type.',
@@ -104,7 +105,8 @@ export const mcpclientL = {
     transportHttp: 'HTTP (Streamable HTTP)',
     presetLabel: 'Presets',
     presetSelf: 'This DevToolbox (self-check)',
-    presetSelfNote: 'Launches the built-in MCP server with this app\'s own executable — proves AI can call our tools',
+    presetSelfNote:
+      "Launches the built-in MCP server with this app's own executable — proves AI can call our tools",
     presetFilesystem: 'Third-party sample: filesystem',
     presetFilesystemNote: 'Requires npx and network access; review the arguments after filling in',
     commandLabel: 'Command',

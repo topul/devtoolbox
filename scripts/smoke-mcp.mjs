@@ -37,7 +37,11 @@ function ok(name, cond, detail = '') {
 }
 
 function eq(name, actual, expected) {
-  ok(name, Object.is(actual, expected), `期望 ${JSON.stringify(expected)}，实际 ${JSON.stringify(actual)}`)
+  ok(
+    name,
+    Object.is(actual, expected),
+    `期望 ${JSON.stringify(expected)}，实际 ${JSON.stringify(actual)}`,
+  )
 }
 
 function includes(name, haystack, needle) {
@@ -54,21 +58,41 @@ const FIXTURES = {
   escape_convert: { text: '<script>alert(1)</script>', codec: 'base64', mode: 'encode' },
   html_entity: { text: '<a href="x">&\'</a>', mode: 'encode' },
   radix_convert: { input: '0xFF', from: 16 },
+  float_bits: { input: '0.1', width: '32', op: 'encode' },
 
   hash: { text: 'abc', algorithm: 'SHA256' },
   hmac: { text: 'message', key: 'secret', algorithm: 'SHA256' },
   aes_crypt: { text: 'hello', key: 'k', mode: 'ECB', op: 'encrypt' },
-  jwt_sign: { op: 'sign', algo: 'HS256', key: 'secret', payload: '{"sub":"1234567890","name":"Ada"}' },
+  jwt_sign: {
+    op: 'sign',
+    algo: 'HS256',
+    key: 'secret',
+    payload: '{"sub":"1234567890","name":"Ada"}',
+  },
   totp: { op: 'generate', secret: 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ' },
   jwt_decode: {
     token:
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c',
   },
+  sri_hash: { text: 'console.log("hello")' },
+  bcrypt: { op: 'hash', password: 'correct horse battery staple', rounds: 10 },
 
   json_format: { text: '{"b":1,"a":[2,3]}', mode: 'format' },
   json_validate: { text: '{"ok":true}' },
-  json_query: { json: '{"store":{"book":[{"price":8.95},{"price":12.99}]}}', path: '$.store.book[*].price' },
-  yaml_convert: { text: 'server:\n  host: 0.0.0.0\n  port: 8080\n  tags:\n    - web\n', mode: 'yaml2json' },
+  json_query: {
+    json: '{"store":{"book":[{"price":8.95},{"price":12.99}]}}',
+    path: '$.store.book[*].price',
+  },
+  yaml_convert: {
+    text: 'server:\n  host: 0.0.0.0\n  port: 8080\n  tags:\n    - web\n',
+    mode: 'yaml2json',
+  },
+  json_diff: { left: '{"a":1,"b":[1,2]}', right: '{"a":2,"b":[1,3],"c":true}' },
+  unit_convert: { value: 1536, from: 'B' },
+  docker2compose: {
+    command:
+      'docker run -d --name web -p 8080:80 -e TZ=Asia/Shanghai -v ./site:/usr/share/nginx/html:ro --restart unless-stopped nginx:1.25-alpine',
+  },
 
   text_case: { text: 'hello world foo-bar', style: 'camelCase' },
   line_ops: { text: 'b\na\nb\n', op: 'dedupe' },
@@ -81,17 +105,30 @@ const FIXTURES = {
         function: {
           name: 'demo',
           description: '演示工具',
-          parameters: { type: 'object', properties: { a: { type: 'string', description: '甲' } }, required: ['a'] },
+          parameters: {
+            type: 'object',
+            properties: { a: { type: 'string', description: '甲' } },
+            required: ['a'],
+          },
         },
       },
     ]),
     target: 'typescript',
   },
   diff: { a: 'a\nb\nc', b: 'a\nx\nc', format: 'text' },
+  glob_match: {
+    patterns: 'src/**/*.ts\n*.md',
+    paths: 'src/lib/toolkit/glob.ts\nREADME.md\ndocs/diagram.svg',
+  },
   // GraphQL：解析一份 introspection 响应（不需要网络）
-  graphql_parse_schema: { payload: '{"data":{"__schema":{"types":[{"kind":"OBJECT","name":"Query","fields":[{"name":"user","description":"按 id 取用户","type":{"kind":"OBJECT","name":"User"},"args":[{"name":"id","type":{"kind":"SCALAR","name":"ID"},"defaultValue":null}],"enumValues":null}],"enumValues":null},{"kind":"OBJECT","name":"User","fields":[{"name":"email","description":null,"type":{"kind":"SCALAR","name":"String"},"args":[],"enumValues":null}],"enumValues":null}],"types":[]}}}' },
+  graphql_parse_schema: {
+    payload:
+      '{"data":{"__schema":{"types":[{"kind":"OBJECT","name":"Query","fields":[{"name":"user","description":"按 id 取用户","type":{"kind":"OBJECT","name":"User"},"args":[{"name":"id","type":{"kind":"SCALAR","name":"ID"},"defaultValue":null}],"enumValues":null}],"enumValues":null},{"kind":"OBJECT","name":"User","fields":[{"name":"email","description":null,"type":{"kind":"SCALAR","name":"String"},"args":[],"enumValues":null}],"enumValues":null}],"types":[]}}}',
+  },
   // HAR：解析一份 Chrome 风格样本
-  har_analyze: { har: '{"log":{"version":"1.2","creator":{"name":"DevTools"},"pages":[],"entries":[{"startedDateTime":"2026-03-01T10:00:00.000Z","time":120,"_resourceType":"document","request":{"method":"GET","url":"https://example.com/a.js","headers":[{"name":"Host","value":"example.com"}],"queryString":[]},"response":{"status":200,"statusText":"OK","headers":[{"name":"content-type","value":"text/javascript"}],"content":{"size":2048,"mimeType":"text/javascript","text":"console.log(1)"},"redirectURL":"","headersSize":180,"bodySize":512},"timings":{"blocked":1,"dns":10,"connect":20,"send":1,"wait":80,"receive":8,"ssl":15},"serverIPAddress":"93.184.216.34","connection":"443"}]}}' },
+  har_analyze: {
+    har: '{"log":{"version":"1.2","creator":{"name":"DevTools"},"pages":[],"entries":[{"startedDateTime":"2026-03-01T10:00:00.000Z","time":120,"_resourceType":"document","request":{"method":"GET","url":"https://example.com/a.js","headers":[{"name":"Host","value":"example.com"}],"queryString":[]},"response":{"status":200,"statusText":"OK","headers":[{"name":"content-type","value":"text/javascript"}],"content":{"size":2048,"mimeType":"text/javascript","text":"console.log(1)"},"redirectURL":"","headersSize":180,"bodySize":512},"timings":{"blocked":1,"dns":10,"connect":20,"send":1,"wait":80,"receive":8,"ssl":15},"serverIPAddress":"93.184.216.34","connection":"443"}]}}',
+  },
   // TLS：探一个本地不存在的端口（离线可重复，失败也是结构化结果）
   tls_inspect: { host: '127.0.0.1', port: 1, timeoutMs: 1500 },
   // SQL：静态检查
@@ -99,7 +136,12 @@ const FIXTURES = {
   // SQL：解读 EXPLAIN 文本表
   sql_explain: { explain: '| 1 | SIMPLE | users | ALL | 152000 | Using where |', dialect: 'mysql' },
 
-  regex_replace: { pattern: '(\\w+)\\s*=\\s*(\\w+)', replacement: '$2 = $1', text: 'foo=1\nbar=22', flags: 'g' },
+  regex_replace: {
+    pattern: '(\\w+)\\s*=\\s*(\\w+)',
+    replacement: '$2 = $1',
+    text: 'foo=1\nbar=22',
+    flags: 'g',
+  },
   regex_test: { pattern: '(\\d+)-(\\d+)', text: 'call 12-34 and 56-78', flags: 'g' },
 
   timestamp_convert: { timestamp: '1758160000' },
@@ -111,7 +153,9 @@ const FIXTURES = {
   chmod_convert: { input: '755' },
   url_parse: { url: 'https://user:pw@api.example.com:8443/v1/users?id=42&tag=a&tag=b#sec' },
   cookie_parse: { cookie: 'sid=abc; Path=/; Secure; HttpOnly; SameSite=Lax' },
-  ua_parse: { ua: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36' },
+  ua_parse: {
+    ua: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+  },
 
   uuid_generate: { count: 3 },
   password_generate: { length: 20, symbol: true },
@@ -157,7 +201,12 @@ class McpSession {
 
   send(method, params, { expectReply = true } = {}) {
     const id = expectReply ? ++this.seq : undefined
-    const msg = { jsonrpc: '2.0', method, ...(params === undefined ? {} : { params }), ...(expectReply ? { id } : {}) }
+    const msg = {
+      jsonrpc: '2.0',
+      method,
+      ...(params === undefined ? {} : { params }),
+      ...(expectReply ? { id } : {}),
+    }
     this.child.stdin.write(JSON.stringify(msg) + '\n')
     if (!expectReply) return Promise.resolve(null)
     return new Promise((resolve, reject) => {
@@ -204,7 +253,13 @@ function startTarget() {
       req.on('data', (c) => chunks.push(c))
       req.on('end', () => {
         res.writeHead(200, { 'Content-Type': 'application/json' })
-        res.end(JSON.stringify({ method: req.method, body: Buffer.concat(chunks).toString('utf8'), probe: req.headers['x-probe'] ?? null }))
+        res.end(
+          JSON.stringify({
+            method: req.method,
+            body: Buffer.concat(chunks).toString('utf8'),
+            probe: req.headers['x-probe'] ?? null,
+          }),
+        )
       })
       return
     }
@@ -243,7 +298,9 @@ async function main() {
   const session = new McpSession(child)
   let stderrText = ''
   child.stderr.setEncoding('utf8')
-  child.stderr.on('data', (d) => { stderrText += d })
+  child.stderr.on('data', (d) => {
+    stderrText += d
+  })
 
   try {
     /* ---------- 协议 ---------- */
@@ -259,7 +316,10 @@ async function main() {
     ok('serverInfo.version 非空', !!init.result?.serverInfo?.version)
 
     // 未知版本要落到服务端支持的最新版本，而不是原样回显
-    const init2 = await session.send('initialize', { protocolVersion: '1999-01-01', capabilities: {} })
+    const init2 = await session.send('initialize', {
+      protocolVersion: '1999-01-01',
+      capabilities: {},
+    })
     eq('未知协议版本降级', init2.result?.protocolVersion, '2025-06-18')
 
     // 通知不得回包
@@ -282,7 +342,9 @@ async function main() {
     ok(
       '参数清单里的工具都已声明',
       Object.keys(FIXTURES).every((n) => names.includes(n)),
-      Object.keys(FIXTURES).filter((n) => !names.includes(n)).join(', '),
+      Object.keys(FIXTURES)
+        .filter((n) => !names.includes(n))
+        .join(', '),
     )
     for (const t of tools) {
       if (!t.description || typeof t.description !== 'string') {
@@ -292,9 +354,14 @@ async function main() {
         ok(`工具 ${t.name} 的 inputSchema 是 object`, false)
       }
       // 目录里带中英两份文案供界面用，但发给客户端的结构里不能混进非标准 JSON Schema 字段
-      const leaked = Object.values(t.inputSchema?.properties ?? {}).some((prop) => 'descriptionEn' in prop)
-      if (leaked) ok(`工具 ${t.name} 未泄漏界面专用字段`, false, 'inputSchema 里出现了 descriptionEn')
-      const undocumented = Object.values(t.inputSchema?.properties ?? {}).filter((prop) => !prop.description)
+      const leaked = Object.values(t.inputSchema?.properties ?? {}).some(
+        (prop) => 'descriptionEn' in prop,
+      )
+      if (leaked)
+        ok(`工具 ${t.name} 未泄漏界面专用字段`, false, 'inputSchema 里出现了 descriptionEn')
+      const undocumented = Object.values(t.inputSchema?.properties ?? {}).filter(
+        (prop) => !prop.description,
+      )
       if (undocumented.length) ok(`工具 ${t.name} 每个参数都有说明`, false)
     }
 
@@ -325,7 +392,10 @@ async function main() {
     eq('缺必填参数时以 isError 结果返回', missingArg.result?.isError, true)
     includes('缺参提示带出参数名', missingArg.result?.content?.[0]?.text, 'text')
 
-    const badAlgo = await session.send('tools/call', { name: 'hash', arguments: { text: 'a', algorithm: 'CRC32' } })
+    const badAlgo = await session.send('tools/call', {
+      name: 'hash',
+      arguments: { text: 'a', algorithm: 'CRC32' },
+    })
     eq('非法枚举值走 isError', badAlgo.result?.isError, true)
 
     // 坏 JSON 会拿到 -32700。这段故意破坏性地占满 stdin，所以单独起一个进程测，
@@ -378,7 +448,10 @@ async function main() {
     const refused = await call({ url: 'http://127.0.0.1:1/', timeoutMs: 3000 })
     includes('连接失败有明确回报', refused, '请求失败')
 
-    const badHeader = await spawnCall(serverFile, 'http_request', { url: `${base}/hello`, headers: 'no-colon-here' })
+    const badHeader = await spawnCall(serverFile, 'http_request', {
+      url: `${base}/hello`,
+      headers: 'no-colon-here',
+    })
     includes('非法请求头格式被拒绝', badHeader.stderr, 'Name: value')
 
     /* ---------- CLI 模式 ---------- */
@@ -421,10 +494,16 @@ function spawnCall(file, tool, args, extraArgv = []) {
     const p = spawn(process.execPath, [file, ...argv], { stdio: ['ignore', 'pipe', 'pipe'] })
     let stdout = ''
     let stderr = ''
-    p.stdout.on('data', (d) => { stdout += d })
-    p.stderr.on('data', (d) => { stderr += d })
+    p.stdout.on('data', (d) => {
+      stdout += d
+    })
+    p.stderr.on('data', (d) => {
+      stderr += d
+    })
     const timer = setTimeout(() => p.kill('SIGKILL'), 15000)
-    p.on('exit', (code) => {
+    // 监听 close 而不是 exit：exit 可能在 stdio 管道刷完之前触发，
+    // 大输出（如 --list）会丢尾部；close 保证流已读完
+    p.on('close', (code) => {
       clearTimeout(timer)
       resolve({ code, stdout, stderr })
     })

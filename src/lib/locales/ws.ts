@@ -22,7 +22,8 @@ export const wsL = {
     desktopOnly: 'WebSocket 调试需要在桌面端应用中运行。',
     emptyUrl: '请先填写 WebSocket URL',
     sendFail: (code: string) => `发送失败（${code}）`,
-    closed: (code: number, reason: string) => `连接已关闭（code ${code}${reason ? ` · ${reason}` : ''}）`,
+    closed: (code: number, reason: string) =>
+      `连接已关闭（code ${code}${reason ? ` · ${reason}` : ''}）`,
     kv: { add: '添加请求头', name: '名称', value: '值', remove: '删除' },
   },
   en: {
@@ -45,7 +46,8 @@ export const wsL = {
     desktopOnly: 'WebSocket debugging requires the desktop app.',
     emptyUrl: 'Enter a WebSocket URL first',
     sendFail: (code: string) => `Send failed (${code})`,
-    closed: (code: number, reason: string) => `Closed (code ${code}${reason ? ` · ${reason}` : ''})`,
+    closed: (code: number, reason: string) =>
+      `Closed (code ${code}${reason ? ` · ${reason}` : ''})`,
     kv: { add: 'Add header', name: 'Name', value: 'Value', remove: 'Delete' },
   },
 }

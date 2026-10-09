@@ -9,7 +9,8 @@ export const schemaL = {
       '看下面的体检结果逐条处理 —— 字段缺 description 这类，正是模型乱填参数的常见原因。',
     ],
     inputLabel: '粘贴工具定义',
-    inputPlaceholder: '支持三种形态：OpenAI 的 { tools: [...] }、MCP 的 { name, inputSchema }、或直接一段 JSON Schema',
+    inputPlaceholder:
+      '支持三种形态：OpenAI 的 { tools: [...] }、MCP 的 { name, inputSchema }、或直接一段 JSON Schema',
     loadExample: '载入示例',
     loadSelf: '载入本机 MCP 能力目录',
     loadSelfHint: '把工具箱自己暴露的能力拉进来，一键转成 TS / Pydantic',
@@ -76,7 +77,8 @@ export const schemaL = {
       'Work through the findings below — a missing description is a common reason a model fills arguments badly.',
     ],
     inputLabel: 'Paste a tool definition',
-    inputPlaceholder: 'Three shapes accepted: OpenAI { tools: [...] }, MCP { name, inputSchema }, or a bare JSON Schema',
+    inputPlaceholder:
+      'Three shapes accepted: OpenAI { tools: [...] }, MCP { name, inputSchema }, or a bare JSON Schema',
     loadExample: 'Load sample',
     loadSelf: 'Load this app MCP catalog',
     loadSelfHint: 'Pull in the capabilities this toolbox exposes and turn them into TS / Pydantic',
