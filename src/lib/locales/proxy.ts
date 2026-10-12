@@ -112,6 +112,11 @@ export const proxyL = {
       confirmYes: '确认',
       cancel: '取消',
       detailHint: '点左侧任意一行查看请求 / 响应详情',
+      markTitle: '勾选两条会话发送到请求对比（先勾选为基准 A）',
+      markedCount: (n: number) => `已勾选 ${n}/2 条`,
+      markHint: '先勾选的为基准 A，后勾选的为对比 B',
+      sendCompare: '发送到请求对比 A/B',
+      clearMarks: '清除勾选',
     },
     detail: {
       title: '会话详情',
@@ -349,6 +354,11 @@ export const proxyL = {
       confirmYes: 'Confirm',
       cancel: 'Cancel',
       detailHint: 'Click a row on the left to inspect the request / response',
+      markTitle: 'Pick two sessions to send to the request diff (first = baseline A)',
+      markedCount: (n: number) => `${n}/2 picked`,
+      markHint: 'First picked is baseline A, second is compare B',
+      sendCompare: 'Send to request diff A/B',
+      clearMarks: 'Clear picks',
     },
     detail: {
       title: 'Session detail',

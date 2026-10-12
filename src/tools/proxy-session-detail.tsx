@@ -9,7 +9,7 @@ import { SendToMenu } from '../components/SendTo'
 import { proxyL } from '../lib/locales/proxy'
 import type { ProxySession } from '../lib/proxy-types'
 import * as U from '../lib/http-utils'
-import { buildRawRequest, type HandoffPayload } from '../lib/handoff'
+import { sessionToHandoff, type HandoffPayload } from '../lib/handoff'
 
 type L = (typeof proxyL)['zh']
 
@@ -37,37 +37,14 @@ export function SessionDetail({
   }, [session, side])
 
   /** 交接载荷：整条会话（请求 + 响应）一次带给目标工具，目标各取所需 */
-  const handoff = useMemo<HandoffPayload>(() => {
-    const reqBytes = U.b64ToBytes(session.reqBodyBase64)
-    const reqBinary = U.isProbablyBinary(reqBytes)
-    // request target 优先 origin-form（path），URL 解析失败时兜底 '/'
-    let target = session.path
-    if (!target) {
-      try {
-        target = new URL(session.url).pathname
-      } catch {
-        target = '/'
-      }
-    }
-    return {
-      sourceLabel: `#${session.seq} ${session.method} ${target}`,
-      method: session.method,
-      url: session.url,
-      reqHeaders: session.reqHeaders,
-      reqBodyText: reqBinary ? null : U.bytesToText(reqBytes),
-      reqBodyBinary: reqBinary && reqBytes.length > 0,
-      rawRequest: buildRawRequest({
-        method: session.method,
-        target,
-        headers: session.reqHeaders,
-        bodyText: reqBinary ? '' : U.bytesToText(reqBytes),
+  const handoff = useMemo<HandoffPayload>(
+    () =>
+      sessionToHandoff(session, {
+        // 代理在跑：重放仍经代理端口，新请求会作为新会话出现在列表里
+        proxy: proxyRunning ? `http://127.0.0.1:${proxyPort}` : null,
       }),
-      resStatus: session.status,
-      resHeaders: session.resHeaders,
-      // 代理在跑：重放仍经代理端口，新请求会作为新会话出现在列表里
-      proxy: proxyRunning ? `http://127.0.0.1:${proxyPort}` : null,
-    }
-  }, [session, proxyRunning, proxyPort])
+    [session, proxyRunning, proxyPort],
+  )
 
   const curl = useMemo(() => {
     const reqBytes = U.b64ToBytes(session.reqBodyBase64)

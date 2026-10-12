@@ -8,7 +8,98 @@ import {
   handoffToDoc,
   handoffToHostPath,
   handoffToRaw,
+  sessionToHandoff,
 } from '../src/lib/handoff'
+import type { ProxySession } from '../src/lib/proxy-types'
+
+/** 最小合法会话：只填交接关心的字段，其余给空值占位 */
+function fakeSession(over: Partial<ProxySession>): ProxySession {
+  return {
+    id: 's1',
+    seq: 7,
+    startedAt: 0,
+    scheme: 'http',
+    method: 'GET',
+    url: 'http://a.com/',
+    host: 'a.com',
+    path: '/',
+    reqHeaders: [],
+    reqBodyBase64: '',
+    reqBodyBytes: 0,
+    status: 200,
+    statusText: 'OK',
+    resHeaders: [],
+    resBodyBase64: '',
+    resBodyBytes: 0,
+    resContentEncoding: '',
+    resTruncated: false,
+    durationMs: 1,
+    clientIp: '',
+    matchedRules: [],
+    modified: false,
+    intercepted: false,
+    mocked: false,
+    blocked: false,
+    tunneled: false,
+    ...over,
+  }
+}
+
+describe('sessionToHandoff', () => {
+  it('文本请求：整条会话带出，raw 用 origin-form，正文完整', () => {
+    const s = fakeSession({
+      method: 'POST',
+      url: 'http://a.com/login?x=1',
+      path: '/login?x=1',
+      reqHeaders: [
+        ['Host', 'a.com'],
+        ['Cookie', 's=1'],
+      ],
+      reqBodyBase64: btoa('a=1&b=2'),
+      reqBodyBytes: 7,
+      status: 302,
+      resHeaders: [['Location', '/home']],
+    })
+    const p = sessionToHandoff(s)
+    expect(p.sourceLabel).toBe('#7 POST /login?x=1')
+    expect(p.method).toBe('POST')
+    expect(p.reqBodyText).toBe('a=1&b=2')
+    expect(p.reqBodyBinary).toBe(false)
+    expect(p.rawRequest).toBe(
+      'POST /login?x=1 HTTP/1.1\r\nHost: a.com\r\nCookie: s=1\r\n\r\na=1&b=2',
+    )
+    expect(p.resStatus).toBe(302)
+    expect(p.resHeaders).toEqual([['Location', '/home']])
+    expect(p.proxy).toBeNull()
+  })
+
+  it('二进制请求体：置标志、正文以 null 交接、raw 中留空', () => {
+    const bin = Uint8Array.from([0, 1, 2, 255])
+    const s = fakeSession({
+      reqBodyBase64: btoa(String.fromCharCode(...bin)),
+      reqBodyBytes: bin.length,
+    })
+    const p = sessionToHandoff(s)
+    expect(p.reqBodyBinary).toBe(true)
+    expect(p.reqBodyText).toBeNull()
+    expect(p.rawRequest?.endsWith('\r\n\r\n')).toBe(true)
+  })
+
+  it('path 缺失时由绝对 URL 还原 target，URL 非法兜底 /', () => {
+    expect(sessionToHandoff(fakeSession({ path: '', url: 'https://a.com/x?y=1' })).rawRequest).toBe(
+      'GET /x?y=1 HTTP/1.1\r\n\r\n',
+    )
+    expect(sessionToHandoff(fakeSession({ path: '', url: 'bad' })).rawRequest).toBe(
+      'GET / HTTP/1.1\r\n\r\n',
+    )
+  })
+
+  it('opts.proxy 透传，未给时为 null', () => {
+    expect(sessionToHandoff(fakeSession({}), { proxy: 'http://127.0.0.1:8899' }).proxy).toBe(
+      'http://127.0.0.1:8899',
+    )
+  })
+})
 
 describe('handoff bus', () => {
   it('push/take 按目标分槽、FIFO、取走即移除', () => {

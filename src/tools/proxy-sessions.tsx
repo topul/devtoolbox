@@ -1,17 +1,21 @@
 /**
  * 抓包工具的会话页（主战场）—— 过滤条、暂停/跟随、清空、流量列表与详情容器。
  * 从 src/tools/proxy.tsx 拆出：过滤/暂停/跟随等状态仍由主文件持有，
- * 切页签回来不能丢输入与观察状态，所以这里只做展示与回调，不持有状态。
+ * 切页签回来不能丢输入与观察状态；这里只额外保留「批量送对比」的瞬时勾选。
  */
-import { type RefObject } from 'react'
+import { useState, type RefObject } from 'react'
 import { Panel } from '../components/ui'
 import { proxyL } from '../lib/locales/proxy'
 import type { ProxySession } from '../lib/proxy-types'
 import * as U from '../lib/http-utils'
 import { DEFAULT_PORT } from '../lib/proxy-view'
+import { handoffBus, sessionToHandoff } from '../lib/handoff'
 import { SessionDetail } from './proxy-session-detail'
 
 type L = (typeof proxyL)['zh']
+
+/** 批量交接给请求对比的勾选上限：A/B 各一条，多了没有去处 */
+const COMPARE_CAP = 2
 
 export function SessionsTab({
   l,
@@ -63,6 +67,29 @@ export function SessionsTab({
   /** 主文件里可能还是 null（状态未回填）；为 null 时不显示端口引导 */
   statePort: number | null
 }) {
+  /* 批量送对比的勾选（纯瞬时界面状态，发完即清）；按勾选顺序决定 A / B */
+  const [marked, setMarked] = useState<string[]>([])
+  // 会话可能刚被清空：渲染前剔除悬挂 id，避免计数虚高
+  const aliveMarks = marked.filter((id) => sessions.some((s) => s.id === id))
+
+  const toggleMark = (id: string): void => {
+    setMarked((m) =>
+      m.includes(id) ? m.filter((x) => x !== id) : m.length >= COMPARE_CAP ? m : [...m, id],
+    )
+  }
+
+  const sendCompare = (): void => {
+    const picked = aliveMarks
+      .map((id) => sessions.find((s) => s.id === id))
+      .filter((s): s is ProxySession => !!s)
+    if (picked.length !== COMPARE_CAP) return
+    // 两个槽先入队再跳转：reqdiff 挂载时 A/B 各自 drain 一次
+    handoffBus.push('reqdiff-a', sessionToHandoff(picked[0]))
+    handoffBus.push('reqdiff-b', sessionToHandoff(picked[1]))
+    setMarked([])
+    window.location.hash = 'reqdiff'
+  }
+
   return (
     <Panel
       title={`${l.sessions.title} (${filtered.length}/${sessions.length})`}
@@ -138,6 +165,30 @@ export function SessionsTab({
           </div>
         )}
 
+        {aliveMarks.length > 0 && (
+          <div className="flex items-center gap-2 flex-wrap border border-amber/40 bg-amber/5 px-3 py-1.5 text-[11.5px]">
+            <span className="text-amber font-medium">
+              {l.sessions.markedCount(aliveMarks.length)}
+            </span>
+            <button
+              onClick={sendCompare}
+              disabled={aliveMarks.length !== COMPARE_CAP}
+              className="px-2 py-0.5 border border-phosphor/50 text-phosphor hover:bg-phosphor/10 disabled:opacity-40 disabled:hover:bg-transparent"
+            >
+              {l.sessions.sendCompare}
+            </button>
+            <button
+              onClick={() => setMarked([])}
+              className="px-2 py-0.5 border border-line-soft text-muted hover:text-bright"
+            >
+              {l.sessions.clearMarks}
+            </button>
+            {aliveMarks.length < COMPARE_CAP && (
+              <span className="text-muted">{l.sessions.markHint}</span>
+            )}
+          </div>
+        )}
+
         {sessions.length === 0 && (
           <div className="border border-line-soft bg-panel-2 px-3 py-6 text-center">
             <div className="text-[12.5px] text-muted">{l.sessions.empty}</div>
@@ -155,6 +206,9 @@ export function SessionsTab({
             <table className="w-full text-[11.5px]">
               <thead className="sticky top-0 bg-panel-2 text-muted">
                 <tr>
+                  <th className="w-7 px-1 py-1" title={l.sessions.markTitle}>
+                    <span className="text-[11px]">⇄</span>
+                  </th>
                   <th className="text-left px-2 py-1 font-normal">{l.sessions.method}</th>
                   <th className="text-left px-2 py-1 font-normal">{l.sessions.host}</th>
                   <th className="text-left px-2 py-1 font-normal">{l.sessions.status}</th>
@@ -163,41 +217,68 @@ export function SessionsTab({
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((s) => (
-                  <tr
-                    key={s.id}
-                    onClick={() => onSelect(s)}
-                    className={`cursor-pointer border-t border-line-soft hover:bg-phosphor-faint ${selected?.id === s.id ? 'bg-phosphor-faint' : ''}`}
-                  >
-                    <td className="px-2 py-1 text-phosphor whitespace-nowrap">{s.method}</td>
-                    <td className="px-2 py-1 text-bright">
-                      <div className="truncate max-w-[220px]" title={`${s.host}${s.path}`}>
-                        {s.host}
-                      </div>
-                      <div
-                        className="truncate max-w-[220px] text-muted text-[10.5px]"
-                        title={s.path}
-                      >
-                        {s.path}
-                      </div>
-                    </td>
-                    <td className={`px-2 py-1 whitespace-nowrap ${U.statusColorClass(s.status)}`}>
-                      {s.status ?? (s.tunneled ? '⇆' : '…')}
-                      {s.mocked && <span className="ml-1 text-amber text-[9.5px]">M</span>}
-                      {s.blocked && <span className="ml-1 text-danger text-[9.5px]">B</span>}
-                      {s.intercepted && <span className="ml-1 text-phosphor text-[9.5px]">P</span>}
-                      {s.modified && <span className="ml-1 text-amber text-[9.5px]">✎</span>}
-                      {s.tunneled && <span className="ml-1 text-muted text-[9.5px]">T</span>}
-                    </td>
-                    <td className="px-2 py-1 text-right text-muted whitespace-nowrap">
-                      {U.formatBytes(s.resBodyBytes)}
-                    </td>
-                    <td className="px-2 py-1 text-right text-muted whitespace-nowrap">
-                      {U.formatDuration(s.durationMs)}
-                      <div className="text-[10px] text-muted/70">{U.formatTime(s.startedAt)}</div>
-                    </td>
-                  </tr>
-                ))}
+                {filtered.map((s) => {
+                  const markIdx = aliveMarks.indexOf(s.id)
+                  const isMarked = markIdx >= 0
+                  const markFull = aliveMarks.length >= COMPARE_CAP
+                  return (
+                    <tr
+                      key={s.id}
+                      onClick={() => onSelect(s)}
+                      className={`cursor-pointer border-t border-line-soft hover:bg-phosphor-faint ${isMarked ? 'bg-amber/10' : selected?.id === s.id ? 'bg-phosphor-faint' : ''}`}
+                    >
+                      <td className="px-1 py-1 text-center" onClick={(e) => e.stopPropagation()}>
+                        {isMarked ? (
+                          <button
+                            type="button"
+                            onClick={() => toggleMark(s.id)}
+                            title={l.sessions.clearMarks}
+                            className="w-4 h-4 inline-flex items-center justify-center text-[10px] font-bold border border-amber/60 text-amber bg-amber/10"
+                          >
+                            {markIdx === 0 ? 'A' : 'B'}
+                          </button>
+                        ) : (
+                          <input
+                            type="checkbox"
+                            className="accent-amber align-middle"
+                            disabled={markFull}
+                            title={markFull ? l.sessions.markHint : l.sessions.markTitle}
+                            onChange={() => toggleMark(s.id)}
+                          />
+                        )}
+                      </td>
+                      <td className="px-2 py-1 text-phosphor whitespace-nowrap">{s.method}</td>
+                      <td className="px-2 py-1 text-bright">
+                        <div className="truncate max-w-[220px]" title={`${s.host}${s.path}`}>
+                          {s.host}
+                        </div>
+                        <div
+                          className="truncate max-w-[220px] text-muted text-[10.5px]"
+                          title={s.path}
+                        >
+                          {s.path}
+                        </div>
+                      </td>
+                      <td className={`px-2 py-1 whitespace-nowrap ${U.statusColorClass(s.status)}`}>
+                        {s.status ?? (s.tunneled ? '⇆' : '…')}
+                        {s.mocked && <span className="ml-1 text-amber text-[9.5px]">M</span>}
+                        {s.blocked && <span className="ml-1 text-danger text-[9.5px]">B</span>}
+                        {s.intercepted && (
+                          <span className="ml-1 text-phosphor text-[9.5px]">P</span>
+                        )}
+                        {s.modified && <span className="ml-1 text-amber text-[9.5px]">✎</span>}
+                        {s.tunneled && <span className="ml-1 text-muted text-[9.5px]">T</span>}
+                      </td>
+                      <td className="px-2 py-1 text-right text-muted whitespace-nowrap">
+                        {U.formatBytes(s.resBodyBytes)}
+                      </td>
+                      <td className="px-2 py-1 text-right text-muted whitespace-nowrap">
+                        {U.formatDuration(s.durationMs)}
+                        <div className="text-[10px] text-muted/70">{U.formatTime(s.startedAt)}</div>
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
             {sessions.length > 0 && filtered.length === 0 && (

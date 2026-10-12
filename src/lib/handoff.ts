@@ -13,6 +13,8 @@
  *     便于在 Vitest 里断言；本文件不 import React、不碰 DOM。
  */
 import type { RequestDoc } from './http-codegen'
+import type { ProxySession } from './proxy-types'
+import * as U from './http-utils'
 
 export type HandoffTarget =
   | 'http-client'
@@ -146,6 +148,44 @@ export function handoffToHostPath(p: HandoffPayload): { host: string; path: stri
     return { host: u.hostname + (port ? `:${port}` : ''), path: u.pathname || '/' }
   } catch {
     return null
+  }
+}
+
+/**
+ * 抓包会话 → 交接载荷（详情菜单与列表批量发送共用）：
+ * 整条会话（请求 + 响应）一次带出，二进制请求体只置标志不伪造文本。
+ */
+export function sessionToHandoff(
+  session: ProxySession,
+  opts?: { proxy?: string | null },
+): HandoffPayload {
+  const reqBytes = U.b64ToBytes(session.reqBodyBase64)
+  const reqBinary = U.isProbablyBinary(reqBytes)
+  let target = session.path
+  if (!target) {
+    try {
+      const u = new URL(session.url)
+      target = u.pathname + u.search
+    } catch {
+      target = '/'
+    }
+  }
+  return {
+    sourceLabel: `#${session.seq} ${session.method} ${target}`,
+    method: session.method,
+    url: session.url,
+    reqHeaders: session.reqHeaders,
+    reqBodyText: reqBinary ? null : U.bytesToText(reqBytes),
+    reqBodyBinary: reqBinary && reqBytes.length > 0,
+    rawRequest: buildRawRequest({
+      method: session.method,
+      target,
+      headers: session.reqHeaders,
+      bodyText: reqBinary ? '' : U.bytesToText(reqBytes),
+    }),
+    resStatus: session.status,
+    resHeaders: session.resHeaders,
+    proxy: opts?.proxy ?? null,
   }
 }
 
