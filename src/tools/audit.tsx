@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { Btn, ErrorNote, Input, KV, Panel, Stat } from '../components/ui'
+import { HandoffBadge, useDrainHandoff } from '../components/SendTo'
 import { useLocalized } from '../lib/i18n'
 import { auditL } from '../lib/locales/audit'
 import { auditSecurityHeaders, type AuditResult, type FindingLevel } from '../lib/toolkit'
@@ -30,6 +31,22 @@ export function HeaderAuditTool() {
   const [status, setStatus] = useState<string>('')
   const [err, setErr] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [from, setFrom] = useState<string | null>(null)
+  // 抓包 / 客户端直接把响应头交过来：免重新请求（重新发一遍可能触发副作用）
+  useDrainHandoff('header-audit', (env) => {
+    setErr(null)
+    if (env.url) setUrl(env.url)
+    if (env.resHeaders?.length) {
+      setStatus(String(env.resStatus ?? ''))
+      setRawHeaders(env.resHeaders)
+      setAudit(auditSecurityHeaders(env.resHeaders, /^https:/i.test(env.url ?? '')))
+      setFrom(env.sourceLabel)
+    } else {
+      setAudit(null)
+      setRawHeaders([])
+      setStatus('')
+    }
+  })
 
   const run = async () => {
     setErr(null)
@@ -65,6 +82,7 @@ export function HeaderAuditTool() {
   return (
     <div className="space-y-3">
       <SecNote scene="audit" />
+      {from && <HandoffBadge label={from} onClear={() => setFrom(null)} />}
       <Input value={url} onChange={setUrl} label={l.urlLabel} placeholder={l.urlPh} />
       <div className="flex gap-2 flex-wrap">
         <Btn variant="primary" onClick={() => void run()} disabled={busy}>

@@ -27,6 +27,7 @@ import { setupChatIpc } from './chat-register'
 import { setupMcpClientIpc } from './mcpclient-register'
 import { setupChatStoreIpc } from './chatstore-ipc'
 import { setupAgentRulesIpc } from './agentrules-register'
+import { setupSysInfoIpc } from './sysinfo-ipc'
 
 // ---- IPC：各功能域注册 ----
 setupAppIpc()
@@ -38,6 +39,7 @@ setupChatIpc()
 setupMcpClientIpc()
 setupChatStoreIpc()
 setupAgentRulesIpc()
+setupSysInfoIpc()
 
 // ---- App lifecycle ----
 app.whenReady().then(() => {

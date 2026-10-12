@@ -22,10 +22,12 @@ import type { Row } from '../components/http/KVEditor'
 import { RequestPanel, Check } from '../components/http/RequestPanel'
 import { ResponseTabs } from '../components/http/ResponseTabs'
 import { HistoryPanel } from '../components/http/HistoryPanel'
+import { SendToMenu, useDrainHandoff } from '../components/SendTo'
 import { useLocalized } from '../lib/i18n'
 import { httpClientL } from '../lib/locales/httpclient'
 import type { HttpRequestResult, HttpRequestSpec } from '../lib/http-types'
 import { mergeRequests, type RequestDoc, type RequestEntry } from '../lib/http-codegen'
+import { handoffToDoc, type HandoffPayload } from '../lib/handoff'
 import * as U from '../lib/http-utils'
 import { useRequestAssembly } from '../lib/httpclient-assembly'
 import {
@@ -316,6 +318,22 @@ export function HttpClientTool() {
     if (name) setSaveName(name)
   }, [])
 
+  /* ---- 接收交接：抓包详情「在 HTTP 客户端打开」挂载即取走 ---- */
+  useDrainHandoff(
+    'http-client',
+    useCallback(
+      (env) => {
+        applyDoc(handoffToDoc(env))
+        setTransferNote(
+          env.reqBodyBinary
+            ? [`${l.misc.handoffLoaded(env.sourceLabel)} · ${l.misc.handoffBinary}`]
+            : [l.misc.handoffLoaded(env.sourceLabel)],
+        )
+      },
+      [applyDoc, l],
+    ),
+  )
+
   /** 收藏 → 导出条目（含认证与正文类型，导出的请求能独立发出去） */
   const buildExportEntries = useCallback(
     (): RequestEntry[] =>
@@ -368,6 +386,33 @@ export function HttpClientTool() {
     fileFields,
     fileFieldData,
   })
+
+  /* ---- 外发交接：已发送的真实请求（优先）或当前表单 + 本次响应 ---- */
+  const handoffPayload = useMemo<HandoffPayload | null>(() => {
+    if (!response) return null
+    if (sentSpec) {
+      return {
+        sourceLabel: `${sentSpec.method} ${sentSpec.url}`,
+        method: sentSpec.method,
+        url: sentSpec.url,
+        reqHeaders: sentSpec.headers ?? [],
+        reqBodyText: sentSpec.bodyText ?? null,
+        reqBodyBinary: !sentSpec.bodyText && !!sentSpec.bodyBase64,
+        resStatus: response.status,
+        resHeaders: response.headers,
+      }
+    }
+    const doc = currentDoc()
+    return {
+      sourceLabel: `${doc.method} ${doc.url}`,
+      method: doc.method,
+      url: doc.url,
+      reqHeaders: doc.headers,
+      reqBodyText: builtBody.text || null,
+      resStatus: response.status,
+      resHeaders: response.headers,
+    }
+  }, [response, sentSpec, currentDoc, builtBody])
 
   /* ---- 发送 ---- */
   const send = useCallback(async () => {
@@ -621,6 +666,7 @@ export function HttpClientTool() {
                     {l.snaps.title}
                     {snapshots.length > 0 ? ` · ${snapshots.length}` : ''}
                   </button>
+                  {handoffPayload && <SendToMenu payload={handoffPayload} />}
                   <button
                     onClick={() => setResponse(null)}
                     className="text-[11px] text-muted hover:text-phosphor"

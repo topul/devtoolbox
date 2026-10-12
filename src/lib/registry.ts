@@ -229,6 +229,12 @@ const TOOL_SPECS: Omit<ToolDef, 'component'>[] = [
     keywords: ['encoding', 'charset', 'gbk', 'shift-jis', 'big5', 'utf-16', '乱码', '编码'],
     load: () => import('../tools/chardet').then((m) => ({ default: m.CharDetTool })),
   },
+  {
+    id: 'hexdump',
+    category: 'encoding',
+    keywords: ['hex', 'hexdump', 'dump', '十六进制', '字节', 'binary', 'ascii', '偏移'],
+    load: () => import('../tools/hexdump').then((m) => ({ default: m.HexDumpTool })),
+  },
 
   // Data formats
   {
@@ -273,6 +279,23 @@ const TOOL_SPECS: Omit<ToolDef, 'component'>[] = [
     keywords: ['docker', 'compose', 'dockerfile', '容器', 'k8s', 'yaml'],
     load: () => import('../tools/docker2compose').then((m) => ({ default: m.Docker2ComposeTool })),
   },
+  {
+    id: 'typegen',
+    category: 'format',
+    keywords: [
+      'typescript',
+      'go',
+      'golang',
+      'rust',
+      'python',
+      'interface',
+      'struct',
+      'dataclass',
+      '类型',
+      'pydantic',
+    ],
+    load: () => import('../tools/typegen').then((m) => ({ default: m.TypeGenTool })),
+  },
 
   // Network
   {
@@ -311,6 +334,28 @@ const TOOL_SPECS: Omit<ToolDef, 'component'>[] = [
     keywords: ['port', '端口', '占用', 'lsof', 'netstat', 'pid', '进程'],
     desktopOnly: true,
     load: () => import('../tools/portlookup').then((m) => ({ default: m.PortLookupTool })),
+  },
+  {
+    id: 'sysinfo',
+    category: 'network',
+    keywords: [
+      'ip',
+      '本机',
+      '系统',
+      'system',
+      'cpu',
+      '内存',
+      'memory',
+      '磁盘',
+      'disk',
+      'mac',
+      '网卡',
+      '资源',
+      'hostname',
+      'os',
+    ],
+    desktopOnly: true,
+    load: () => import('../tools/sysinfo').then((m) => ({ default: m.SysInfoTool })),
   },
 
   // HTTP 调试
@@ -404,6 +449,38 @@ const TOOL_SPECS: Omit<ToolDef, 'component'>[] = [
     keywords: ['load', '压测', '压力测试', 'benchmark', 'rps', '并发', 'ab', 'wrk', 'jmeter'],
     desktopOnly: true,
     load: () => import('../tools/loadtest').then((m) => ({ default: m.LoadTestTool })),
+  },
+
+  // HTTP 攻防分析（本地粘贴分析，不主动扫描）
+  {
+    id: 'httpreq',
+    category: 'http',
+    keywords: ['raw', 'request', '原始请求', 'burp', '请求分析', '越权', 'idor', '攻击面'],
+    load: () => import('../tools/httpreq').then((m) => ({ default: m.HttpRawTool })),
+  },
+  {
+    id: 'reqdiff',
+    category: 'http',
+    keywords: ['diff', '对比', '差异', '重放对比', 'idor', '越权'],
+    load: () => import('../tools/reqdiff').then((m) => ({ default: m.ReqDiffTool })),
+  },
+  {
+    id: 'corsaudit',
+    category: 'http',
+    keywords: ['cors', 'acao', 'allow-origin', 'credentials', '跨域', '跨域读取', 'origin'],
+    load: () => import('../tools/corsaudit').then((m) => ({ default: m.CorsAuditTool })),
+  },
+  {
+    id: 'cspaudit',
+    category: 'http',
+    keywords: ['csp', 'content-security-policy', 'unsafe-inline', 'nonce', '安全策略'],
+    load: () => import('../tools/cspaudit').then((m) => ({ default: m.CspAuditTool })),
+  },
+  {
+    id: 'smuggling',
+    category: 'http',
+    keywords: ['smuggling', '请求走私', 'cl.te', 'te.cl', 'chunked', 'transfer-encoding', 'desync'],
+    load: () => import('../tools/smuggling').then((m) => ({ default: m.SmugglingTool })),
   },
 
   // Formatters
@@ -706,6 +783,24 @@ const TOOL_SPECS: Omit<ToolDef, 'component'>[] = [
     category: 'offsec',
     keywords: ['privesc', '提权', 'suid', 'sudo', 'root', 'system'],
     load: () => import('../tools/offsec').then((m) => ({ default: m.PrivescTool })),
+  },
+  {
+    id: 'ssrf',
+    category: 'offsec',
+    keywords: ['ssrf', '内网', '127.0.0.1', 'localhost', 'ipv6', '绕过', 'url 校验'],
+    load: () => import('../tools/ssrf').then((m) => ({ default: m.SsrfTool })),
+  },
+  {
+    id: 'redirect',
+    category: 'offsec',
+    keywords: ['redirect', '开放重定向', 'open redirect', 'returnurl', '跳转', '回跳'],
+    load: () => import('../tools/redirect').then((m) => ({ default: m.RedirectTool })),
+  },
+  {
+    id: 'nmap-parse',
+    category: 'offsec',
+    keywords: ['nmap', '扫描', '端口', 'recon', 'og', 'ox', '侦察'],
+    load: () => import('../tools/nmap').then((m) => ({ default: m.NmapTool })),
   },
 
   // Reference

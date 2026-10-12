@@ -193,6 +193,35 @@ export function buildWebApi(): ElectronAPI {
         error: 'Port lookup needs the desktop app (it shells out to lsof/netstat)',
       }),
     },
+    system: {
+      info: async () => ({
+        ok: false,
+        collectedAt: Date.now(),
+        hostname: '',
+        platform: '',
+        osType: '',
+        osRelease: '',
+        osVersion: '',
+        arch: '',
+        machine: '',
+        endianness: 'LE',
+        uptimeSeconds: 0,
+        username: '',
+        homedir: '',
+        tmpdir: '',
+        shell: null,
+        cpu: { model: '', cores: 0, speedMhz: 0, overallPercent: 0, perCorePercent: [] },
+        memory: { totalBytes: 0, freeBytes: 0, usedBytes: 0, usedPercent: 0 },
+        loadAvg: [0, 0, 0] as [number, number, number],
+        gateway: { ipv4: null, ipv6: null, iface: null },
+        interfaces: [],
+        disks: [],
+        commands: [],
+        warnings: [],
+        error:
+          'System info needs the desktop app (it reads local OS info and shells out to df/route)',
+      }),
+    },
     mcpClient: {
       connect: async () => {
         throw new Error('浏览器版不支持 stdio MCP 连接，请使用桌面版或 Streamable HTTP 服务端')

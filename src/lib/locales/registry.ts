@@ -202,6 +202,46 @@ export const TOOLS_L = {
       name: 'docker run 转 compose',
       desc: '把 docker run 命令解析成 docker-compose.yml',
     },
+    typegen: {
+      name: 'JSON 类型生成',
+      desc: 'JSON 转 TypeScript / Go / Rust / Python 静态类型',
+    },
+    hexdump: {
+      name: 'Hex Dump 查看器',
+      desc: '文本与十六进制转储互转（偏移 + Hex + ASCII 三栏）',
+    },
+    httpreq: {
+      name: '原始 HTTP 请求分析',
+      desc: '拆解原始请求的头 / Cookie / 参数，标出越权、SSRF、注入等攻击面线索',
+    },
+    reqdiff: {
+      name: 'HTTP 请求差异对比',
+      desc: '两份原始请求并排 diff，定位越权重放到底差在哪个头或参数',
+    },
+    corsaudit: {
+      name: 'CORS 配置分析',
+      desc: '判定 ACAO / 凭据配置能否被跨域读取，并生成 PoC',
+    },
+    cspaudit: {
+      name: 'CSP 策略分析',
+      desc: '逐条解释 CSP，标红 unsafe-inline、通配符与 JSONP 白名单风险',
+    },
+    smuggling: {
+      name: 'HTTP 请求走私实验台',
+      desc: 'CL.TE / TE.CL / TE.TE 字节精确模板与无危害时间探测（教学）',
+    },
+    ssrf: {
+      name: 'SSRF URL 变体',
+      desc: '进制 / IPv6 / @ / 编码等等价写法，验证 URL 校验是否可绕过',
+    },
+    redirect: {
+      name: '开放重定向载荷',
+      desc: '按绕过手法分类生成回跳参数测试载荷',
+    },
+    'nmap-parse': {
+      name: 'Nmap 输出解析',
+      desc: '普通 / -oG / -oX 输出解析成主机端口表，可导出 CSV',
+    },
     bcrypt: {
       name: 'bcrypt 与密码强度',
       desc: 'bcrypt 哈希 / 校验 / rehash 检查，附带熵值强度评估',
@@ -219,6 +259,7 @@ export const TOOLS_L = {
     chardet: { name: '编码检测', desc: '拖入文件识别 UTF-8 / GBK / Shift-JIS / UTF-16 等编码' },
     'qr-decode': { name: '二维码解码', desc: '拖入二维码图片，本地解码出文本或链接' },
     'port-lookup': { name: '端口占用查询', desc: '查本机端口被哪个进程占用（lsof / netstat）' },
+    sysinfo: { name: '本机信息', desc: '本机 IP、系统版本、CPU / 内存 / 磁盘占用与网卡列表' },
     loadtest: { name: 'HTTP 压测', desc: '并发打目标接口：RPS、延迟分位数、状态码分布' },
   },
   en: {
@@ -402,6 +443,46 @@ export const TOOLS_L = {
       name: 'docker run → Compose',
       desc: 'Turn docker run commands into docker-compose.yml',
     },
+    typegen: {
+      name: 'JSON Type Generator',
+      desc: 'Turn JSON into TypeScript / Go / Rust / Python types',
+    },
+    hexdump: {
+      name: 'Hex Dump Viewer',
+      desc: 'Text ↔ hex dump with offset, hex and ASCII columns',
+    },
+    httpreq: {
+      name: 'Raw HTTP Request Analyzer',
+      desc: 'Break a raw request into headers / cookies / params, with IDOR, SSRF and injection hints',
+    },
+    reqdiff: {
+      name: 'HTTP Request Diff',
+      desc: 'Diff two raw requests side by side to pinpoint what an authz replay changed',
+    },
+    corsaudit: {
+      name: 'CORS Config Analyzer',
+      desc: 'Judge whether ACAO / credentials allow cross-origin reads, with a PoC page',
+    },
+    cspaudit: {
+      name: 'CSP Policy Analyzer',
+      desc: 'Explain every CSP directive and flag unsafe-inline, wildcards and JSONP allowlists',
+    },
+    smuggling: {
+      name: 'HTTP Smuggling Lab',
+      desc: 'Byte-accurate CL.TE / TE.CL / TE.TE templates and a harmless timing probe (educational)',
+    },
+    ssrf: {
+      name: 'SSRF URL Variants',
+      desc: 'Notation / IPv6 / @ / encoding equivalents to test URL validation bypasses',
+    },
+    redirect: {
+      name: 'Open Redirect Payloads',
+      desc: 'Redirect-param payloads grouped by bypass technique',
+    },
+    'nmap-parse': {
+      name: 'Nmap Output Parser',
+      desc: 'Parse normal / -oG / -oX output into a host-port table, export to CSV',
+    },
     bcrypt: {
       name: 'bcrypt & Password Strength',
       desc: 'bcrypt hash / verify / rehash check plus entropy-based strength rating',
@@ -430,6 +511,10 @@ export const TOOLS_L = {
     'port-lookup': {
       name: 'Port Occupancy',
       desc: 'See which process is holding a local port (lsof / netstat)',
+    },
+    sysinfo: {
+      name: 'System Info',
+      desc: 'Local IPs, OS version, CPU / memory / disk usage and network interfaces',
     },
     loadtest: {
       name: 'HTTP Load Test',

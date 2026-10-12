@@ -1,6 +1,7 @@
 // Electron bridge types, as seen from the renderer process
 import type { HttpRequestResult, HttpRequestSpec, HttpTransferAPI } from './lib/http-types'
 import type { PortLookupResult } from './lib/portlookup-types'
+import type { SysInfoResult } from './lib/sysinfo-types'
 import type { TlsAPI } from './lib/tls-types'
 import type { SseAPI } from './lib/sse-types'
 import type { WsAPI } from './lib/ws-types'
@@ -54,6 +55,11 @@ export interface HttpAPI extends HttpTransferAPI {
 export interface PortLookupAPI {
   /** 查询本机端口占用（lsof / netstat 在主进程执行） */
   lookup: (port: number) => Promise<PortLookupResult>
+}
+
+export interface SysInfoAPI {
+  /** 取一次本机信息快照（系统 / CPU / 内存 / 网卡 / 磁盘），主进程只读采集 */
+  info: () => Promise<SysInfoResult>
 }
 
 export interface McpAPI {
@@ -140,6 +146,7 @@ export interface ElectronAPI {
   http: HttpAPI
   tls: TlsAPI
   port: PortLookupAPI
+  system: SysInfoAPI
   sse: SseAPI
   ws: WsAPI
   proxy: ProxyAPI
@@ -158,6 +165,12 @@ export type {
   CaInfo,
   SystemProxyState,
   InterceptDecision,
+}
+
+declare module 'highlight.js/lib/languages/*' {
+  import type { LanguageFn } from 'lowlight'
+  const language: LanguageFn
+  export default language
 }
 
 declare global {

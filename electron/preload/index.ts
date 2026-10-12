@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type { HttpRequestResult, HttpRequestSpec, HttpTransferAPI } from '../../src/lib/http-types'
 import type { PortLookupResult } from '../../src/lib/portlookup-types'
+import type { SysInfoResult } from '../../src/lib/sysinfo-types'
 import type { TlsAPI } from '../../src/lib/tls-types'
 import type { SseAPI } from '../../src/lib/sse-types'
 import type { WsAPI } from '../../src/lib/ws-types'
@@ -59,6 +60,11 @@ export interface McpAPI {
 export interface PortLookupAPI {
   /** 查询本机端口占用（lsof / netstat 在主进程执行） */
   lookup: (port: number) => Promise<PortLookupResult>
+}
+
+export interface SysInfoAPI {
+  /** 取一次本机信息快照（系统 / CPU / 内存 / 网卡 / 磁盘），主进程只读采集 */
+  info: () => Promise<SysInfoResult>
 }
 
 export interface ChatAPI {
@@ -151,6 +157,7 @@ export interface ElectronAPI {
   http: HttpAPI
   tls: TlsAPI
   port: PortLookupAPI
+  system: SysInfoAPI
   sse: SseAPI
   ws: WsAPI
   proxy: ProxyAPI
@@ -190,6 +197,9 @@ const api: ElectronAPI = {
   },
   port: {
     lookup: (port) => ipcRenderer.invoke('port:lookup', port),
+  },
+  system: {
+    info: () => ipcRenderer.invoke('system:info'),
   },
   sse: {
     send: (spec) => ipcRenderer.invoke('sse:send', spec),

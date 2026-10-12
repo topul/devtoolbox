@@ -253,6 +253,8 @@ export const httpClientL = {
       clearResponse: '清空响应',
       repeatTip: '连发次数（1-20）：顺序发送，失败即停，结果汇总在下方',
       repeatDone: (n: number, line: string) => `已发送 ${n} 次：${line}`,
+      handoffLoaded: (from: string) => `已从交接区载入请求：${from}`,
+      handoffBinary: '原请求为二进制正文，未带入，请手动添加。',
     },
     errHints: {
       ECONNREFUSED: '连接被拒绝：目标端口没有服务在监听，检查主机和端口是否正确。',
@@ -530,6 +532,8 @@ export const httpClientL = {
       repeatTip:
         'Repeat count (1-20): sends sequentially, stops on first failure, summary shown below',
       repeatDone: (n: number, line: string) => `Sent ${n} times: ${line}`,
+      handoffLoaded: (from: string) => `Request loaded via handoff: ${from}`,
+      handoffBinary: 'The original request had a binary body, which was not carried over.',
     },
     errHints: {
       ECONNREFUSED:
