@@ -8,9 +8,8 @@
  *     流式时有内容就展开，这一轮结束后自动折叠（用户手动点过就以用户的操作为准）。
  *   - 工具调用与结果按发生顺序插在正文之间，参数与输出默认折叠。
  */
-import React, { useEffect, useRef, useState } from 'react'
+import React, { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { CopyBtn, ErrorNote, KV, Stat } from '../ui'
-import { Markdown } from '../Markdown'
 import { useLocalized } from '../../lib/i18n'
 import { chatL } from '../../lib/locales/chat'
 import { costOf, estimateTokens, formatMoney, type ModelPrice } from '../../lib/toolkit'
@@ -22,6 +21,13 @@ import {
   type ToolPartView,
 } from '../../lib/chat-ui'
 import type { ChatMeta } from '../../lib/chat-types'
+
+/**
+ * Markdown 渲染器（react-markdown + 语法高亮，约半 MB）按需加载：
+ * 不拖慢对话外壳，第一条 AI 回复要渲染时才拉 chunk；
+ * 首次拉取期间用纯文本原文占位，布局基本不跳动。
+ */
+const Markdown = lazy(() => import('../Markdown').then((m) => ({ default: m.Markdown })))
 
 type L = (typeof chatL)['zh']
 
@@ -94,7 +100,18 @@ export function MessageView({
                   </pre>
                 )
               }
-              return part.text ? <Markdown key={i} text={part.text} /> : null
+              return part.text ? (
+                <Suspense
+                  key={i}
+                  fallback={
+                    <pre className="text-[12.5px] whitespace-pre-wrap break-words text-bright">
+                      {part.text}
+                    </pre>
+                  }
+                >
+                  <Markdown text={part.text} />
+                </Suspense>
+              ) : null
             }
             if (part.type === 'reasoning') {
               return (
