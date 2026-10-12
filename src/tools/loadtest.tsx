@@ -20,6 +20,8 @@ import {
 import { useLocalized } from '../lib/i18n'
 import { liveStats, type LoadSample, type LoadStats } from '../lib/toolkit/loadtest'
 import type { HttpRequestSpec } from '../lib/http-types'
+import { HandoffBadge, useDrainHandoff } from '../components/SendTo'
+import { filterReplayHeaders } from '../lib/handoff'
 
 const L = {
   zh: {
@@ -114,7 +116,23 @@ export function LoadTestTool() {
   const [running, setRunning] = useState(false)
   const [err, setErr] = useState<string | null>(null)
   const [stats, setStats] = useState<LoadStats | null>(null)
+  const [from, setFrom] = useState<string | null>(null)
   const desktop = typeof window !== 'undefined' && !!window.electronAPI?.http
+
+  // 从 HTTP 客户端 / 抓包 / HAR 交接来：只预填请求四件套，压测参数不动；
+  // 正文为二进制时不伪造，逐跳头过滤后序列化成文本块
+  useDrainHandoff('loadtest', (env) => {
+    if (env.url) setUrl(env.url)
+    const m = env.method?.toUpperCase()
+    if (m && METHODS.includes(m)) setMethod(m)
+    setHeaders(
+      filterReplayHeaders(env.reqHeaders ?? [])
+        .map(([k, v]) => `${k}: ${v}`)
+        .join('\n'),
+    )
+    setBody(env.reqBodyBinary ? '' : (env.reqBodyText ?? ''))
+    setFrom(env.sourceLabel)
+  })
 
   // 运行期数据全部走 ref：热路径不进 React 状态，每 300ms 快照一次
   const samplesRef = useRef<LoadSample[]>([])
@@ -198,12 +216,25 @@ export function LoadTestTool() {
 
   return (
     <ToolShell toolId="loadtest" note={l.note}>
-      <Input toolInput value={url} onChange={setUrl} label={l.url} placeholder={l.urlPh} />
+      {from && <HandoffBadge label={from} onClear={() => setFrom(null)} />}
+      <Input
+        toolInput
+        value={url}
+        onChange={(v) => {
+          setUrl(v)
+          setFrom(null)
+        }}
+        label={l.url}
+        placeholder={l.urlPh}
+      />
       <div className="flex flex-wrap items-end gap-2">
         <div className="w-32">
           <Select
             value={method}
-            onChange={setMethod}
+            onChange={(v) => {
+              setMethod(v)
+              setFrom(null)
+            }}
             label={l.method}
             options={METHODS.map((m) => ({ value: m, label: m }))}
           />
@@ -252,14 +283,26 @@ export function LoadTestTool() {
 
       <TA
         value={headers}
-        onChange={setHeaders}
+        onChange={(v) => {
+          setHeaders(v)
+          setFrom(null)
+        }}
         label={l.headers}
         placeholder={l.headersPh}
         rows={2}
         spellCheck={false}
       />
       {method !== 'GET' && method !== 'HEAD' && (
-        <TA value={body} onChange={setBody} label={l.body} rows={3} spellCheck={false} />
+        <TA
+          value={body}
+          onChange={(v) => {
+            setBody(v)
+            setFrom(null)
+          }}
+          label={l.body}
+          rows={3}
+          spellCheck={false}
+        />
       )}
 
       {running && (
