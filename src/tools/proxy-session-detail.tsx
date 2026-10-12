@@ -1,52 +1,31 @@
 /**
- * 抓包工具的会话详情视图 —— 请求/响应两侧、pretty/raw/hex 三种视图、cURL 复制与重发。
- * 从 src/tools/proxy.tsx 拆出：选中会话由主文件传入；重发走 httpApi 直连，
- * 代理运行中时自动经本代理端口转发。
+ * 抓包工具的会话详情视图 —— 请求/响应两侧、pretty/raw/hex 三种视图、cURL 复制。
+ * 重放不再内嵌简陋编辑器：通过「发送到」把会话交给 HTTP 客户端，
+ * 在那里享有历史 / 环境变量 / 快照 / 代码生成；分析器同理直达，零复制粘贴。
  */
-import { useState, useEffect, useMemo, useCallback } from 'react'
-import { Btn, CopyBtn, TA } from '../components/ui'
+import { useState, useMemo } from 'react'
+import { CopyBtn } from '../components/ui'
+import { SendToMenu } from '../components/SendTo'
 import { proxyL } from '../lib/locales/proxy'
 import type { ProxySession } from '../lib/proxy-types'
 import * as U from '../lib/http-utils'
-import { headersToText, textToHeaders } from '../lib/proxy-view'
+import { buildRawRequest, type HandoffPayload } from '../lib/handoff'
 
 type L = (typeof proxyL)['zh']
 
 export function SessionDetail({
   session,
   l,
-  httpApi,
   proxyPort,
   proxyRunning,
 }: {
   session: ProxySession
   l: L
-  httpApi: NonNullable<Window['electronAPI']>['http'] | undefined
   proxyPort: number
   proxyRunning: boolean
 }) {
   const [side, setSide] = useState<'req' | 'res'>('res')
   const [view, setView] = useState<'pretty' | 'raw' | 'hex'>('pretty')
-  const [resendOpen, setResendOpen] = useState(false)
-  const [rMethod, setRMethod] = useState(session.method)
-  const [rUrl, setRUrl] = useState(session.url)
-  const [rHeaders, setRHeaders] = useState(headersToText(session.reqHeaders))
-  const [rBody, setRBody] = useState(() => {
-    const bytes = U.b64ToBytes(session.reqBodyBase64)
-    return U.isProbablyBinary(bytes) ? '' : U.bytesToText(bytes)
-  })
-  const [result, setResult] = useState<string | null>(null)
-  const [sending, setSending] = useState(false)
-
-  useEffect(() => {
-    setRMethod(session.method)
-    setRUrl(session.url)
-    setRHeaders(headersToText(session.reqHeaders))
-    const bytes = U.b64ToBytes(session.reqBodyBase64)
-    setRBody(U.isProbablyBinary(bytes) ? '' : U.bytesToText(bytes))
-    setResult(null)
-    setResendOpen(false)
-  }, [session])
 
   const shown = useMemo(() => {
     const b64 = side === 'req' ? session.reqBodyBase64 : session.resBodyBase64
@@ -56,6 +35,39 @@ export function SessionDetail({
     const text = U.bytesToText(bytes, U.detectCharset(ct))
     return { bytes, text, binary: U.isProbablyBinary(bytes), pretty: U.prettyJson(text), ct }
   }, [session, side])
+
+  /** 交接载荷：整条会话（请求 + 响应）一次带给目标工具，目标各取所需 */
+  const handoff = useMemo<HandoffPayload>(() => {
+    const reqBytes = U.b64ToBytes(session.reqBodyBase64)
+    const reqBinary = U.isProbablyBinary(reqBytes)
+    // request target 优先 origin-form（path），URL 解析失败时兜底 '/'
+    let target = session.path
+    if (!target) {
+      try {
+        target = new URL(session.url).pathname
+      } catch {
+        target = '/'
+      }
+    }
+    return {
+      sourceLabel: `#${session.seq} ${session.method} ${target}`,
+      method: session.method,
+      url: session.url,
+      reqHeaders: session.reqHeaders,
+      reqBodyText: reqBinary ? null : U.bytesToText(reqBytes),
+      reqBodyBinary: reqBinary && reqBytes.length > 0,
+      rawRequest: buildRawRequest({
+        method: session.method,
+        target,
+        headers: session.reqHeaders,
+        bodyText: reqBinary ? '' : U.bytesToText(reqBytes),
+      }),
+      resStatus: session.status,
+      resHeaders: session.resHeaders,
+      // 代理在跑：重放仍经代理端口，新请求会作为新会话出现在列表里
+      proxy: proxyRunning ? `http://127.0.0.1:${proxyPort}` : null,
+    }
+  }, [session, proxyRunning, proxyPort])
 
   const curl = useMemo(() => {
     const reqBytes = U.b64ToBytes(session.reqBodyBase64)
@@ -69,32 +81,6 @@ export function SessionDetail({
       verifyTls: false,
     })
   }, [session])
-
-  const resend = useCallback(async () => {
-    if (!httpApi) return
-    setSending(true)
-    setResult(null)
-    try {
-      const res = await httpApi.send({
-        method: rMethod,
-        url: rUrl,
-        headers: textToHeaders(rHeaders),
-        bodyText: rBody || null,
-        followRedirects: false,
-        rejectUnauthorized: false,
-        proxy: proxyRunning ? `http://127.0.0.1:${proxyPort}` : null,
-      })
-      setResult(
-        res.ok
-          ? `${res.status} ${res.statusText} · ${U.formatDuration(res.timings.totalMs)} · ${U.formatBytes(res.bodyBytes)}\n\n${U.bytesToText(U.b64ToBytes(res.bodyBase64), U.detectCharset(U.headerValueOf(res.headers, 'content-type'))).slice(0, 4000)}`
-          : `${l.detail.error}: ${res.error ?? ''}`,
-      )
-    } catch (err) {
-      setResult(`${l.detail.error}: ${(err as Error).message}`)
-    } finally {
-      setSending(false)
-    }
-  }, [httpApi, rMethod, rUrl, rHeaders, rBody, proxyRunning, proxyPort, l])
 
   const headers = side === 'req' ? session.reqHeaders : session.resHeaders
 
@@ -212,48 +198,12 @@ export function SessionDetail({
       )}
 
       <div className="flex items-center gap-2 flex-wrap pt-1">
-        <Btn variant="ghost" onClick={() => setResendOpen(!resendOpen)}>
-          {l.detail.resend}
-        </Btn>
+        <SendToMenu payload={handoff} />
         <CopyBtn text={curl} />
-        <span className="text-[10.5px] text-muted">{resendOpen ? l.detail.resendHint : ''}</span>
+        {handoff.reqBodyBinary && (
+          <span className="text-[10.5px] text-amber">{l.detail.binarySkip}</span>
+        )}
       </div>
-
-      {resendOpen && (
-        <div className="space-y-2 border border-line-soft p-2">
-          <div className="flex gap-2">
-            <select
-              value={rMethod}
-              onChange={(e) => setRMethod(e.target.value)}
-              className="bg-panel-2 border border-line-soft px-2 py-1 text-[12px] text-phosphor"
-            >
-              {['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'].map((m) => (
-                <option key={m} value={m}>
-                  {m}
-                </option>
-              ))}
-            </select>
-            <input
-              value={rUrl}
-              onChange={(e) => setRUrl(e.target.value)}
-              className="flex-1 min-w-0 bg-panel-2 border border-line-soft px-2 py-1 text-[12px] text-bright"
-            />
-          </div>
-          <TA label={l.intercept.headers} rows={4} value={rHeaders} onChange={setRHeaders} />
-          <TA label={l.intercept.body} rows={4} value={rBody} onChange={setRBody} />
-          <Btn variant="primary" onClick={() => void resend()} disabled={sending || !httpApi}>
-            {sending ? l.detail.sending : l.detail.send}
-          </Btn>
-          {result && (
-            <div>
-              <div className="text-[11px] text-muted mb-1">{l.detail.resendResult}</div>
-              <pre className="codeblock max-h-[220px] overflow-auto bg-panel border border-line-soft px-2 py-1.5 text-[11px] text-bright">
-                {result}
-              </pre>
-            </div>
-          )}
-        </div>
-      )}
     </div>
   )
 }

@@ -3,7 +3,7 @@
  * 从 src/tools/proxy.tsx 拆出：过滤/暂停/跟随等状态仍由主文件持有，
  * 切页签回来不能丢输入与观察状态，所以这里只做展示与回调，不持有状态。
  */
-import type { RefObject } from 'react'
+import { type RefObject } from 'react'
 import { Panel } from '../components/ui'
 import { proxyL } from '../lib/locales/proxy'
 import type { ProxySession } from '../lib/proxy-types'
@@ -33,7 +33,6 @@ export function SessionsTab({
   onClear,
   onCancelClear,
   listRef,
-  httpApi,
   proxyPort,
   proxyRunning,
   statePort,
@@ -58,7 +57,7 @@ export function SessionsTab({
   onCancelClear: () => void
   /** React 19 起 useRef<T>(null) 的返回类型带 | null，这里如实接收 */
   listRef: RefObject<HTMLDivElement | null>
-  httpApi: NonNullable<Window['electronAPI']>['http'] | undefined
+  /** 仅用于交接给 HTTP 客户端：代理在跑时重放仍经代理端口，可在列表里观测 */
   proxyPort: number
   proxyRunning: boolean
   /** 主文件里可能还是 null（状态未回填）；为 null 时不显示端口引导 */
@@ -213,7 +212,6 @@ export function SessionsTab({
               <SessionDetail
                 session={selected}
                 l={l}
-                httpApi={httpApi}
                 proxyPort={proxyPort}
                 proxyRunning={proxyRunning}
               />

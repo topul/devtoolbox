@@ -52,7 +52,6 @@ export function TrafficProxyTool() {
   const [confirmClear, setConfirmClear] = useState(false)
 
   const api = typeof window !== 'undefined' ? window.electronAPI?.proxy : undefined
-  const httpApi = typeof window !== 'undefined' ? window.electronAPI?.http : undefined
 
   /* ---- 事件订阅 ---- */
   useEffect(() => {
@@ -381,7 +380,6 @@ export function TrafficProxyTool() {
           onClear={() => void clearSessions()}
           onCancelClear={() => setConfirmClear(false)}
           listRef={listRef}
-          httpApi={httpApi}
           proxyPort={state?.port ?? DEFAULT_PORT}
           proxyRunning={running}
           statePort={state ? state.port : null}

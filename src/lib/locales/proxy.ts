@@ -142,6 +142,7 @@ export const proxyL = {
       resendResult: '重发结果',
       tunnelNotice: '该会话是 CONNECT 隧道（未解密），只能看到目标主机与端口，看不到正文。',
       cookieNone: '无 Cookie',
+      binarySkip: '二进制正文未交接，重放时需自行添加。',
     },
     intercept: {
       title: '断点拦截',
@@ -379,6 +380,7 @@ export const proxyL = {
       tunnelNotice:
         'This session is an undecrypted CONNECT tunnel: only host and port are visible.',
       cookieNone: 'No cookies',
+      binarySkip: 'Binary body was not handed off — add it manually when replaying.',
     },
     intercept: {
       title: 'Breakpoint',
