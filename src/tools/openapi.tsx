@@ -8,6 +8,7 @@ import React, { useMemo } from 'react'
 import { Btn, ErrorNote, KV, Panel, Stat, TA, ToolShell, usePersistedState } from '../components/ui'
 import { useLocalized } from '../lib/i18n'
 import { listEndpoints, openApiOverview, parseOpenApiSpec } from '../lib/toolkit/openapi'
+import { handoffBus, openApiToHandoff } from '../lib/handoff'
 
 const L = {
   zh: {
@@ -26,6 +27,7 @@ const L = {
     endpoints: '端点',
     noEndpoints: 'paths 里没有定义任何端点',
     params: '参数',
+    openInClient: '在客户端打开',
   },
   en: {
     spec: 'Spec JSON',
@@ -43,6 +45,7 @@ const L = {
     endpoints: 'Endpoints',
     noEndpoints: 'No endpoints defined in paths',
     params: 'params',
+    openInClient: 'Open in client',
   },
 }
 
@@ -101,6 +104,13 @@ export function OpenApiTool() {
   const overview = useMemo(() => (spec ? openApiOverview(spec) : null), [spec])
   const endpoints = useMemo(() => (spec ? listEndpoints(spec) : []), [spec])
   const specVersion = spec ? spec.version : ''
+
+  // 端点 → HTTP 客户端：用首个 server 拼 URL，{path 参数} 占位保留给用户替换
+  const openInClient = (ep: { method: string; path: string }): void => {
+    if (!spec) return
+    handoffBus.push('http-client', openApiToHandoff(spec.baseUrl, ep))
+    window.location.hash = 'http-client'
+  }
 
   return (
     <ToolShell toolId="openapi">
@@ -173,6 +183,14 @@ export function OpenApiTool() {
                         · {e.paramsCount} {l.params}
                       </span>
                     )}
+                    <button
+                      type="button"
+                      onClick={() => openInClient({ method: e.method, path: e.path })}
+                      title={l.openInClient}
+                      className="ml-auto shrink-0 px-1.5 py-0 border border-line-soft text-[11px] text-muted hover:text-phosphor hover:border-phosphor/50"
+                    >
+                      ↗ {l.openInClient}
+                    </button>
                   </div>
                 ))}
               </div>
