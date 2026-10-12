@@ -25,6 +25,7 @@ export type HandoffTarget =
   | 'cspaudit'
   | 'smuggling'
   | 'header-audit'
+  | 'loadtest'
 
 /** 一份在工具间流转的请求快照（字段尽量可选，发送方有什么给什么） */
 export interface HandoffPayload {
@@ -186,6 +187,81 @@ export function sessionToHandoff(
     resStatus: session.status,
     resHeaders: session.resHeaders,
     proxy: opts?.proxy ?? null,
+  }
+}
+
+/* ---------- HAR（HTTP Archive）条目 ---------- */
+
+function harNameValue(list: unknown): [string, string][] {
+  if (!Array.isArray(list)) return []
+  const out: [string, string][] = []
+  for (const item of list) {
+    const o = (item ?? {}) as Record<string, unknown>
+    if (typeof o.name === 'string') out.push([o.name, typeof o.value === 'string' ? o.value : ''])
+  }
+  return out
+}
+
+/**
+ * 原始 HAR entry（log.entries[i]）→ 交接载荷。
+ * 直接吃 unknown 宽松解析：各导出工具的 HAR 字段差异大，这里只取规范里稳定的
+ * request.method/url/headers/postData.text 与 response.status/headers；
+ * 请求缺失或 method/url 不全返回 null。
+ */
+export function harEntryToHandoff(har: unknown, index: number): HandoffPayload | null {
+  const entries = (har as { log?: { entries?: unknown } })?.log?.entries
+  const entry = Array.isArray(entries) ? (entries[index] as Record<string, unknown>) : undefined
+  const req = (entry?.request ?? {}) as Record<string, unknown>
+  const res = (entry?.response ?? {}) as Record<string, unknown>
+  const method = typeof req.method === 'string' ? req.method : ''
+  const url = typeof req.url === 'string' ? req.url : ''
+  if (!method || !url) return null
+
+  const reqHeaders = harNameValue(req.headers)
+  const resHeaders = harNameValue(res.headers)
+  const post = (req.postData ?? {}) as Record<string, unknown>
+  // HAR 规范里 postData.text 是解码后的字符串；没有正文就是空串
+  const bodyText = typeof post.text === 'string' && post.text ? post.text : null
+
+  let target: string
+  try {
+    const u = new URL(url)
+    target = u.pathname + u.search
+  } catch {
+    target = '/'
+  }
+  return {
+    sourceLabel: `HAR#${index} ${method} ${target}`,
+    method,
+    url,
+    reqHeaders,
+    reqBodyText: bodyText,
+    rawRequest: buildRawRequest({ method, target, headers: reqHeaders, bodyText: bodyText ?? '' }),
+    resStatus: typeof res.status === 'number' ? res.status : null,
+    resHeaders,
+  }
+}
+
+/* ---------- OpenAPI 端点 ---------- */
+
+/**
+ * OpenAPI 端点（method + path）→ 交接载荷。
+ * baseUrl 取解析出的第一个 server（可为空串，URL 留 path 让用户补主机）；
+ * 路径参数占位（/users/{id}）原样保留，交给用户替换——不猜示例值。
+ */
+export function openApiToHandoff(
+  baseUrl: string,
+  ep: { method: string; path: string },
+): HandoffPayload {
+  const base = baseUrl.replace(/\/+$/, '')
+  const path = ep.path.startsWith('/') ? ep.path : `/${ep.path}`
+  const url = /^https?:\/\//.test(base) ? base + path : path
+  return {
+    sourceLabel: `${ep.method.toUpperCase()} ${path}`,
+    method: ep.method.toUpperCase(),
+    url,
+    reqHeaders: [],
+    reqBodyText: null,
   }
 }
 

@@ -8,6 +8,8 @@ import {
   handoffToDoc,
   handoffToHostPath,
   handoffToRaw,
+  harEntryToHandoff,
+  openApiToHandoff,
   sessionToHandoff,
 } from '../src/lib/handoff'
 import type { ProxySession } from '../src/lib/proxy-types'
@@ -98,6 +100,85 @@ describe('sessionToHandoff', () => {
     expect(sessionToHandoff(fakeSession({}), { proxy: 'http://127.0.0.1:8899' }).proxy).toBe(
       'http://127.0.0.1:8899',
     )
+  })
+})
+
+describe('harEntryToHandoff', () => {
+  const har = {
+    log: {
+      entries: [
+        {
+          request: {
+            method: 'POST',
+            url: 'https://a.com/x?y=1',
+            headers: [
+              { name: 'Host', value: 'a.com' },
+              { name: 'Content-Type', value: 'application/json' },
+            ],
+            postData: { text: '{"k":1}' },
+          },
+          response: {
+            status: 201,
+            headers: [{ name: 'Access-Control-Allow-Origin', value: '*' }],
+          },
+        },
+        {
+          // 失败条目：status 0，无 postData，headers 为 null（Firefox 风格偏差）
+          request: { method: 'GET', url: 'http://a.com/f', headers: null },
+          response: { status: 0, statusText: '', headers: [] },
+        },
+      ],
+    },
+  }
+
+  it('完整条目：方法/URL/头/正文/响应齐全，raw 用 origin-form', () => {
+    const p = harEntryToHandoff(har, 0)
+    expect(p).not.toBeNull()
+    expect(p?.sourceLabel).toBe('HAR#0 POST /x?y=1')
+    expect(p?.reqHeaders).toEqual([
+      ['Host', 'a.com'],
+      ['Content-Type', 'application/json'],
+    ])
+    expect(p?.reqBodyText).toBe('{"k":1}')
+    expect(p?.rawRequest).toBe(
+      'POST /x?y=1 HTTP/1.1\r\nHost: a.com\r\nContent-Type: application/json\r\n\r\n{"k":1}',
+    )
+    expect(p?.resStatus).toBe(201)
+    expect(p?.resHeaders).toEqual([['Access-Control-Allow-Origin', '*']])
+  })
+
+  it('缺正文/异常头的条目不炸，body 归 null', () => {
+    const p = harEntryToHandoff(har, 1)
+    expect(p?.reqHeaders).toEqual([])
+    expect(p?.reqBodyText).toBeNull()
+    expect(p?.resStatus).toBe(0)
+  })
+
+  it('越界 / 结构损坏 / method 或 url 缺失返回 null', () => {
+    expect(harEntryToHandoff(har, 9)).toBeNull()
+    expect(harEntryToHandoff(null, 0)).toBeNull()
+    expect(harEntryToHandoff({ log: {} }, 0)).toBeNull()
+    expect(harEntryToHandoff({ log: { entries: [{ request: { method: 'GET' } }] } }, 0)).toBeNull()
+  })
+})
+
+describe('openApiToHandoff', () => {
+  it('base + path 拼接，方法大写，路径参数占位保留', () => {
+    const p = openApiToHandoff('https://api.a.com/v1/', { method: 'get', path: '/users/{id}' })
+    expect(p.url).toBe('https://api.a.com/v1/users/{id}')
+    expect(p.method).toBe('GET')
+    expect(p.sourceLabel).toBe('GET /users/{id}')
+  })
+
+  it('base 尾斜杠与 path 前斜杠重复时归一', () => {
+    expect(openApiToHandoff('https://a.com', { method: 'post', path: 'login' }).url).toBe(
+      'https://a.com/login',
+    )
+  })
+
+  it('没有 server（空 base）时只给 path，让用户补主机', () => {
+    expect(openApiToHandoff('', { method: 'get', path: '/ping' }).url).toBe('/ping')
+    expect(openApiToHandoff('not-a-host', { method: 'get', path: '/ping' }).url).toBe('/ping')
   })
 })
 
