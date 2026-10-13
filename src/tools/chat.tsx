@@ -8,28 +8,30 @@
  *   - 两者之间的桥 = `src/lib/chat-transport.ts`（走 IPC 的自定义 transport）。
  *   - 纯逻辑（事件映射、历史转换、旧格式迁移）= `src/lib/chat-ui.ts`。
  *
- * 这个文件只留状态编排与布局，渲染细节在 `src/components/chat/*`。
+ * 这个文件只留状态编排与布局，渲染细节在 `src/components/chat/*`：
+ * 消息流 MessageList、输入区 Composer、引导页 OnboardPanel、会话栏 SessionRail、
+ * 顶栏 ChatHeader、会话持久化 useChatSessions。
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useChat } from '@ai-sdk/react'
-import { Btn, ErrorNote, Input, Panel } from '../components/ui'
-import { MessageView } from '../components/chat/MessageView'
+import { MessageList } from '../components/chat/MessageList'
+import { ChatEmptyState } from '../components/chat/ChatEmptyState'
 import { Composer } from '../components/chat/Composer'
-import { Greeter } from '../components/chat/Greeter'
+import { OnboardPanel } from '../components/chat/OnboardPanel'
+import { ChatHeader } from '../components/chat/ChatHeader'
+import { MobileSessionList, SessionRail } from '../components/chat/SessionRail'
+import { useChatSessions } from '../components/chat/useChatSessions'
+import { usePaneMode } from '../components/chat/usePaneMode'
+import { PaneEnterButton, PaneView } from '../components/chat/PaneView'
 import { SettingsDrawer } from '../components/chat/SettingsDrawer'
 import { TraceDrawer } from '../components/chat/TraceView'
 import { useLocalized } from '../lib/i18n'
 import { chatL } from '../lib/locales/chat'
+import { chatpanesL } from '../lib/locales/chatpanes'
 import { createIpcChatTransport } from '../lib/chat-transport'
+import { buildChatSendSpec, lastReplyCost } from '../lib/chat-spec'
+import { estimatePreflight, messageMeta, messageText, type ChatUIMessage } from '../lib/chat-ui'
 import {
-  messageMeta,
-  messageText,
-  normalizeStoredTurns,
-  uiMessagesToHistory,
-  type ChatUIMessage,
-} from '../lib/chat-ui'
-import {
-  PRESET_BASE_URLS,
   blankProfile,
   findProfile,
   loadActiveProfileId,
@@ -37,9 +39,6 @@ import {
   loadProfiles,
   loadServers,
   loadSettings,
-  numOrUndefined,
-  parseAllowList,
-  parseHeaderLines,
   profileName,
   profileReady,
   saveActiveProfileId,
@@ -47,15 +46,14 @@ import {
   saveProfiles,
   saveServers,
   saveSettings,
-  toChatToolServers,
   type ChatSettings,
   type CustomServer,
   type ModelProfile,
 } from '../lib/chat-config'
-import { costOf, estimateMessages, findPrice, uuidV4, type ModelPrice } from '../lib/toolkit'
+import { uuidV4, type ModelPrice } from '../lib/toolkit'
 import type { ChatMessage, ChatSendSpec } from '../lib/chat-types'
 import { WEB_BUILD } from '../lib/platform'
-import { titleFromText, type ChatSessionMeta } from '../lib/chatstore-types'
+import { titleFromText } from '../lib/chatstore-types'
 
 /**
  * Chat 实例的 id 固定不变。
@@ -68,6 +66,7 @@ const CHAT_ID = 'devtoolbox-chat'
 
 export function ChatTool(): React.ReactElement {
   const l = useLocalized(chatL)
+  const lp = useLocalized(chatpanesL)
 
   /* ================= 本机配置 ================= */
   const [profiles, setProfiles] = useState<ModelProfile[]>(loadProfiles)
@@ -174,79 +173,14 @@ export function ChatTool(): React.ReactElement {
     }
   }, [l])
 
-  /* ================= 会话持久化 ================= */
-  const storeApi = typeof window !== 'undefined' ? window.electronAPI?.chatStore : undefined
-  const [sessions, setSessions] = useState<ChatSessionMeta[]>([])
-  const [sessionId, setSessionId] = useState(() => `s${uuidV4().replace(/-/g, '')}`)
-  const [sessionTitle, setSessionTitle] = useState('')
-  const [storeNote, setStoreNote] = useState('')
-  const [showSessions, setShowSessions] = useState(false)
-  const [renaming, setRenaming] = useState(false)
-  const [titleDraft, setTitleDraft] = useState('')
-  const [confirmDel, setConfirmDel] = useState(false)
-  const [storePath, setStorePath] = useState('')
-
-  const sessionRef = useRef({ id: sessionId, title: sessionTitle })
-  sessionRef.current = { id: sessionId, title: sessionTitle }
-
-  const refreshSessions = useCallback(async (): Promise<void> => {
-    if (!storeApi) return
-    try {
-      const res = await storeApi.list()
-      if (res.ok) setSessions(res.sessions)
-    } catch {
-      /* 列表刷新失败不打断对话 */
-    }
-  }, [storeApi])
-
-  /**
-   * 写盘。**不含正在流式输出的那条助手消息** —— 半截回答落盘后，
-   * 重启看到的半句话比看不到更让人困惑。
-   */
-  const persist = useCallback(
-    async (id: string, title: string, msgs: ChatUIMessage[]): Promise<void> => {
-      if (!storeApi || !id) return
-      const settled = msgs.filter(
-        (m, i) =>
-          !(
-            i === msgs.length - 1 &&
-            m.role === 'assistant' &&
-            !messageMeta(m).meta &&
-            !m.parts.length
-          ),
-      )
-      try {
-        const res = await storeApi.save({ id, title, turns: settled })
-        if (!res.ok)
-          setStoreNote(res.tooLarge ? l.storeTooLarge : `${l.storeFailed}: ${res.error ?? ''}`)
-        else void refreshSessions()
-      } catch (e) {
-        setStoreNote(`${l.storeFailed}: ${(e as Error).message}`)
-      }
-    },
-    [storeApi, l, refreshSessions],
+  /* ================= 传输层 ================= */
+  // session/persist 的实际值来自 useChatSessions（在后面调用），
+  // 但 transport 的回调闭包要先拿到稳定 ref —— 声明提前，赋值在 hook 之后
+  const sessionRef = useRef({ id: '', title: '' })
+  const persistRef = useRef<(id: string, title: string, msgs: ChatUIMessage[]) => Promise<void>>(
+    async () => {},
   )
 
-  const persistRef = useRef(persist)
-  persistRef.current = persist
-
-  useEffect(() => {
-    if (!storeApi) return
-    let alive = true
-    storeApi
-      .file()
-      .then((p) => {
-        if (alive) setStorePath(p)
-      })
-      .catch(() => {
-        /* 拿不到就不显示 */
-      })
-    return () => {
-      alive = false
-    }
-  }, [storeApi])
-
-  /* ================= 传输层 ================= */
   /** 供 transport 读取的实时状态（Chat 实例只创建一次，闭包会过期，必须走 ref） */
   const ctxRef = useRef({
     active: active as ModelProfile | null,
@@ -257,49 +191,24 @@ export function ChatTool(): React.ReactElement {
   })
   ctxRef.current = { active, settings, servers, toolServer, l }
 
-  const buildSpec = useCallback((history: ChatMessage[], requestId: string): ChatSendSpec => {
-    const c = ctxRef.current
-    const prof = c.active
-    if (!prof || !profileReady(prof)) throw new Error(c.l.noModel)
-    const custom = toChatToolServers(c.servers)
-    const maxRounds = Math.max(1, Math.min(parseInt(c.settings.maxRounds) || 8, 20))
-    const useTools = c.settings.toolsEnabled && (!!c.toolServer || custom.length > 0)
-    return {
-      requestId,
-      baseUrl: prof.baseUrl.trim(),
-      apiKey: prof.apiKey.trim(),
-      model: prof.model.trim(),
-      messages: history,
-      temperature: numOrUndefined(c.settings.temperature),
-      maxTokens: numOrUndefined(c.settings.maxTokens),
-      topP: numOrUndefined(c.settings.topP),
-      extraHeaders: parseHeaderLines(c.settings.extraHeaders),
-      proxy: c.settings.proxy.trim() || null,
-      rejectUnauthorized: c.settings.tlsVerify,
-      includeUsage: c.settings.includeUsage,
-      tools: useTools
-        ? {
-            servers: [
-              ...(c.toolServer
-                ? [
-                    {
-                      label: c.l.toolSelfLabel,
-                      command: c.toolServer.command,
-                      args: c.toolServer.args,
-                      env: c.toolServer.env,
-                    },
-                  ]
-                : []),
-              ...custom,
-            ],
-            maxRounds,
-            ...(parseAllowList(c.settings.toolAllow).length
-              ? { allow: parseAllowList(c.settings.toolAllow) }
-              : {}),
-          }
-        : null,
-    }
-  }, [])
+  const buildSpec = useCallback(
+    (history: ChatMessage[], requestId: string): ChatSendSpec => {
+      const c = ctxRef.current
+      return buildChatSendSpec(
+        {
+          active: c.active,
+          settings: c.settings,
+          servers: c.servers,
+          toolServer: c.toolServer,
+          noModel: c.l.noModel,
+          toolSelfLabel: c.l.toolSelfLabel,
+        },
+        history,
+        requestId,
+      )
+    },
+    [],
+  )
 
   const transport = useMemo(
     () =>
@@ -354,99 +263,41 @@ export function ChatTool(): React.ReactElement {
 
   const busy = status === 'submitted' || status === 'streaming'
 
-  /** 切走之前先把当前会话写下来，否则会丢最后几条 */
-  const flushCurrent = useCallback(async (): Promise<void> => {
-    if (!sessionId) return
-    // 流式中的那一轮不落盘（onFinish 会负责收尾）
-    if (status === 'submitted' || status === 'streaming') return
-    if (!messages.length) return
-    await persist(sessionId, sessionTitle, messages)
-  }, [sessionId, sessionTitle, messages, status, persist])
+  /* ================= 分窗对比模式 ================= */
+  const panes = usePaneMode(profiles)
 
-  // 启动：读回上次的会话列表与当前会话
-  useEffect(() => {
-    if (!storeApi) return
-    let alive = true
-    void (async () => {
-      try {
-        const res = await storeApi.list()
-        if (!alive) return
-        if (!res.ok) {
-          setStoreNote(l.storeFailed)
-          return
-        }
-        setSessions(res.sessions)
-        if (res.recovered) setStoreNote(l.storeRecovered)
-        const id =
-          res.activeId && res.sessions.some((x) => x.id === res.activeId) ? res.activeId : ''
-        if (!id) return
-        const loaded = await storeApi.load(id)
-        if (!alive || !loaded.ok) return
-        setSessionId(id)
-        setSessionTitle(res.sessions.find((x) => x.id === id)?.title ?? '')
-        setMessages(normalizeStoredTurns(loaded.turns))
-      } catch (e) {
-        if (alive) setStoreNote(`${l.storeFailed}: ${(e as Error).message}`)
-      }
-    })()
-    return () => {
-      alive = false
-    }
-  }, [storeApi, l, setMessages])
+  /* ================= 会话持久化 ================= */
+  const sessionsCtl = useChatSessions({
+    busy,
+    messages,
+    setMessages,
+    strings: { storeTooLarge: l.storeTooLarge, storeFailed: l.storeFailed, storeRecovered: l.storeRecovered },
+  })
+  const {
+    storeApi,
+    sessions,
+    sessionId,
+    sessionTitle,
+    setSessionTitle,
+    storeNote,
+    showSessions,
+    setShowSessions,
+    renaming,
+    setRenaming,
+    titleDraft,
+    setTitleDraft,
+    confirmDel,
+    setConfirmDel,
+    storePath,
+    persist,
+    newSession,
+    switchSession,
+    removeSession,
+    commitRename,
+  } = sessionsCtl
 
-  const newSession = async (): Promise<void> => {
-    await flushCurrent()
-    setSessionId(`s${uuidV4().replace(/-/g, '')}`)
-    setSessionTitle('')
-    setMessages([])
-    setShowSessions(false)
-    setRenaming(false)
-    setConfirmDel(false)
-    setStoreNote('')
-    // 新会话还没落盘，先不指认它，免得重启后打开一个空会话
-    void storeApi?.setActive(null)
-  }
-
-  const switchSession = async (id: string): Promise<void> => {
-    if (id === sessionId) {
-      setShowSessions(false)
-      return
-    }
-    if (!storeApi || busy) return
-    await flushCurrent()
-    const loaded = await storeApi.load(id)
-    if (!loaded.ok) {
-      setStoreNote(`${l.storeFailed}: ${loaded.error ?? ''}`)
-      return
-    }
-    setSessionId(id)
-    setSessionTitle(sessions.find((s) => s.id === id)?.title ?? '')
-    setMessages(normalizeStoredTurns(loaded.turns))
-    setShowSessions(false)
-    setRenaming(false)
-    setConfirmDel(false)
-    void storeApi.setActive(id)
-  }
-
-  const removeSession = async (id: string): Promise<void> => {
-    if (!storeApi || !id) return
-    await storeApi.remove(id)
-    if (id === sessionId) {
-      setSessionId(`s${uuidV4().replace(/-/g, '')}`)
-      setMessages([])
-      setSessionTitle('')
-    }
-    setConfirmDel(false)
-    await refreshSessions()
-  }
-
-  const commitRename = async (): Promise<void> => {
-    const t = titleDraft.trim()
-    setRenaming(false)
-    if (!t || t === sessionTitle) return
-    setSessionTitle(t)
-    if (messages.length) await persist(sessionId, t, messages)
-  }
+  sessionRef.current = { id: sessionId, title: sessionTitle }
+  persistRef.current = persist
 
   /* ================= 发送 / 停止 / 重试 ================= */
 
@@ -473,27 +324,14 @@ export function ChatTool(): React.ReactElement {
 
   /* ================= 派生数据 ================= */
 
-  const preflight = useMemo(() => {
-    const msgs: { role: string; content: string }[] = []
-    if (settings.system.trim()) msgs.push({ role: 'system', content: settings.system })
-    msgs.push(...uiMessagesToHistory(messages))
-    if (input.trim()) msgs.push({ role: 'user', content: input })
-    return estimateMessages(msgs)
-  }, [settings.system, messages, input])
+  const preflightTotal = useMemo(
+    () => estimatePreflight(settings.system, messages, input),
+    [settings.system, messages, input],
+  )
 
   const lastAssistant = [...messages].reverse().find((m) => m.role === 'assistant')
   const lastMeta = lastAssistant ? messageMeta(lastAssistant).meta : undefined
-  const lastCost = (() => {
-    if (!lastMeta) return null
-    const price = findPrice(lastMeta.model ?? active?.model ?? '', prices)
-    if (!price) return null
-    const tokens = lastMeta.usage?.completionTokens ?? Math.ceil(lastMeta.chars / 3.2)
-    return costOf(price, {
-      promptTokens: lastMeta.usage?.promptTokens ?? 0,
-      completionTokens: tokens,
-      cachedTokens: lastMeta.usage?.cachedTokens ?? 0,
-    }).total
-  })()
+  const lastCost = lastReplyCost(lastMeta, active?.model ?? '', prices)
 
   const notice = [storeNote, agentNotice].filter(Boolean).join(' · ')
   const lastIsAssistant = messages.length > 0 && messages[messages.length - 1].role === 'assistant'
@@ -502,213 +340,86 @@ export function ChatTool(): React.ReactElement {
 
   /* ================= 未配模型：配置引导 ================= */
   if (!cfgReady) {
-    return (
-      <div className="max-w-[680px] mx-auto fade-in py-8">
-        <Panel title={l.onboardTitle}>
-          <p className="text-[12.5px] text-muted leading-relaxed mb-4">{l.onboardIntro}</p>
-          {!desktop && <ErrorNote msg={l.noDesktop} />}
-          <div className="space-y-3">
-            <Input
-              value={active?.baseUrl ?? ''}
-              onChange={(v) => patchProfile({ baseUrl: v })}
-              label={l.baseUrl}
-              placeholder={l.baseUrlPh}
-            />
-            <div className="flex flex-wrap gap-1.5">
-              {PRESET_BASE_URLS.map(([name, url]) => (
-                <button
-                  key={name}
-                  onClick={() => patchProfile({ baseUrl: url })}
-                  className="px-2 py-0.5 text-[11px] border border-line-soft text-muted hover:text-phosphor hover:border-phosphor/40 transition-colors"
-                >
-                  {name}
-                </button>
-              ))}
-            </div>
-            <div className="grid grid-cols-1 min-[640px]:grid-cols-2 gap-3">
-              <Input
-                value={active?.model ?? ''}
-                onChange={(v) => patchProfile({ model: v })}
-                label={l.model}
-                placeholder={l.modelPh}
-              />
-              <Input
-                value={active?.apiKey ?? ''}
-                onChange={(v) => patchProfile({ apiKey: v })}
-                label={l.apiKey}
-                placeholder={l.apiKeyPh}
-                type="password"
-              />
-            </div>
-          </div>
-          <p className="text-[11px] text-muted mt-4 leading-relaxed border-t border-line-soft pt-3">
-            {l.apiKeyNote} {l.onboardTools}
-          </p>
-        </Panel>
-      </div>
-    )
+    return <OnboardPanel desktop={desktop} active={active} onPatchProfile={patchProfile} />
   }
 
   /* ================= 主布局 ================= */
-  const rail = (
-    <aside className="hidden lg:flex flex-col w-60 shrink-0 border-r border-line bg-panel/60 lg:h-screen">
-      <button
-        onClick={() => void newSession()}
-        disabled={busy}
-        className="m-2 border border-line-soft px-3 py-2 text-[12px] text-bright hover:border-phosphor/50 hover:text-phosphor transition-colors disabled:opacity-40"
-      >
-        + {l.newSession}
-      </button>
-      <div className="flex-1 overflow-y-auto px-1.5 pb-2">
-        {sessions.length === 0 && (
-          <div className="px-2 py-4 text-[11px] text-muted leading-relaxed">{l.emptySessions}</div>
-        )}
-        {sessions.map((sess) => (
-          <div
-            key={sess.id}
-            className={`group flex items-center gap-1 rounded-sm mb-0.5 ${sess.id === sessionId ? 'bg-phosphor-faint' : 'hover:bg-phosphor-faint/50'}`}
-          >
-            <button
-              onClick={() => void switchSession(sess.id)}
-              disabled={busy}
-              className={`flex-1 min-w-0 text-left px-2 py-1.5 text-[12px] truncate ${sess.id === sessionId ? 'text-phosphor' : 'text-dim hover:text-bright'}`}
-              title={sess.title || l.untitledSession}
-            >
-              {sess.title || l.untitledSession}
-              <span className="ml-1.5 text-[9.5px] text-muted/50">{sess.turnCount}</span>
-            </button>
-            {/* 管理操作常驻可见（不再 hover 才出现）：触屏点得到，删错也有二次确认兜底 */}
-            {sess.id === sessionId && (
-              <button
-                onClick={() => {
-                  setTitleDraft(sessionTitle || sess.title)
-                  setRenaming(true)
-                }}
-                title={l.rename}
-                aria-label={l.rename}
-                className="shrink-0 text-muted/50 hover:text-phosphor text-[11px] px-0.5"
-              >
-                ✎
-              </button>
-            )}
-            <button
-              onClick={() => {
-                if (sess.id === sessionId) {
-                  if (confirmDel) void removeSession(sess.id)
-                  else setConfirmDel(true)
-                } else void removeSession(sess.id)
-              }}
-              title={confirmDel && sess.id === sessionId ? l.confirmDelete : l.deleteSession}
-              aria-label={l.deleteSession}
-              className={`shrink-0 text-[12px] px-0.5 ${confirmDel && sess.id === sessionId ? 'text-danger' : 'text-muted/50 hover:text-danger'}`}
-            >
-              ×
-            </button>
-          </div>
-        ))}
-      </div>
-      {/* 存储位置从常驻文字降级为 ⓘ 悬浮提示：这一行信息价值低，不该常驻占位 */}
-      <div className="border-t border-line-soft px-2.5 py-1.5">
-        <span
-          className="cursor-help text-[10px] text-muted/40 hover:text-muted"
-          title={`${l.savedHint}${storePath ? ` · ${storePath}` : ''}`}
-        >
-          ⓘ
-        </span>
-      </div>
-    </aside>
-  )
+  const railProps = {
+    sessions,
+    currentId: sessionId,
+    currentTitle: sessionTitle,
+    busy,
+    storePath,
+    confirmDel,
+    onConfirmDel: setConfirmDel,
+    onNew: () => void newSession(),
+    onSwitch: (id: string) => void switchSession(id),
+    onStartRename: (title: string) => {
+      setTitleDraft(sessionTitle || title)
+      setRenaming(true)
+    },
+    onRemove: (id: string) => void removeSession(id),
+  }
 
   // 高度见 index.css 的 .chat-viewport：宽屏下要抵消 <main> 的 zoom
+  // 分窗模式下发送 = fan-out 到所有就绪窗格；输入框保留在底部共享
+  const onComposerSend = (): void => {
+    if (panes.active) {
+      if (panes.send(input) > 0) setInput('')
+      return
+    }
+    void send()
+  }
+  const onComposerStop = (): void => {
+    if (panes.active) panes.stopAll()
+    else stopStream()
+  }
   const composer = (
     <Composer
       input={input}
       onInput={setInput}
-      onSend={() => void send()}
-      onStop={stopStream}
-      streaming={busy}
+      onSend={onComposerSend}
+      onStop={onComposerStop}
+      streaming={busy || panes.busy}
       profiles={profiles}
       activeId={active?.id ?? ''}
       onPickProfile={activate}
       onManageModels={() => setShowSettings(true)}
       onAddProfile={addProfile}
-      estimate={preflight.total}
-      cost={lastCost}
+      estimate={preflightTotal}
+      cost={panes.active ? null : lastCost}
       roundInfo={roundInfo}
-      toolCount={toolNames.length}
+      toolCount={panes.active ? 0 : toolNames.length}
       disabled={!desktop || !cfgReady}
     />
   )
 
   return (
     <div className="flex chat-viewport">
-      {rail}
+      <SessionRail {...railProps} />
       <div className="flex-1 min-w-0 flex flex-col">
-        <header className="flex items-center gap-2 border-b border-line px-3 py-2 shrink-0 pt-safe">
-          {/* 改名只替换标题本身：模型名、提示、设置键在改名期间保持可见，
-              顶栏职责不随编辑状态漂移 */}
-          {renaming ? (
-            <input
-              value={titleDraft}
-              onChange={(e) => setTitleDraft(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') void commitRename()
-                if (e.key === 'Escape') setRenaming(false)
-              }}
-              autoFocus
-              spellCheck={false}
-              className="flex-1 min-w-0 bg-panel-2 border border-line-soft px-2 py-1 text-[12px] text-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-phosphor focus-visible:outline-offset-2 focus:border-phosphor/40"
-            />
-          ) : (
-            <button
-              onClick={() => {
-                setTitleDraft(sessionTitle)
-                setRenaming(true)
-              }}
-              className="min-w-0 max-w-[50%] truncate text-left text-[12.5px] text-bright hover:text-phosphor transition-colors !min-h-0"
-              title={l.rename}
-            >
-              {sessionTitle || l.untitledSession}
-            </button>
-          )}
-          {renaming ? (
-            <>
-              <Btn variant="ghost" onClick={() => void commitRename()}>
-                {l.renameSave}
-              </Btn>
-              <Btn variant="ghost" onClick={() => setRenaming(false)}>
-                {l.renameCancel}
-              </Btn>
-            </>
-          ) : (
-            <span className="text-[10px] text-muted/60 truncate hidden md:inline">
-              {active ? `${profileName(active)} · ${active.model}` : ''}
-            </span>
-          )}
-          <span className="flex-1" />
-          {notice && (
-            <span
-              className="hidden md:inline text-[10.5px] text-amber truncate max-w-[40%]"
-              title={notice}
-            >
-              {notice}
-            </span>
-          )}
-          <button
-            onClick={() => setShowSessions((v) => !v)}
-            disabled={!storeApi}
-            className="lg:hidden border border-line-soft px-2 py-1 text-[11px] text-muted hover:text-phosphor"
-          >
-            {l.sessionsTitle}
-          </button>
-          <button
-            onClick={() => setShowSettings(true)}
-            className="border border-line-soft px-2.5 py-1 text-[12px] text-muted hover:text-phosphor hover:border-phosphor/40 transition-colors"
-            title={l.settingsTitle}
-          >
-            ⚙
-          </button>
-        </header>
+        <ChatHeader
+          sessionTitle={sessionTitle}
+          activeLabel={active ? `${profileName(active)} · ${active.model}` : ''}
+          notice={notice}
+          hasStore={!!storeApi}
+          renaming={renaming}
+          titleDraft={titleDraft}
+          onTitleDraft={setTitleDraft}
+          onStartRename={() => {
+            setTitleDraft(sessionTitle)
+            setRenaming(true)
+          }}
+          onCommitRename={() => void commitRename()}
+          onCancelRename={() => setRenaming(false)}
+          onToggleSessions={() => setShowSessions((v) => !v)}
+          onOpenSettings={() => setShowSettings(true)}
+          extra={
+            panes.active ? undefined : (
+              <PaneEnterButton onClick={() => panes.enter(active?.id ?? null)} label={lp.enter} />
+            )
+          }
+        />
 
         {notice && (
           <p className="lg:hidden px-3 py-1.5 text-[11px] text-amber border-b border-line-soft">
@@ -717,80 +428,33 @@ export function ChatTool(): React.ReactElement {
         )}
 
         {showSessions && (
-          <div className="lg:hidden border-b border-line max-h-[40vh] overflow-auto">
-            <button
-              onClick={() => void newSession()}
-              className="w-full text-left px-3 py-2 text-[12px] text-phosphor border-b border-line-soft"
-            >
-              + {l.newSession}
-            </button>
-            {sessions.length === 0 && (
-              <div className="px-3 py-3 text-[11.5px] text-muted">{l.emptySessions}</div>
-            )}
-            {sessions.map((sess) => (
-              /* 行结构从「整行一个按钮」改为「主按钮 + 行内操作」：
-                 窄屏没有 hover，管理操作必须和桌面一样点得到 */
-              <div
-                key={sess.id}
-                className={`flex items-stretch border-b border-line-soft last:border-0 ${sess.id === sessionId ? 'bg-phosphor-faint' : ''}`}
-              >
-                <button
-                  onClick={() => void switchSession(sess.id)}
-                  className="flex-1 min-w-0 text-left px-3 py-2 text-[12px]"
-                >
-                  <div
-                    className={`truncate ${sess.id === sessionId ? 'text-phosphor' : 'text-bright'}`}
-                  >
-                    {sess.title || l.untitledSession}
-                  </div>
-                  <div className="text-[10px] text-muted">
-                    {l.msgCount(sess.turnCount)} · {new Date(sess.updatedAt).toLocaleString()}
-                  </div>
-                </button>
-                {sess.id === sessionId && (
-                  <button
-                    onClick={() => {
-                      setTitleDraft(sessionTitle || sess.title)
-                      setRenaming(true)
-                      setShowSessions(false)
-                    }}
-                    aria-label={l.rename}
-                    title={l.rename}
-                    className="shrink-0 px-2.5 flex items-center text-muted/70 hover:text-phosphor text-[13px]"
-                  >
-                    ✎
-                  </button>
-                )}
-                <button
-                  onClick={() => {
-                    if (sess.id === sessionId) {
-                      if (confirmDel) void removeSession(sess.id)
-                      else setConfirmDel(true)
-                    } else void removeSession(sess.id)
-                  }}
-                  aria-label={l.deleteSession}
-                  title={confirmDel && sess.id === sessionId ? l.confirmDelete : l.deleteSession}
-                  className={`shrink-0 px-3 flex items-center text-[14px] ${confirmDel && sess.id === sessionId ? 'text-danger' : 'text-muted/70 hover:text-danger'}`}
-                >
-                  ×
-                </button>
-              </div>
-            ))}
-          </div>
+          <MobileSessionList
+            {...railProps}
+            onStartRename={(title: string) => {
+              setTitleDraft(sessionTitle || title)
+              setRenaming(true)
+              setShowSessions(false)
+            }}
+          />
         )}
 
-        {messages.length === 0 ? (
-          /* 空会话：Kimi 式首屏 —— 输入框在视口中央，上方坐着 SVG 小人；
-             发出第一条消息后切换回「消息流 + 底部输入框」的对话布局 */
-          <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-safe">
-            <div className="min-h-full flex flex-col items-center justify-center py-8">
-              <div className="w-full max-w-[860px] -mt-14 fade-in">
-                <Greeter />
-                <p className="text-center text-[13.5px] text-dim mb-5">{l.heroTitle}</p>
-                {composer}
-              </div>
+        {panes.active ? (
+          <>
+            <div className="flex-1 min-h-0 px-1 pt-1">
+              <PaneView
+                sess={panes.sess}
+                profiles={profiles}
+                ctl={panes}
+                onManageModels={() => setShowSettings(true)}
+                onAddProfile={addProfile}
+              />
             </div>
-          </div>
+            <div className="px-4 pt-1 pb-4 shrink-0 pb-safe">
+              <div className="max-w-[860px] mx-auto">{composer}</div>
+            </div>
+          </>
+        ) : messages.length === 0 ? (
+          <ChatEmptyState hero={l.heroTitle}>{composer}</ChatEmptyState>
         ) : (
           <>
             <MessageList
@@ -804,7 +468,7 @@ export function ChatTool(): React.ReactElement {
               onTrace={setTraceId}
             />
 
-            <div className="border-t border-line px-4 py-3 shrink-0 pb-safe">
+            <div className="px-4 pt-1 pb-4 shrink-0 pb-safe">
               <div className="max-w-[860px] mx-auto">{composer}</div>
             </div>
           </>
@@ -828,67 +492,6 @@ export function ChatTool(): React.ReactElement {
       />
 
       {traceId && <TraceDrawer requestId={traceId} onClose={() => setTraceId(null)} />}
-    </div>
-  )
-}
-
-/* ================= 消息流 ================= */
-
-function MessageList({
-  messages,
-  busy,
-  prices,
-  model,
-  emptyText,
-  sendError,
-  onRetry,
-  onTrace,
-}: {
-  messages: ChatUIMessage[]
-  busy: boolean
-  prices: ModelPrice[]
-  model: string
-  emptyText: string
-  sendError: string
-  onRetry: () => Promise<void>
-  onTrace: (requestId: string) => void
-}): React.ReactElement {
-  const l = useLocalized(chatL)
-  const listRef = useRef<HTMLDivElement | null>(null)
-
-  // 贴底跟随：只有当前已经在底部附近才自动滚，避免打断向上翻阅
-  useEffect(() => {
-    const el = listRef.current
-    if (!el) return
-    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 120
-    if (nearBottom) el.scrollTop = el.scrollHeight
-  }, [messages])
-
-  return (
-    <div ref={listRef} className="flex-1 min-h-0 overflow-y-auto px-4 py-4">
-      <div className="max-w-[860px] mx-auto space-y-4">
-        {messages.length === 0 && (
-          <div className="py-16 text-center">
-            <div className="text-phosphor/40 text-2xl mb-2">✦</div>
-            <p className="text-[12px] text-muted leading-relaxed">{emptyText}</p>
-          </div>
-        )}
-        {messages.map((m, i) => (
-          <MessageView
-            key={m.id}
-            msg={m}
-            live={busy && i === messages.length - 1}
-            price={findPrice(messageMeta(m).meta?.model ?? model, prices)}
-            onTrace={m.role === 'assistant' ? onTrace : undefined}
-          />
-        ))}
-        {sendError && (
-          <div className="space-y-2">
-            <ErrorNote msg={sendError} />
-            <Btn onClick={() => void onRetry()}>{l.retry}</Btn>
-          </div>
-        )}
-      </div>
     </div>
   )
 }

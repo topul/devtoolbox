@@ -10,7 +10,7 @@
  */
 import type { UIMessage, UIMessageChunk } from 'ai'
 import type { ChatEvent, ChatMessage, ChatMeta, ChatToolResult } from './chat-types'
-import { uuidV4 } from './toolkit'
+import { estimateMessages, uuidV4 } from './toolkit'
 
 /**
  * 挂在消息 metadata 上的一轮统计。跟着消息一起落盘，
@@ -372,4 +372,13 @@ export function normalizeStoredTurns(turns: unknown[]): ChatUIMessage[] {
 /** 界面消息是否为空轮（一个字都没出、也没调工具）—— 用来决定要不要显示「本轮无输出」 */
 export function isEmptyAssistant(msg: ChatUIMessage): boolean {
   return messageText(msg) === '' && messageToolParts(msg).length === 0 && rawReasoning(msg) === ''
+}
+
+/** 发出前预检估算：系统提示 + 已有历史 + 草稿合成一条临时消息列，估 total tokens */
+export function estimatePreflight(system: string, messages: ChatUIMessage[], input: string): number {
+  const msgs: ChatMessage[] = []
+  if (system.trim()) msgs.push({ role: 'system', content: system })
+  msgs.push(...uiMessagesToHistory(messages))
+  if (input.trim()) msgs.push({ role: 'user', content: input })
+  return estimateMessages(msgs).total
 }

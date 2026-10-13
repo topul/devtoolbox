@@ -1,7 +1,7 @@
 {
   "name": "devtoolbox",
   "private": false,
-  "version": "1.11.1",
+  "version": "1.12.0",
   "type": "module",
   "description": "DevOps Toolbox - a local toolkit for developers & security researchers (Electron + React) · 程序员与安全研究员的本地工具箱（Electron + React）",
   "author": {
@@ -41,6 +41,7 @@
     "smoke:chattrace": "node scripts/run-smoke.mjs chattrace",
     "smoke:skills": "node scripts/run-smoke.mjs skills",
     "smoke:compare": "node scripts/run-smoke.mjs compare",
+    "smoke:chatpanes": "node scripts/run-smoke.mjs chatpanes",
     "smoke:chatui": "node scripts/run-smoke.mjs chatui",
     "smoke:schema": "node scripts/run-smoke.mjs schema",
     "smoke:httpcodec": "node scripts/run-smoke.mjs httpcodec",

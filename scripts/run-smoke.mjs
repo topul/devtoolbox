@@ -33,6 +33,7 @@ const SMOKES = {
   chattrace: { file: 'smoke-chat-trace.ts' },
   skills: { file: 'smoke-chat-skills.ts' },
   compare: { file: 'smoke-chat-compare.ts' },
+  chatpanes: { file: 'smoke-chat-panes.ts' },
   chatui: { external: ['react', 'react-dom', 'react/jsx-runtime'] },
   schema: {},
   httpcodec: {},
