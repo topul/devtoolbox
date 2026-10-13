@@ -3,9 +3,16 @@
  *
  * 菜单只做两件事：把载荷 push 进 handoffBus、然后改 location.hash 跳到目标工具；
  * 目标工具挂载时用 useDrainHandoff 取走并填入自己的输入区。
- * 菜单用 fixed 定位：抓包详情在 overflow-auto 容器里，absolute 下拉会被裁掉。
+ *
+ * 定位与挂载（都是踩过的坑）：
+ *   - 必须 `fixed`：抓包详情在 overflow-auto 容器里，absolute 下拉会被裁掉；
+ *   - 必须 portal 到 document.body：工具页在带 `zoom` 的 <main>（content-zoom）里，
+ *     zoom 会让祖先成为 fixed 的包含块 —— 菜单留在容器内会被整体放大、坐标按缩放系
+ *     解释而偏移，还会把主文档撑出横向滚动条。挂到 body 才拿得到真实视口
+ *     （与 Drawer 同一个坑、同一种解法，见 components/ui.tsx）。
  */
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useLocalized } from '../lib/i18n'
 import { cn } from '../lib/cn'
 import {
@@ -167,42 +174,46 @@ export function SendToMenu({
       >
         {l.send} ▾
       </button>
-      {open && pos && (
-        <>
-          {/* 透明背板负责点外部关闭 */}
-          <div className="fixed inset-0 z-[90]" onClick={() => setOpen(false)} />
-          <div
-            className="fixed z-[91] w-60 rounded-md border border-line bg-panel p-1 shadow-xl"
-            style={{
-              left: pos.x,
-              ...(pos.up ? { bottom: window.innerHeight - pos.y } : { top: pos.y }),
-            }}
-          >
-            {GROUPS.map((g, gi) => (
-              <div key={gi}>
-                <div className="px-1.5 pt-1 pb-0.5 text-[10px] uppercase tracking-wide text-muted">
-                  {g[lang]}
+      {open &&
+        pos &&
+        typeof document !== 'undefined' &&
+        createPortal(
+          <>
+            {/* 透明背板负责点外部关闭 */}
+            <div className="fixed inset-0 z-[90]" onClick={() => setOpen(false)} />
+            <div
+              className="fixed z-[91] w-60 rounded-md border border-line bg-panel p-1 shadow-xl"
+              style={{
+                left: pos.x,
+                ...(pos.up ? { bottom: window.innerHeight - pos.y } : { top: pos.y }),
+              }}
+            >
+              {GROUPS.map((g, gi) => (
+                <div key={gi}>
+                  <div className="px-1.5 pt-1 pb-0.5 text-[10px] uppercase tracking-wide text-muted">
+                    {g[lang]}
+                  </div>
+                  {g.items.map((def) => {
+                    const off = !!def.needsResponse && !hasResponse
+                    return (
+                      <button
+                        key={def.id}
+                        type="button"
+                        disabled={off}
+                        title={off ? l.send + l.needResponse : undefined}
+                        onClick={() => choose(def)}
+                        className="block w-full rounded px-1.5 py-1 text-left text-[12px] text-bright hover:bg-panel-2 disabled:opacity-35 disabled:hover:bg-transparent"
+                      >
+                        {LABELS[def.id][lang]}
+                      </button>
+                    )
+                  })}
                 </div>
-                {g.items.map((def) => {
-                  const off = !!def.needsResponse && !hasResponse
-                  return (
-                    <button
-                      key={def.id}
-                      type="button"
-                      disabled={off}
-                      title={off ? l.send + l.needResponse : undefined}
-                      onClick={() => choose(def)}
-                      className="block w-full rounded px-1.5 py-1 text-left text-[12px] text-bright hover:bg-panel-2 disabled:opacity-35 disabled:hover:bg-transparent"
-                    >
-                      {LABELS[def.id][lang]}
-                    </button>
-                  )
-                })}
-              </div>
-            ))}
-          </div>
-        </>
-      )}
+              ))}
+            </div>
+          </>,
+          document.body,
+        )}
     </>
   )
 }
