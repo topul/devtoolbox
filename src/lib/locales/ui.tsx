@@ -37,6 +37,19 @@ export interface UIStrings {
   homeNav: string
   jumpToSection: string
   heroChips: string[]
+  /** 首页按时段的问候语（替代原来的品牌大标题） */
+  greetMorning: string
+  greetAfternoon: string
+  greetEvening: string
+  /** 首页 AI 对话渐变焦点卡 */
+  featTag: string
+  featTitle: string
+  featDesc: string
+  featCta: string
+  /** 「常用工具」分区标题（hot 工具聚合） */
+  favTitle: string
+  /** 分区尾部「+N 更多」展开卡 */
+  moreTools: (n: number) => string
   /** ⌘K 命令面板：空结果提示 */
   cmdkEmpty: string
   /** ⌘K 命令面板：命令型条目分组标题（切主题/语言等全局动作） */
@@ -93,6 +106,15 @@ export const UI: Record<Locale, UIStrings> = {
     homeNav: '工具箱',
     jumpToSection: '跳到分组',
     heroChips: ['MCP 服务端', '流式对话', '工具调用', 'Agent 规则', 'JSON', 'JWT'],
+    greetMorning: '早上好，今天折腾点什么？',
+    greetAfternoon: '下午好，今天折腾点什么？',
+    greetEvening: '晚上好，来捣鼓点什么？',
+    featTag: 'AI WORKSPACE',
+    featTitle: 'AI 对话 — 你的随开工位',
+    featDesc: '多模型并排对比、工具调用追踪、一键把片段送进任意工具。粘贴一段 curl，剩下的交给它。',
+    featCta: '开始对话',
+    favTitle: '常用工具',
+    moreTools: (n: number) => `还有 ${n} 个`,
     cmdkEmpty: '没有匹配的工具',
     cmdkActions: '操作',
     quickNav: '快捷入口',
@@ -145,6 +167,16 @@ export const UI: Record<Locale, UIStrings> = {
     homeNav: 'Toolbox',
     jumpToSection: 'Jump to group',
     heroChips: ['MCP server', 'Streaming chat', 'Tool calling', 'Agent rules', 'JSON', 'JWT'],
+    greetMorning: 'Good morning — what are we hacking today?',
+    greetAfternoon: 'Good afternoon — what are we hacking today?',
+    greetEvening: 'Good evening — still at it?',
+    featTag: 'AI WORKSPACE',
+    featTitle: 'AI Chat — your always-on workbench',
+    featDesc:
+      'Compare models side by side, trace tool calls, send snippets to any tool. Paste a curl command and let it take over.',
+    featCta: 'Start chatting',
+    favTitle: 'Frequently used',
+    moreTools: (n: number) => `${n} more`,
     cmdkEmpty: 'No matching tools',
     cmdkActions: 'Actions',
     quickNav: 'Quick access',

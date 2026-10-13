@@ -7,6 +7,7 @@ import {
   searchTools,
   toolsInSection,
   visibleToolCount,
+  visibleTools,
   ToolDef,
   CategoryId,
   SectionId,
@@ -35,6 +36,38 @@ const SECTION_ICONS: Record<SectionId, string> = {
   content: '⚙',
   misc: '▤',
 }
+
+/** 每个分组的粉彩 chip 配色（index.css 的 .chip-*）：侧栏导航与工具卡片共用一套色相 */
+const SECTION_CHIP: Record<SectionId, string> = {
+  ai: 'chip-emerald',
+  http: 'chip-sky',
+  codec: 'chip-amber',
+  security: 'chip-rose',
+  network: 'chip-teal',
+  content: 'chip-indigo',
+  misc: 'chip-violet',
+}
+
+/** 高频工具的专属卡片字形；没列出的回落到分组图标 */
+const TOOL_GLYPHS: Record<string, string> = {
+  json: '{ }',
+  base64: 'B64',
+  jwt: 'JWT',
+  'http-client': '⇅',
+  'regex-replace': '.*',
+  graphql: '◈',
+  'traffic-proxy': '◎',
+  'mcp-server': '✦',
+}
+
+/**
+ * 常用工具网格里的暖色渐变焦点卡（全站只有这一张：克制才有点睛效果）。
+ * 抓包代理是桌面端独占的旗舰能力，值得这个位置。
+ */
+const WARM_FEATURED_TOOL = 'traffic-proxy'
+
+/** 首页每个分区先展示的工具数，其余的收进「+N 更多」虚线卡 */
+const SEC_PREVIEW = 7
 
 /** 首页与侧栏共用的分组内容：组 → 其下的工具（按分类顺序） */
 type SectionGroup = { tools: ToolDef[]; cats: Map<CategoryId, ToolDef[]> }
@@ -144,12 +177,15 @@ function AppInner() {
       <aside
         className={`
         fixed lg:sticky top-0 z-50 h-screen h-[100dvh] w-[82vw] max-w-[300px] shrink-0 flex flex-col
-        border-r border-line bg-panel/95 lg:bg-panel backdrop-blur
+        bg-panel/95 lg:bg-transparent backdrop-blur lg:backdrop-blur-none
         transition-[transform,width] duration-200 pt-safe pl-safe
-        ${sidebar.collapsed ? 'lg:w-[3.25rem]' : 'lg:w-64'}
+        ${sidebar.collapsed ? 'lg:w-[4rem]' : 'lg:w-[17rem]'}
         ${sidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full lg:translate-x-0 lg:shadow-none'}
       `}
       >
+        {/* 桌面端：侧栏是浮在画布上的白卡片，靠弥散阴影分层而不是 1px 描边；
+            移动端抽屉不受影响（lg: 前缀外的样式保持原样） */}
+        <div className="flex flex-col flex-1 min-h-0 lg:m-3 lg:mr-0 lg:rounded-[20px] lg:bg-panel lg:shadow-soft-card overflow-hidden">
         {/* ===== 桌面端窄栏（收起态） ===== */}
         {sidebar.collapsed && (
           <div data-sb-rail className="hidden lg:flex flex-col flex-1 min-h-0">
@@ -236,21 +272,26 @@ function AppInner() {
 
         {/* ===== 移动端抽屉 + 桌面端展开态 ===== */}
         <div className={cn('flex flex-col flex-1 min-h-0', sidebar.collapsed ? 'lg:hidden' : '')}>
-          <div className="flex items-center border-b border-line">
+          <div className="flex items-center px-3 pt-4 pb-2">
             <button
               onClick={() => openTool(null)}
-              className="flex-1 text-left px-4 pt-4 pb-3 group !min-h-0"
+              className="flex items-center gap-2.5 flex-1 min-w-0 text-left group !min-h-0"
             >
-              <div className="text-[15px] font-bold tracking-tight text-bright group-hover:text-phosphor transition-colors">
-                BUGBUCKET<span className="text-phosphor">.BOX</span>
-              </div>
-              <div className="text-[10px] text-muted tracking-[0.2em] mt-0.5 uppercase">
-                Dev × Sec Toolkit
-              </div>
+              <span className="chip-c grad-hero w-9 h-9 !rounded-[13px] text-white text-[15px] shadow-[0_6px_16px_-6px_rgba(11,169,119,.55)]">
+                ✦
+              </span>
+              <span className="min-w-0">
+                <span className="block text-[15px] font-bold tracking-tight text-bright group-hover:text-phosphor transition-colors truncate">
+                  BUGBUCKET<span className="text-phosphor">.BOX</span>
+                </span>
+                <span className="block text-[10px] text-muted tracking-[0.2em] mt-0.5 uppercase">
+                  Dev × Sec Toolkit
+                </span>
+              </span>
             </button>
             <button
               onClick={sidebar.toggle}
-              className="hidden lg:flex items-center self-stretch px-3 text-muted hover:text-bright text-[14px] transition-colors"
+              className="hidden lg:flex items-center self-stretch px-2 text-muted hover:text-bright text-[14px] transition-colors"
               title={t.collapseSidebar}
               aria-label={t.collapseSidebar}
             >
@@ -258,7 +299,7 @@ function AppInner() {
             </button>
             <button
               onClick={() => setSidebarOpen(false)}
-              className="lg:hidden px-4 self-stretch flex items-center text-muted text-xl"
+              className="lg:hidden px-2 self-stretch flex items-center text-muted text-xl"
               aria-label={t.closeMenu}
             >
               ×
@@ -266,42 +307,44 @@ function AppInner() {
           </div>
 
           {/* 搜索入口：直接打开命令面板（⌘K），不再做侧栏内过滤 */}
-          <div className="p-3 border-b border-line-soft">
+          <div className="px-3 pb-3">
             <button
               onClick={() => setPaletteOpen(true)}
-              className="w-full flex items-center gap-2 rounded-md bg-panel-2 border border-line-soft px-2.5 py-1.5 text-[12.5px] text-muted hover:border-phosphor/40 transition-colors"
+              className="w-full flex items-center gap-2 rounded-full bg-panel-2 px-3.5 py-2 text-[12.5px] text-muted hover:text-bright transition-colors"
             >
               <span className="text-[12px]">⌕</span>
               <span className="flex-1 text-left truncate">{t.searchPlaceholder}</span>
-              <kbd className="shrink-0 rounded border border-line bg-panel px-1 py-0.5 text-[10px] text-muted">
+              <kbd className="shrink-0 rounded-md bg-panel px-1.5 py-0.5 text-[10px] text-muted shadow-soft-sm">
                 {kbdHint}
               </kbd>
             </button>
           </div>
 
-          <nav className="flex-1 overflow-y-auto px-2 py-2 space-y-0.5">
+          <nav className="flex-1 overflow-y-auto px-2.5 py-1 space-y-0.5">
             <button
               onClick={() => openTool(null)}
               className={cn(
-                'w-full text-left rounded-md px-2.5 py-1.5 text-[12.5px] transition-colors',
+                'w-full flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-[13px] transition-colors',
                 view === 'chat'
-                  ? 'bg-phosphor-faint text-phosphor font-medium'
+                  ? 'bg-phosphor-faint text-phosphor font-semibold'
                   : 'text-muted hover:text-bright hover:bg-panel-2',
               )}
             >
-              ✦ {t.chatNav}
+              <span className="chip-c chip-emerald w-[26px] h-[26px] text-[13px]">✦</span>
+              {t.chatNav}
             </button>
             <button
               onClick={() => openTool('home')}
               className={cn(
-                'w-full text-left rounded-md px-2.5 py-1.5 text-[12.5px] transition-colors',
+                'w-full flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-[13px] transition-colors',
                 view === 'home'
-                  ? 'bg-phosphor-faint text-phosphor font-medium'
+                  ? 'bg-phosphor-faint text-phosphor font-semibold'
                   : 'text-muted hover:text-bright hover:bg-panel-2',
               )}
             >
-              ⌂ {t.homeNav}{' '}
-              <span className="text-muted/60 text-[10.5px]">({visibleToolCount()})</span>
+              <span className="chip-c chip-slate w-[26px] h-[26px] text-[13px]">⌂</span>
+              {t.homeNav}
+              <span className="ml-auto text-[10.5px] text-muted/60">{visibleToolCount()}</span>
             </button>
 
             {[...grouped.entries()].map(([sec, entry]) => {
@@ -312,21 +355,27 @@ function AppInner() {
                   <button
                     onClick={() => openSections.toggle(sec)}
                     aria-expanded={open}
-                    className="w-full flex items-center gap-2 rounded-md px-2.5 py-1.5 text-left transition-colors hover:bg-panel-2 text-muted hover:text-bright"
+                    className="w-full flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-left transition-colors hover:bg-panel-2 text-muted hover:text-bright"
                   >
                     <span
                       className={cn(
-                        'text-[9px] w-2 shrink-0 text-muted/60 transition-transform duration-200',
+                        'chip-c w-[26px] h-[26px] text-[13px]',
+                        SECTION_CHIP[sec],
+                      )}
+                    >
+                      {SECTION_ICONS[sec]}
+                    </span>
+                    <span className="text-[13px] font-medium truncate">{sectionName(sec)}</span>
+                    <span className="ml-auto text-[10.5px] text-muted/60 shrink-0">
+                      {entry.tools.length}
+                    </span>
+                    <span
+                      className={cn(
+                        'text-[8px] shrink-0 text-muted/50 transition-transform duration-200',
                         open && 'rotate-90',
                       )}
                     >
                       ▶
-                    </span>
-                    <span className="text-[12px] font-medium truncate">
-                      {SECTION_ICONS[sec]} {sectionName(sec)}
-                    </span>
-                    <span className="ml-auto text-[10.5px] text-muted/60 shrink-0">
-                      {entry.tools.length}
                     </span>
                   </button>
 
@@ -337,11 +386,11 @@ function AppInner() {
                     {...(open ? {} : { inert: '' as unknown as boolean })}
                   >
                     <div>
-                      <div className="pb-1 pl-3">
+                      <div className="pb-1">
                         {[...entry.cats.entries()].map(([cat, items]) => (
                           <div key={cat}>
                             {multiCat && (
-                              <div className="pl-3 pr-2 pt-1.5 pb-0.5 text-[10.5px] text-muted/60 select-none truncate">
+                              <div className="pl-[46px] pr-2 pt-1.5 pb-0.5 text-[10.5px] text-muted/60 select-none truncate">
                                 {catName(cat)}
                               </div>
                             )}
@@ -350,7 +399,7 @@ function AppInner() {
                                 key={item.id}
                                 onClick={() => openTool(item.id)}
                                 className={cn(
-                                  'w-full text-left rounded-md pl-6 pr-2 py-1.5 text-[12.5px] transition-colors truncate',
+                                  'w-full text-left rounded-lg pl-[46px] pr-2 py-1.5 text-[12.5px] transition-colors truncate',
                                   active?.id === item.id
                                     ? 'bg-phosphor-faint text-phosphor font-medium'
                                     : 'text-muted hover:text-bright hover:bg-panel-2',
@@ -373,11 +422,11 @@ function AppInner() {
           </nav>
 
           {/* 底栏：操作三键 + 版本行（免责声明收进 ⓘ 悬浮提示，不再常驻占行） */}
-          <div data-sb-foot className="border-t border-line px-3 pt-2 pb-safe space-y-2">
+          <div data-sb-foot className="px-3 pt-2 pb-3 space-y-2">
             <div className="grid grid-cols-3 gap-1.5">
               <button
                 onClick={zoom.cycle}
-                className="rounded-md border border-line-soft px-1.5 py-1.5 text-[10.5px] text-muted text-center truncate hover:text-bright hover:border-line transition-colors"
+                className="rounded-xl bg-panel-2 px-1.5 py-1.5 text-[10.5px] text-muted text-center truncate hover:text-bright transition-colors"
                 aria-label={t.zoomTip}
                 title={t.zoomTip}
               >
@@ -385,7 +434,7 @@ function AppInner() {
               </button>
               <button
                 onClick={() => setLocale(locale === 'zh' ? 'en' : 'zh')}
-                className="rounded-md border border-line-soft px-1.5 py-1.5 text-[10.5px] text-muted text-center truncate hover:text-bright hover:border-line transition-colors"
+                className="rounded-xl bg-panel-2 px-1.5 py-1.5 text-[10.5px] text-muted text-center truncate hover:text-bright transition-colors"
                 aria-label={t.switchLangTip}
                 title={t.switchLangTip}
               >
@@ -393,7 +442,7 @@ function AppInner() {
               </button>
               <button
                 onClick={toggleTheme}
-                className="rounded-md border border-line-soft px-1.5 py-1.5 text-[10.5px] text-muted text-center truncate hover:text-bright hover:border-line transition-colors"
+                className="rounded-xl bg-panel-2 px-1.5 py-1.5 text-[10.5px] text-muted text-center truncate hover:text-bright transition-colors"
                 aria-label={t.toggleTheme}
                 title={theme === 'dark' ? t.switchToLight : t.switchToDark}
               >
@@ -418,6 +467,7 @@ function AppInner() {
             </div>
           </div>
         </div>
+        </div>
       </aside>
 
       {sidebarOpen && (
@@ -434,7 +484,7 @@ function AppInner() {
       {/* ============ Main ============ */}
       <main className={cn('flex-1 min-w-0 content-zoom', view === 'chat' ? 'overflow-hidden' : '')}>
         {/* mobile topbar */}
-        <div className="lg:hidden sticky top-0 z-30 flex items-center gap-1 border-b border-line bg-panel/95 backdrop-blur px-2 py-1.5 pt-safe">
+        <div className="lg:hidden sticky top-0 z-30 flex items-center gap-1 border-b border-line-soft bg-panel/90 backdrop-blur px-2 py-1.5 pt-safe">
           <button
             onClick={() => setSidebarOpen(true)}
             className="text-bright text-lg px-3 py-1"
@@ -626,85 +676,237 @@ function HomeView({
   onOpen,
 }: {
   grouped: Map<SectionId, SectionGroup>
-  onOpen: (id: string) => void
+  onOpen: (id: string | null) => void
 }) {
-  const { t, catName, toolName, toolDesc, sectionName, sectionDesc } = useI18n()
+  const { t, toolName, toolDesc, sectionName, sectionDesc } = useI18n()
+  /** 「+N 更多」点开后就保持展开：回头看一眼全部比反复折叠更顺手 */
+  const [expanded, setExpanded] = useState<ReadonlySet<SectionId>>(new Set())
+  const hour = new Date().getHours()
+  const greeting = hour < 12 ? t.greetMorning : hour < 18 ? t.greetAfternoon : t.greetEvening
+  const favorites = visibleTools().filter((x) => x.hot)
+
+  const expandSection = (sec: SectionId): void => {
+    setExpanded((prev) => new Set(prev).add(sec))
+  }
+
   return (
     <div className="fade-in">
-      {/* hero */}
-      <div className="border-b border-line bg-gradient-to-b from-phosphor-faint/60 to-transparent">
-        <div className="w-full mx-auto max-w-[1720px] px-4 md:px-8 xl:px-10 py-10 md:py-14">
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-bright">
-            BUGBUCKET<span className="text-phosphor">.BOX</span>
+      <div className="w-full mx-auto max-w-[1720px] px-4 md:px-8 xl:px-10 pt-10 md:pt-12 pb-12 pb-safe">
+        {/* hero：时段问候 + 一句话定位 + 能力 chips（白卡丸，不描边） */}
+        <div className="mb-7">
+          <h1 className="text-[26px] md:text-[30px] font-extrabold tracking-tight text-bright">
+            {greeting}
           </h1>
-          <p className="mt-3 text-[13.5px] text-muted max-w-2xl leading-relaxed">
+          <p className="mt-2.5 text-[13.5px] text-muted max-w-2xl leading-relaxed">
             {t.hero(visibleToolCount())}
           </p>
-          <div className="mt-5 flex gap-2 flex-wrap text-[11.5px]">
+          <div className="mt-4 flex gap-2 flex-wrap text-[11.5px]">
             {t.heroChips.map((k) => (
-              <span
-                key={k}
-                className="px-2.5 py-0.5 rounded-full border border-line text-muted bg-panel"
-              >
+              <span key={k} className="px-3 py-1 rounded-full bg-panel text-muted shadow-soft-sm">
                 {k}
               </span>
             ))}
           </div>
         </div>
-      </div>
 
-      {/* tool grid */}
-      <div className="w-full mx-auto max-w-[1720px] px-4 md:px-8 xl:px-10 py-6 md:py-8 pb-12 pb-safe space-y-8">
-        {[...grouped.entries()].map(([sec, entry]) => (
-          <section key={sec} id={`sec-${sec}`}>
-            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-3">
-              <h2 className="text-[15px] font-semibold tracking-tight text-bright">
-                <span className="text-phosphor">{SECTION_ICONS[sec]}</span> {sectionName(sec)}
-              </h2>
-              <span className="text-[11px] text-muted/70">{t.toolsCount(entry.tools.length)}</span>
-              <span className="hidden md:inline text-[12px] text-muted/70">{sectionDesc(sec)}</span>
-              <div className="flex-1 border-t border-line-soft min-w-8" />
-            </div>
-
-            {/* 组内再按分类分小节；只有一个分类时（如 AI 组）不重复标题 */}
-            {[...entry.cats.entries()].map(([cat, items]) => (
-              <div key={cat} className={entry.cats.size > 1 ? 'mb-5 last:mb-0' : ''}>
-                {entry.cats.size > 1 && (
-                  <div className="text-[11.5px] text-muted/70 mb-2 select-none">{catName(cat)}</div>
-                )}
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3">
-                  {items.map((tool) => (
-                    <button
-                      key={tool.id}
-                      onClick={() => onOpen(tool.id)}
-                      className="tool-grid-card text-left rounded-xl border border-line bg-panel px-4 py-3.5 hover:border-phosphor/40 hover:shadow-md"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="text-[13.5px] font-medium text-bright">
-                          {toolName(tool)}
-                        </span>
-                        {tool.hot && (
-                          <span className="text-[9.5px] text-amber border border-amber/30 rounded px-1 py-px">
-                            HOT
-                          </span>
-                        )}
-                      </div>
-                      <div className="mt-1 text-[12px] text-muted leading-relaxed">
-                        {toolDesc(tool)}
-                      </div>
-                    </button>
-                  ))}
-                </div>
+        {/* AI 渐变焦点卡：全页唯一的品牌渐变面，视觉锚点 */}
+        <button
+          onClick={() => onOpen(null)}
+          className="grad-hero group relative overflow-hidden w-full text-left rounded-[24px] p-6 md:p-8 text-white shadow-[0_20px_44px_-16px_rgba(11,169,119,.45)] mb-10"
+        >
+          {/* 装饰弥散光斑 */}
+          <div className="absolute -top-36 right-[24%] w-72 h-72 rounded-full bg-white/15 pointer-events-none" />
+          <div className="absolute -bottom-24 -right-10 w-52 h-52 rounded-full bg-white/10 pointer-events-none" />
+          <div className="relative flex items-center gap-8">
+            <div className="flex-1 min-w-0">
+              <span className="inline-block text-[10.5px] font-semibold tracking-[0.12em] bg-white/20 rounded-full px-3 py-1">
+                {t.featTag}
+              </span>
+              <div className="mt-3 text-[19px] md:text-[21px] font-bold tracking-tight">
+                {t.featTitle}
               </div>
-            ))}
+              <p className="mt-2 text-[12.5px] text-white/85 max-w-xl leading-relaxed">
+                {t.featDesc}
+              </p>
+              <span className="mt-4 inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-[13px] font-bold text-phosphor transition-transform duration-150 group-hover:translate-x-0.5">
+                {t.featCta} <span aria-hidden>→</span>
+              </span>
+            </div>
+            {/* 迷你对话装饰（纯视觉，不进可及性树） */}
+            <div
+              aria-hidden
+              className="hidden md:flex flex-col gap-2.5 w-[280px] shrink-0 select-none"
+            >
+              <div className="self-end rounded-2xl rounded-br-md bg-white/25 px-3.5 py-2 text-[11.5px] text-white/95">
+                curl → fetch
+              </div>
+              <div className="self-start w-[80%] rounded-2xl rounded-bl-md bg-white/15 px-3.5 py-2.5">
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-white/90 mr-1" />
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-white/60 mr-1" />
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-white/35" />
+              </div>
+            </div>
+          </div>
+        </button>
+
+        {/* 常用工具：hot 标记聚合，抓包代理以暖色渐变卡点睛 */}
+        {favorites.length > 0 && (
+          <section className="mb-10">
+            <div className="flex items-center gap-3 mb-4">
+              <span className="chip-c chip-amber w-8 h-8 !rounded-[11px] text-[14px]">★</span>
+              <h2 className="text-[15.5px] font-bold tracking-tight text-bright">{t.favTitle}</h2>
+              <span className="text-[11px] text-muted/70">{t.toolsCount(favorites.length)}</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
+              {favorites.map((tool) =>
+                tool.id === WARM_FEATURED_TOOL ? (
+                  <WarmToolCard
+                    key={tool.id}
+                    name={toolName(tool)}
+                    desc={toolDesc(tool)}
+                    glyph={TOOL_GLYPHS[tool.id] ?? '◎'}
+                    onOpen={() => onOpen(tool.id)}
+                  />
+                ) : (
+                  <ToolCard
+                    key={tool.id}
+                    sec={sectionOf(tool.category)}
+                    name={toolName(tool)}
+                    desc={toolDesc(tool)}
+                    hot={!!tool.hot}
+                    glyph={TOOL_GLYPHS[tool.id] ?? SECTION_ICONS[sectionOf(tool.category)]}
+                    onOpen={() => onOpen(tool.id)}
+                  />
+                ),
+              )}
+            </div>
           </section>
-        ))}
-        <footer className="rounded-lg border border-line bg-panel px-4 py-3 text-[12px] text-muted leading-relaxed">
+        )}
+
+        {/* 分区网格：平铺（不再按分类分小节），超出 7 个收进「+N 更多」 */}
+        {[...grouped.entries()].map(([sec, entry]) => {
+          const all = entry.tools
+          const shown = expanded.has(sec) ? all : all.slice(0, SEC_PREVIEW)
+          const hidden = all.length - shown.length
+          return (
+            <section key={sec} id={`sec-${sec}`} className="mb-10">
+              <div className="flex items-center gap-3 mb-4">
+                <span
+                  className={cn('chip-c w-8 h-8 !rounded-[11px] text-[14px]', SECTION_CHIP[sec])}
+                >
+                  {SECTION_ICONS[sec]}
+                </span>
+                <h2 className="text-[15.5px] font-bold tracking-tight text-bright">
+                  {sectionName(sec)}
+                </h2>
+                <span className="text-[11px] text-muted/70">{t.toolsCount(all.length)}</span>
+                <span className="hidden md:inline text-[12px] text-muted/70 truncate">
+                  {sectionDesc(sec)}
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
+                {shown.map((tool) => (
+                  <ToolCard
+                    key={tool.id}
+                    sec={sec}
+                    name={toolName(tool)}
+                    desc={toolDesc(tool)}
+                    hot={!!tool.hot}
+                    glyph={TOOL_GLYPHS[tool.id] ?? SECTION_ICONS[sec]}
+                    onOpen={() => onOpen(tool.id)}
+                  />
+                ))}
+                {hidden > 0 && (
+                  <button
+                    onClick={() => expandSection(sec)}
+                    className="tool-more-card rounded-2xl min-h-[120px] flex flex-col items-center justify-center gap-1 text-[12px] font-medium"
+                  >
+                    <span className="text-[18px] font-semibold">＋{hidden}</span>
+                    {t.moreTools(hidden)}
+                  </button>
+                )}
+              </div>
+            </section>
+          )
+        })}
+
+        <footer className="rounded-2xl bg-panel shadow-soft-sm px-4 py-3 text-[12px] text-muted leading-relaxed">
           <span className="text-amber font-semibold">{t.legalTitle}</span>
           {t.legalBody}
         </footer>
       </div>
     </div>
+  )
+}
+
+/** 工具卡片：白卡 + 粉彩 chip + 弥散阴影，hover 浮起（不描边） */
+function ToolCard({
+  sec,
+  name,
+  desc,
+  hot,
+  glyph,
+  onOpen,
+}: {
+  sec: SectionId
+  name: string
+  desc: string
+  hot: boolean
+  glyph: string
+  onOpen: () => void
+}) {
+  return (
+    <button
+      onClick={onOpen}
+      className="tool-grid-card text-left rounded-2xl bg-panel p-4 shadow-soft-card hover:shadow-soft-pop"
+    >
+      <div className="flex items-center justify-between mb-3">
+        <span className={cn('chip-c w-9 h-9 !rounded-xl text-[13px]', SECTION_CHIP[sec])}>
+          {glyph}
+        </span>
+        {hot && (
+          <span className="text-[9px] font-bold tracking-[0.06em] text-amber bg-amber/10 rounded-full px-2 py-0.5">
+            HOT
+          </span>
+        )}
+      </div>
+      <div className="text-[13.5px] font-semibold text-bright">{name}</div>
+      <div className="mt-1 text-[12px] text-muted leading-relaxed line-clamp-2">{desc}</div>
+    </button>
+  )
+}
+
+/** 暖色渐变焦点卡：常用工具网格里的唯一一张彩色卡（抓包代理） */
+function WarmToolCard({
+  name,
+  desc,
+  glyph,
+  onOpen,
+}: {
+  name: string
+  desc: string
+  glyph: string
+  onOpen: () => void
+}) {
+  return (
+    <button
+      onClick={onOpen}
+      className="tool-grid-card grad-warm relative overflow-hidden text-left rounded-2xl p-4 text-white shadow-[0_16px_34px_-14px_rgba(244,114,182,.5)] hover:shadow-[0_24px_48px_-16px_rgba(244,114,182,.6)]"
+    >
+      <div className="absolute -top-10 -right-8 w-32 h-32 rounded-full bg-white/15 pointer-events-none" />
+      <div className="relative flex items-center justify-between mb-3">
+        <span className="chip-c w-9 h-9 !rounded-xl text-[13px] bg-white/20 text-white">
+          {glyph}
+        </span>
+        <span className="text-[9px] font-bold tracking-[0.06em] bg-white/25 rounded-full px-2 py-0.5">
+          HOT
+        </span>
+      </div>
+      <div className="relative text-[13.5px] font-bold">{name}</div>
+      <div className="relative mt-1 text-[12px] text-white/85 leading-relaxed line-clamp-2">
+        {desc}
+      </div>
+    </button>
   )
 }
 
@@ -737,8 +939,8 @@ function ToolView({ tool, onBack }: { tool: ToolDef; onBack: () => void }) {
         <span className="text-muted/50">/</span>
         <span className="text-bright truncate">{toolName(tool)}</span>
       </div>
-      <div className="rounded-xl border border-line bg-panel mt-3 overflow-hidden">
-        <div className="border-b border-line px-4 py-3 flex items-center justify-between gap-3">
+      <div className="rounded-[20px] bg-panel shadow-soft-card mt-3 overflow-hidden">
+        <div className="border-b border-line-soft px-5 py-4 flex items-center justify-between gap-3">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <h1 className="text-[17px] font-semibold text-bright truncate">{toolName(tool)}</h1>

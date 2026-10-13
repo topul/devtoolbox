@@ -59,7 +59,11 @@
 
 :root,
 .dark {
-  --c-bg: #0f1216;
+  /*
+   * 深色 SaaS 变体：画布压到近黑中性色，卡片明度抬高形成「浮起」层级，
+   * 分层靠明度差 + 弥散阴影（下方 --sh-*），描边降到几乎不可见。
+   */
+  --c-bg: #0f1114;
   --c-text: #cbd5e1;
   --c-text-bright: #e8edf4;
   --c-text-dim: #94a3b8;
@@ -69,10 +73,10 @@
   --c-phosphor-glow: #6ee7b7;
   --c-phosphor-dim: #065f46;
   --c-phosphor-faint: rgba(52, 211, 153, 0.1);
-  --c-panel: #14171c;
-  --c-panel-2: #1c2128;
-  --c-line: rgba(148, 163, 184, 0.16);
-  --c-line-soft: rgba(148, 163, 184, 0.09);
+  --c-panel: #191c21;
+  --c-panel-2: #22262c;
+  --c-line: rgba(148, 163, 184, 0.1);
+  --c-line-soft: rgba(148, 163, 184, 0.06);
   --c-amber: #fbbf24;
   --c-danger: #f87171;
   --c-muted: #8a97a8;
@@ -85,6 +89,10 @@
   --c-selection-bg: rgba(52, 211, 153, 0.25);
   --c-selection-fg: #ecfdf5;
   --c-focus: #34d399;
+  /* 弥散阴影（暗色）：深底上阴影要更重才托得起卡片 */
+  --sh-sm: 0 1px 2px rgba(0, 0, 0, 0.5), 0 4px 14px -6px rgba(0, 0, 0, 0.5);
+  --sh-card: 0 1px 2px rgba(0, 0, 0, 0.45), 0 14px 34px -14px rgba(0, 0, 0, 0.65);
+  --sh-pop: 0 2px 6px rgba(0, 0, 0, 0.5), 0 28px 56px -20px rgba(0, 0, 0, 0.75);
   /* glow 仅保留变量兼容旧类，值已归零（终端辉光效果下线） */
   --glow-strength: 0;
   --glow-spread: 0;
@@ -95,12 +103,13 @@
   --c-hl-fn: #7dd3fc;
   --c-hl-typ: #67e8f9;
   --c-hl-var: #e879f9;
-  --c-hl-com: #7d8b9c;
+  --c-hl-com: #93a1b0;
   color-scheme: dark;
 }
 
 .light {
-  --c-bg: #f6f7f9;
+  /* SaaS Dashboard 浅色：暖白灰画布 + 纯白卡片浮起，靠阴影而非描边分层 */
+  --c-bg: #f5f6f4;
   --c-text: #334155;
   --c-text-bright: #0f172a;
   --c-text-dim: #475569;
@@ -111,9 +120,9 @@
   --c-phosphor-dim: #059669;
   --c-phosphor-faint: rgba(5, 150, 105, 0.08);
   --c-panel: #ffffff;
-  --c-panel-2: #f1f3f6;
-  --c-line: #e2e8f0;
-  --c-line-soft: #eceff3;
+  --c-panel-2: #f0f1ef;
+  --c-line: #e3e6e2;
+  --c-line-soft: #eceee9;
   --c-amber: #b45309;
   --c-danger: #dc2626;
   --c-muted: #5b6472;
@@ -127,6 +136,10 @@
   --c-selection-fg: #06281c;
   /* 焦点环必须是不透明实色：半透明色合成后对比度会塌到 1.6:1，键盘用户看不见焦点在哪 */
   --c-focus: #047857;
+  /* 弥散阴影（亮色）：大而柔、负偏移，卡片之间靠它分层而不是描边 */
+  --sh-sm: 0 1px 2px rgba(23, 25, 35, 0.04), 0 4px 14px -6px rgba(23, 25, 35, 0.06);
+  --sh-card: 0 1px 2px rgba(23, 25, 35, 0.03), 0 14px 34px -14px rgba(23, 25, 35, 0.1);
+  --sh-pop: 0 2px 6px rgba(23, 25, 35, 0.05), 0 28px 56px -20px rgba(23, 25, 35, 0.18);
   --glow-strength: 0;
   --glow-spread: 0;
   /* 亮色下把同一套语义色压深，否则黄/绿在白底上几乎看不见 */
@@ -440,10 +453,9 @@ button:focus-visible {
   transform: translateX(-50%);
   z-index: 71;
   width: min(620px, 92vw);
-  border-radius: 14px;
-  border: 1px solid var(--c-line);
+  border-radius: 20px;
   background: var(--c-panel);
-  box-shadow: 0 20px 60px rgba(2, 6, 12, 0.3);
+  box-shadow: var(--sh-pop);
   overflow: hidden;
   animation: cmdk-in var(--dur-base) var(--ease-out) both;
 }
@@ -484,7 +496,7 @@ button:focus-visible {
   display: flex;
   align-items: center;
   gap: 10px;
-  border-radius: 8px;
+  border-radius: 10px;
   padding: 8px 10px;
   cursor: pointer;
   color: var(--c-text);
@@ -636,10 +648,99 @@ button:focus-visible {
   transition:
     border-color 0.15s ease,
     background 0.15s ease,
-    transform 0.15s ease;
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
 }
 .tool-grid-card:hover {
   transform: translateY(-2px);
+}
+
+/* ==================== SaaS Dashboard 设计系统 ==================== */
+
+/* 弥散阴影三档：控件 / 卡片 / 悬浮层。卡片分层靠它，不靠描边 */
+.shadow-soft-sm {
+  box-shadow: var(--sh-sm);
+}
+.shadow-soft-card {
+  box-shadow: var(--sh-card);
+}
+.shadow-soft-pop {
+  box-shadow: var(--sh-pop);
+}
+
+/* 渐变焦点色：只用于装饰面与主行动按钮，不作为文本色（对比度不够） */
+.grad-hero {
+  background: linear-gradient(120deg, #0ba977 0%, #0ba8a0 52%, #0e9bd8 100%);
+}
+.grad-warm {
+  background: linear-gradient(120deg, #fb923c 0%, #f472b6 55%, #a78bfa 100%);
+}
+
+/* 渐变主按钮（新会话 / 发送 / 焦点卡 CTA 共用），带同色系光晕 */
+.btn-grad {
+  background: linear-gradient(120deg, #0ba977 0%, #0ba8a0 52%, #0e9bd8 100%);
+  color: #fff;
+  box-shadow: 0 8px 18px -6px rgba(11, 169, 119, 0.5);
+  transition:
+    filter var(--dur-fast) ease,
+    transform var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) ease;
+}
+.btn-grad:hover:not(:disabled) {
+  filter: brightness(1.06);
+  box-shadow: 0 10px 22px -6px rgba(11, 169, 119, 0.6);
+}
+.btn-grad:active:not(:disabled) {
+  transform: scale(0.97);
+}
+.btn-grad:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/*
+ * 粉彩 icon chip：浅色底 + 饱和字形，侧栏导航与工具卡片的统一视觉锚点。
+ * 暗色下换算成同色相的半透明底 + 提亮字形。
+ */
+.chip-c {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 10px;
+  font-weight: 600;
+}
+.chip-emerald { background: #e7f6ef; color: #0b9e6e; }
+.chip-sky { background: #e9f5fe; color: #0e9bd8; }
+.chip-amber { background: #fef3e0; color: #e8930c; }
+.chip-rose { background: #fcedf1; color: #e14e78; }
+.chip-indigo { background: #edf0fd; color: #5b6be0; }
+.chip-teal { background: #e5f6f5; color: #0ca5a5; }
+.chip-violet { background: #f0effe; color: #7c6cf0; }
+.chip-slate { background: #eef0f3; color: #64748b; }
+
+.dark .chip-emerald { background: rgba(52, 211, 153, 0.14); color: #6ee7b7; }
+.dark .chip-sky { background: rgba(56, 189, 248, 0.14); color: #7dd3fc; }
+.dark .chip-amber { background: rgba(251, 191, 36, 0.14); color: #fcd34d; }
+.dark .chip-rose { background: rgba(251, 113, 133, 0.14); color: #fda4af; }
+.dark .chip-indigo { background: rgba(129, 140, 248, 0.14); color: #a5b4fc; }
+.dark .chip-teal { background: rgba(45, 212, 191, 0.14); color: #5eead4; }
+.dark .chip-violet { background: rgba(167, 139, 250, 0.14); color: #c4b5fd; }
+.dark .chip-slate { background: rgba(148, 163, 184, 0.14); color: #b0bccb; }
+
+/* 「+N 更多」虚线卡：收敛长尾工具，hover 时才染上品牌色 */
+.tool-more-card {
+  border: 1.5px dashed var(--c-line);
+  color: var(--c-muted);
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease,
+    background 0.15s ease;
+}
+.tool-more-card:hover {
+  border-color: var(--c-phosphor);
+  color: var(--c-phosphor);
+  background: var(--c-phosphor-faint);
 }
 
 pre.codeblock {

@@ -63,7 +63,7 @@ export function Composer({
   }
 
   return (
-    <div className="border border-line-soft bg-panel-2/40 focus-within:border-phosphor/40 transition-colors">
+    <div className="rounded-[20px] bg-panel shadow-soft-pop transition-shadow">
       <textarea
         value={input}
         onChange={(e) => onInput(e.target.value)}
@@ -71,12 +71,12 @@ export function Composer({
         rows={3}
         spellCheck={false}
         placeholder={l.inputPh}
-        className="w-full resize-y bg-transparent px-2.5 py-2 text-[12.5px] leading-relaxed text-bright placeholder:text-muted/50 focus:outline-none"
+        className="w-full resize-y bg-transparent px-4 py-3 text-[12.5px] leading-relaxed text-bright placeholder:text-muted/50 focus:outline-none"
       />
 
       {/* 动作行：换模型与主按钮都在右下（打完字光标就在这一带，Fitts 最近路径），
           token 估算、工具数与费用降级成左侧说明文字，不和按钮抢视觉权重 */}
-      <div className="flex items-center gap-2 border-t border-line-soft px-2 py-1.5">
+      <div className="flex items-center gap-2 px-3 pb-3">
         <span className="flex-1 min-w-0 truncate text-[11px] text-muted/70">
           {l.preflight.replace('{n}', estimate.toLocaleString())}
           {cost !== null && ` · ${l.lastCost} ${formatMoney(cost)}`}
@@ -100,9 +100,14 @@ export function Composer({
         {streaming ? (
           <Btn onClick={onStop}>{l.stop}</Btn>
         ) : (
-          <Btn variant="primary" onClick={onSend} disabled={disabled || !input.trim()}>
+          <button
+            type="button"
+            onClick={onSend}
+            disabled={disabled || !input.trim()}
+            className="btn-grad rounded-xl px-4 py-2 text-[12.5px] font-semibold"
+          >
             {l.send}
-          </Btn>
+          </button>
         )}
       </div>
     </div>
@@ -111,7 +116,8 @@ export function Composer({
 
 /* ================= 模型切换 ================= */
 
-function ModelMenu({
+/** 模型下拉菜单：Composer 与分窗窗格头共用（切换档案 + 管理 + 新增） */
+export function ModelMenu({
   profiles,
   activeId,
   onPick,
@@ -136,7 +142,7 @@ function ModelMenu({
         aria-haspopup="listbox"
         aria-expanded={open}
         title={l.modelsTitle}
-        className="flex items-center gap-1.5 px-1.5 py-0.5 border border-line-soft text-[11.5px] text-bright hover:border-phosphor/40 max-w-[280px] sm:max-w-[360px] transition-colors"
+        className="flex items-center gap-1.5 rounded-full bg-panel-2 px-3 py-1.5 text-[11.5px] text-bright hover:text-phosphor max-w-[280px] sm:max-w-[360px] transition-colors"
       >
         <span className="text-phosphor shrink-0">◆</span>
         <span className="truncate">{active ? profileName(active) : l.pickModel}</span>
@@ -151,7 +157,7 @@ function ModelMenu({
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 bottom-full mb-1 z-50 w-[320px] border border-line bg-panel shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
+          <div className="absolute right-0 bottom-full mb-2 z-50 w-[320px] rounded-2xl bg-panel shadow-soft-pop overflow-hidden">
             <div className="px-3 py-1.5 text-[9.5px] uppercase tracking-[0.2em] text-muted/60 border-b border-line-soft">
               {l.modelsTitle}
             </div>

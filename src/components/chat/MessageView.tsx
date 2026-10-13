@@ -62,14 +62,13 @@ export function MessageView({
 
   return (
     /* 分侧气泡：用户右对齐 + 品牌描边，助手左对齐 + 中性描边。
-       原来两边共用同一条 2px 左边线、只换颜色，扫一眼分不清谁说的 ——
-       对齐方向 + 描边颜色双重编码，谁讲的哪段一眼可辨。 */
+       白卡 + 弥散阴影 + 异侧圆角，谁讲的哪段一眼可辨。 */
     <div className={isUser ? 'flex justify-end' : undefined}>
       <div
-        className={`rounded-lg px-3 py-2 ${
+        className={`rounded-2xl px-4 py-3 shadow-soft-sm ${
           isUser
-            ? 'max-w-[88%] border border-phosphor/25 bg-phosphor-faint/40'
-            : 'border border-line-soft bg-panel-2/25'
+            ? 'max-w-[88%] rounded-br-md bg-panel'
+            : 'rounded-bl-md bg-panel'
         }`}
       >
         <div className={`flex items-center gap-2 flex-wrap ${isUser ? 'justify-end' : ''}`}>
@@ -181,7 +180,7 @@ function ReasoningBlock({
   }, [autoOpen])
 
   return (
-    <div className="border border-line-soft bg-panel-2/40">
+    <div className="rounded-xl border border-line-soft bg-panel-2/40">
       <button
         onClick={() => {
           touched.current = true
@@ -227,7 +226,7 @@ function ToolBlock({ part, l }: { part: ToolPartView; l: L }): React.ReactElemen
         : JSON.stringify(part.output, null, 2)
 
   return (
-    <div className="border border-line-soft bg-panel-2/60 px-2.5 py-1.5">
+    <div className="rounded-xl border border-line-soft bg-panel-2/60 px-2.5 py-1.5">
       <div className="flex items-center gap-2 flex-wrap">
         <span className="text-[11px] text-muted">→</span>
         {/* 工具名走主题变量而不是硬编码色：那个浅蓝在亮色白底上只有 1.81:1，几乎看不见 */}
@@ -309,7 +308,7 @@ function InlineMetrics({
         <span className="text-muted/40">{open ? ' ▾' : ' ▸'}</span>
       </button>
       {open && (
-        <div className="mt-1.5 border border-line-soft bg-panel-2 p-2.5">
+        <div className="mt-1.5 rounded-xl border border-line-soft bg-panel-2 p-2.5">
           {onTrace && (
             <button
               onClick={onTrace}
