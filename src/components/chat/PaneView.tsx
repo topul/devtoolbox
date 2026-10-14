@@ -3,7 +3,7 @@
  * 每窗格：头部（模型切换 + 拆分/关闭/停止 + 状态指标）+ 消息体（多轮历史 +
  * 当前流式回复）。用户消息纯文本右对齐，助手回复走 Markdown。
  */
-import React, { lazy, Suspense } from 'react'
+import React, { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { ErrorNote } from '../ui'
 import { ModelMenu } from './Composer'
 import { useLocalized } from '../../lib/i18n'
@@ -19,6 +19,38 @@ const Markdown = lazy(() => import('../Markdown').then((m) => ({ default: m.Mark
 
 type PaneL = (typeof chatpanesL)['zh']
 
+/**
+ * 拆分的容量门控：宁可禁用入口也不让窗格溢出成滚动条——
+ * 「对比」的前提是同时可见，需要滚动才能看到的窗格没有对比价值。
+ * 拆完低于该尺寸就禁用对应方向的拆分按钮，tooltip 引导换方向，
+ * 自然把布局导向 2×2 / 3×2 网格；宽屏自动放行更多列。
+ */
+const MIN_ROW_W = 220
+const MIN_COL_H = 190
+
+/**
+ * 每片叶子的实际尺寸：树是二叉的且每层 flex-1 等分，
+ * 横拆一次宽减半、竖拆一次高减半，从容器尺寸精确递推（gap 忽略）。
+ */
+function leafDims(
+  node: PaneNode,
+  w: number,
+  h: number,
+  out: Map<string, { w: number; h: number }>,
+): void {
+  if (node.kind === 'leaf') {
+    out.set(node.id, { w, h })
+    return
+  }
+  if (node.dir === 'row') {
+    leafDims(node.children[0], w / 2, h, out)
+    leafDims(node.children[1], w / 2, h, out)
+  } else {
+    leafDims(node.children[0], w, h / 2, out)
+    leafDims(node.children[1], w, h / 2, out)
+  }
+}
+
 export function PaneView({
   sess,
   profiles,
@@ -32,9 +64,25 @@ export function PaneView({
   onManageModels: () => void
   onAddProfile: () => void
 }): React.ReactElement {
+  const hostRef = useRef<HTMLDivElement>(null)
+  const [box, setBox] = useState({ w: 0, h: 0 })
+  useEffect(() => {
+    const el = hostRef.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver((entries) => {
+      const r = entries[0].contentRect
+      setBox({ w: r.width, h: r.height })
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
+  const dims = new Map<string, { w: number; h: number }>()
+  leafDims(sess.tree, box.w, box.h, dims)
+
   return (
-    <div className="flex-1 min-h-0 min-w-0 flex">
-      {renderNode(sess.tree, sess.panes, profiles, ctl, onManageModels, onAddProfile)}
+    <div ref={hostRef} className="flex-1 min-h-0 min-w-0 flex">
+      {renderNode(sess.tree, sess.panes, profiles, ctl, dims, onManageModels, onAddProfile)}
     </div>
   )
 }
@@ -44,6 +92,7 @@ function renderNode(
   panes: Record<string, PaneRuntime>,
   profiles: ModelProfile[],
   ctl: PaneModeCtl,
+  dims: Map<string, { w: number; h: number }>,
   onManageModels: () => void,
   onAddProfile: () => void,
 ): React.ReactElement {
@@ -51,8 +100,8 @@ function renderNode(
     const dirCls = node.dir === 'row' ? 'flex-row' : 'flex-col'
     return (
       <div className={`flex ${dirCls} flex-1 min-w-0 min-h-0 gap-1`}>
-        {renderNode(node.children[0], panes, profiles, ctl, onManageModels, onAddProfile)}
-        {renderNode(node.children[1], panes, profiles, ctl, onManageModels, onAddProfile)}
+        {renderNode(node.children[0], panes, profiles, ctl, dims, onManageModels, onAddProfile)}
+        {renderNode(node.children[1], panes, profiles, ctl, dims, onManageModels, onAddProfile)}
       </div>
     )
   }
@@ -61,6 +110,7 @@ function renderNode(
       paneId={node.id}
       profileId={node.profileId}
       rt={panes[node.id]}
+      dim={dims.get(node.id) ?? { w: 0, h: 0 }}
       profiles={profiles}
       ctl={ctl}
       onManageModels={onManageModels}
@@ -73,6 +123,7 @@ function PaneLeaf({
   paneId,
   profileId,
   rt,
+  dim,
   profiles,
   ctl,
   onManageModels,
@@ -81,6 +132,7 @@ function PaneLeaf({
   paneId: string
   profileId: string | null
   rt: PaneRuntime | undefined
+  dim: { w: number; h: number }
   profiles: ModelProfile[]
   ctl: PaneModeCtl
   onManageModels: () => void
@@ -104,11 +156,17 @@ function PaneLeaf({
   const inFlight = runtime.status === 'pending' || runtime.status === 'streaming'
   const iconBtn =
     'shrink-0 px-1 text-[12px] text-muted/60 hover:text-phosphor transition-colors disabled:opacity-30 disabled:hover:text-muted/60'
+  /*
+   * dim 为 0 = 尚未测量（首帧），放行；测得尺寸后拆完会低于阈值就禁用，
+   * 避免出现需要滚动才能看到的窗格。窗口事后缩小则弹性挤压，不裁剪。
+   */
+  const noRoomRow = dim.w > 0 && dim.w / 2 < MIN_ROW_W
+  const noRoomCol = dim.h > 0 && dim.h / 2 < MIN_COL_H
 
   return (
     <section
       aria-label={profile ? profileName(profile) : l.noModel}
-      className="flex-1 min-w-[240px] min-h-[180px] flex flex-col border border-line-soft bg-panel/40"
+      className="flex-1 min-w-0 min-h-0 flex flex-col border border-line-soft bg-panel/40"
     >
       <div className="flex items-center gap-1 px-2 py-1 border-b border-line-soft bg-panel/70 shrink-0">
         <ModelMenu
@@ -127,17 +185,17 @@ function PaneLeaf({
         )}
         <button
           onClick={() => ctl.split(paneId, 'row')}
-          disabled={!ctl.canSplit}
+          disabled={!ctl.canSplit || noRoomRow}
           className={iconBtn}
-          title={l.splitRow}
+          title={noRoomRow ? l.splitNoRoomRow : l.splitRow}
         >
           ⬌
         </button>
         <button
           onClick={() => ctl.split(paneId, 'col')}
-          disabled={!ctl.canSplit}
+          disabled={!ctl.canSplit || noRoomCol}
           className={iconBtn}
-          title={l.splitCol}
+          title={noRoomCol ? l.splitNoRoomCol : l.splitCol}
         >
           ⬍
         </button>

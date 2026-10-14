@@ -7,7 +7,7 @@
  * 键盘：Enter 发送、Shift+Enter 换行。**必须避开输入法组词中的 Enter**
  * （中文输入法里按 Enter 是选中候选词，此时发送会把人逼疯）。
  */
-import React, { useState } from 'react'
+import React, { useRef, useState } from 'react'
 import { Btn } from '../ui'
 import { useLocalized } from '../../lib/i18n'
 import { chatL } from '../../lib/locales/chat'
@@ -134,11 +134,33 @@ export function ModelMenu({
 }): React.ReactElement {
   const [open, setOpen] = useState(false)
   const active = profiles.find((p) => p.id === activeId) ?? null
+  /**
+   * 弹出方向在打开瞬间按触发按钮的实测位置决定：底部输入框里向上弹，
+   * 分窗窗格头部（页面顶部）向下弹；水平同理。原来写死 bottom-full，
+   * 在窗格头部会顶出 main 的 overflow-hidden 裁剪区，整张菜单消失。
+   */
+  const btnRef = useRef<HTMLButtonElement>(null)
+  const [pos, setPos] = useState({ up: true, left: true })
+
+  const toggle = (): void => {
+    if (!open && btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect()
+      const MENU_H = 340
+      const MENU_W = 320
+      setPos({
+        // 上方空间够就放上面，否则哪边空间大去哪边；水平同理（right-0 = 向左展开）
+        up: r.top >= MENU_H || r.top > window.innerHeight - r.bottom,
+        left: r.right - MENU_W >= 0 || r.right > window.innerWidth - r.left,
+      })
+    }
+    setOpen((o) => !o)
+  }
 
   return (
     <div className="relative">
       <button
-        onClick={() => setOpen((o) => !o)}
+        ref={btnRef}
+        onClick={toggle}
         aria-haspopup="listbox"
         aria-expanded={open}
         title={l.modelsTitle}
@@ -157,32 +179,38 @@ export function ModelMenu({
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 bottom-full mb-2 z-50 w-[320px] rounded-2xl bg-panel shadow-soft-pop overflow-hidden">
-            <div className="px-3 py-1.5 text-[9.5px] uppercase tracking-[0.2em] text-muted/60 border-b border-line-soft">
+          <div
+            className={`absolute z-50 w-[320px] rounded-2xl bg-panel shadow-soft-pop overflow-hidden flex flex-col max-h-[min(60vh,420px)] ${
+              pos.up ? 'bottom-full mb-2' : 'top-full mt-2'
+            } ${pos.left ? 'right-0' : 'left-0'}`}
+          >
+            <div className="px-3 py-1.5 text-[9.5px] uppercase tracking-[0.2em] text-muted/60 border-b border-line-soft shrink-0">
               {l.modelsTitle}
             </div>
-            {profiles.length === 0 && (
-              <div className="px-3 py-3 text-[11.5px] text-muted">{l.emptyProfiles}</div>
-            )}
-            {profiles.map((p) => {
-              const on = p.id === activeId
-              return (
-                <button
-                  key={p.id}
-                  onClick={() => {
-                    onPick(p.id)
-                    setOpen(false)
-                  }}
-                  className={`w-full text-left px-3 py-2 border-b border-line-soft last:border-0 text-[12px] transition-colors ${on ? 'bg-phosphor-faint text-phosphor' : 'text-bright hover:bg-phosphor-faint'}`}
-                >
-                  <div className="truncate">{profileName(p)}</div>
-                  <div className="text-[10px] text-muted truncate">
-                    {p.model} · {shortHost(p.baseUrl)}
-                  </div>
-                </button>
-              )
-            })}
-            <div className="flex items-center border-t border-line-soft">
+            <div className="overflow-y-auto min-h-0">
+              {profiles.length === 0 && (
+                <div className="px-3 py-3 text-[11.5px] text-muted">{l.emptyProfiles}</div>
+              )}
+              {profiles.map((p) => {
+                const on = p.id === activeId
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => {
+                      onPick(p.id)
+                      setOpen(false)
+                    }}
+                    className={`w-full text-left px-3 py-2 border-b border-line-soft last:border-0 text-[12px] transition-colors ${on ? 'bg-phosphor-faint text-phosphor' : 'text-bright hover:bg-phosphor-faint'}`}
+                  >
+                    <div className="truncate">{profileName(p)}</div>
+                    <div className="text-[10px] text-muted truncate">
+                      {p.model} · {shortHost(p.baseUrl)}
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+            <div className="flex items-center border-t border-line-soft shrink-0">
               <button
                 onClick={() => {
                   onAdd()
