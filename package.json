@@ -44,6 +44,7 @@
     "smoke:chatpanes": "node scripts/run-smoke.mjs chatpanes",
     "smoke:chatui": "node scripts/run-smoke.mjs chatui",
     "smoke:schema": "node scripts/run-smoke.mjs schema",
+    "smoke:http": "node scripts/run-smoke.mjs http",
     "smoke:httpcodec": "node scripts/run-smoke.mjs httpcodec",
     "smoke:httpenv": "node scripts/run-smoke.mjs httpenv",
     "smoke:httpsnap": "node scripts/run-smoke.mjs httpsnap",

@@ -465,7 +465,8 @@ function sendHop(o: HopOptions): Promise<HopResult> {
           timings: {
             connectMs: Math.max(connectMs, 0),
             tlsMs: Math.max(tlsMs, 0),
-            ttfbMs: Math.max(ttfbMs - started, 0),
+            // ttfbMs 在 finish() 里已存为时长（Date.now() - started），此处不可再减 started
+            ttfbMs: Math.max(ttfbMs, 0),
             totalMs: Date.now() - started,
           },
           remoteAddress: res.socket?.remoteAddress ?? '',
@@ -727,15 +728,18 @@ export async function performRequest(spec: HttpRequestSpec): Promise<HttpRequest
   for (let hop = 0; hop <= maxRedirects; hop++) {
     const isHttps = current.protocol === 'https:'
     const headers = toHeaderObject(rawHeaderList)
+    // 头部存在性检查必须大小写不敏感：用户手填小写 content-length 时若再补一个，
+    // 会产生重复 Content-Length（Node 新版直接抛错，侥幸发出则是走私级畸形报文）
+    const hasHeader = (name: string): boolean =>
+      Object.keys(headers).some((k) => k.toLowerCase() === name)
     if (!passthrough) {
       if (body && body.length > 0) {
-        if (!('Content-Length' in headers)) headers['Content-Length'] = String(body.length)
-      } else if (method !== 'GET' && method !== 'HEAD' && !('Content-Length' in headers)) {
+        if (!hasHeader('content-length')) headers['Content-Length'] = String(body.length)
+      } else if (method !== 'GET' && method !== 'HEAD' && !hasHeader('content-length')) {
         headers['Content-Length'] = '0'
       }
-      if (!Object.keys(headers).some((k) => k.toLowerCase() === 'connection'))
-        headers.Connection = 'close'
-      if (!Object.keys(headers).some((k) => k.toLowerCase() === 'accept-encoding')) {
+      if (!hasHeader('connection')) headers.Connection = 'close'
+      if (!hasHeader('accept-encoding')) {
         headers['Accept-Encoding'] = 'gzip, deflate, br'
       }
     }
