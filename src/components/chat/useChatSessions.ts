@@ -55,7 +55,12 @@ function storeApiOf(): ElectronAPI['chatStore'] | undefined {
   return typeof window !== 'undefined' ? window.electronAPI?.chatStore : undefined
 }
 
-export function useChatSessions({ busy, messages, setMessages, strings }: UseChatSessionsOpts): ChatSessionsCtl {
+export function useChatSessions({
+  busy,
+  messages,
+  setMessages,
+  strings,
+}: UseChatSessionsOpts): ChatSessionsCtl {
   const storeApi = storeApiOf()
   const [sessions, setSessions] = useState<ChatSessionMeta[]>([])
   const [sessionId, setSessionId] = useState(() => `s${uuidV4().replace(/-/g, '')}`)
@@ -99,7 +104,8 @@ export function useChatSessions({ busy, messages, setMessages, strings }: UseCha
       )
       try {
         const res = await storeApi.save({ id, title, turns: settled })
-        if (!res.ok) setStoreNote(res.tooLarge ? s.storeTooLarge : `${s.storeFailed}: ${res.error ?? ''}`)
+        if (!res.ok)
+          setStoreNote(res.tooLarge ? s.storeTooLarge : `${s.storeFailed}: ${res.error ?? ''}`)
         else void refreshSessions()
       } catch (e) {
         setStoreNote(`${s.storeFailed}: ${(e as Error).message}`)

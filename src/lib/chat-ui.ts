@@ -375,7 +375,11 @@ export function isEmptyAssistant(msg: ChatUIMessage): boolean {
 }
 
 /** 发出前预检估算：系统提示 + 已有历史 + 草稿合成一条临时消息列，估 total tokens */
-export function estimatePreflight(system: string, messages: ChatUIMessage[], input: string): number {
+export function estimatePreflight(
+  system: string,
+  messages: ChatUIMessage[],
+  input: string,
+): number {
   const msgs: ChatMessage[] = []
   if (system.trim()) msgs.push({ role: 'system', content: system })
   msgs.push(...uiMessagesToHistory(messages))

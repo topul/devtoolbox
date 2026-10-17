@@ -113,7 +113,9 @@ export function MobileSessionList(p: SessionRailProps): React.ReactElement {
             onClick={() => p.onSwitch(sess.id)}
             className="flex-1 min-w-0 text-left px-3 py-2 text-[12px]"
           >
-            <div className={`truncate ${sess.id === p.currentId ? 'text-phosphor' : 'text-bright'}`}>
+            <div
+              className={`truncate ${sess.id === p.currentId ? 'text-phosphor' : 'text-bright'}`}
+            >
               {sess.title || l.untitledSession}
             </div>
             <div className="text-[10px] text-muted">

@@ -66,9 +66,7 @@ export function MessageView({
     <div className={isUser ? 'flex justify-end' : undefined}>
       <div
         className={`rounded-2xl px-4 py-3 shadow-soft-sm ${
-          isUser
-            ? 'max-w-[88%] rounded-br-md bg-panel'
-            : 'rounded-bl-md bg-panel'
+          isUser ? 'max-w-[88%] rounded-br-md bg-panel' : 'rounded-bl-md bg-panel'
         }`}
       >
         <div className={`flex items-center gap-2 flex-wrap ${isUser ? 'justify-end' : ''}`}>

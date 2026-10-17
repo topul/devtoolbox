@@ -140,9 +140,16 @@ async function main(): Promise<void> {
     /* ---- TTFB ---- */
     {
       const r = await performRequest({ url: `${base}/delay`, method: 'GET' })
-      check('TTFB 反映首字节耗时（非恒 0）', r.ok && r.timings.ttfbMs >= 100, `ttfb=${r.timings.ttfbMs}ms`)
+      check(
+        'TTFB 反映首字节耗时（非恒 0）',
+        r.ok && r.timings.ttfbMs >= 100,
+        `ttfb=${r.timings.ttfbMs}ms`,
+      )
       check('TTFB 不超过总耗时', r.timings.ttfbMs <= r.timings.totalMs)
-      check('耗时分解字段齐全', typeof r.timings.connectMs === 'number' && typeof r.timings.tlsMs === 'number')
+      check(
+        '耗时分解字段齐全',
+        typeof r.timings.connectMs === 'number' && typeof r.timings.tlsMs === 'number',
+      )
     }
 
     /* ---- 解压矩阵 ---- */
@@ -152,7 +159,10 @@ async function main(): Promise<void> {
       const b = await performRequest({ url: `${base}/br`, method: 'GET' })
       check('brotli 自动解压', b.ok && b.decompressed && decode(b.bodyBase64) === '{"br":true}')
       const d = await performRequest({ url: `${base}/deflate`, method: 'GET' })
-      check('deflate 自动解压', d.ok && d.decompressed && decode(d.bodyBase64) === '{"deflate":true}')
+      check(
+        'deflate 自动解压',
+        d.ok && d.decompressed && decode(d.bodyBase64) === '{"deflate":true}',
+      )
     }
 
     /* ---- 截断 ---- */
@@ -169,32 +179,55 @@ async function main(): Promise<void> {
     /* ---- 重定向 ---- */
     {
       const r = await performRequest({ url: `${base}/r302`, method: 'GET' })
-      check('302 跟随重定向', r.ok && r.status === 200 && r.redirects.length === 1, decode(r.bodyBase64))
+      check(
+        '302 跟随重定向',
+        r.ok && r.status === 200 && r.redirects.length === 1,
+        decode(r.bodyBase64),
+      )
 
       const noFollow = await performRequest({
         url: `${base}/r302`,
         method: 'GET',
         followRedirects: false,
       })
-      check('关闭跟随则返回 302 本体', noFollow.ok && noFollow.status === 302 && noFollow.redirects.length === 0)
+      check(
+        '关闭跟随则返回 302 本体',
+        noFollow.ok && noFollow.status === 302 && noFollow.redirects.length === 0,
+      )
 
       const post303 = await performRequest({
         url: `${base}/r303`,
         method: 'POST',
         bodyText: 'payload',
       })
-      check('303 后 POST 降级为 GET 且丢弃正文', post303.ok && post303.status === 200, decode(post303.bodyBase64))
-      check('303 降级结果内容正确', decode(post303.bodyBase64).includes('"method":"GET"') && decode(post303.bodyBase64).includes('"body":""'))
+      check(
+        '303 后 POST 降级为 GET 且丢弃正文',
+        post303.ok && post303.status === 200,
+        decode(post303.bodyBase64),
+      )
+      check(
+        '303 降级结果内容正确',
+        decode(post303.bodyBase64).includes('"method":"GET"') &&
+          decode(post303.bodyBase64).includes('"body":""'),
+      )
 
       const post307 = await performRequest({
         url: `${base}/r307`,
         method: 'POST',
         bodyText: 'payload',
       })
-      check('307 保留方法与正文', post307.ok && decode(post307.bodyBase64).includes('"method":"POST"') && decode(post307.bodyBase64).includes('"body":"payload"'))
+      check(
+        '307 保留方法与正文',
+        post307.ok &&
+          decode(post307.bodyBase64).includes('"method":"POST"') &&
+          decode(post307.bodyBase64).includes('"body":"payload"'),
+      )
 
       const chain = await performRequest({ url: `${base}/chain1`, method: 'GET', maxRedirects: 2 })
-      check('重定向次数超上限时返回最后一跳的响应', chain.ok && chain.status === 302 && chain.redirects.length === 2)
+      check(
+        '重定向次数超上限时返回最后一跳的响应',
+        chain.ok && chain.status === 302 && chain.redirects.length === 2,
+      )
     }
 
     /* ---- Content-Length 大小写不敏感 ---- */
@@ -220,7 +253,10 @@ async function main(): Promise<void> {
       const cl2 = (raw2.rawHeaders as string[]).filter(
         (_v, i) => i % 2 === 0 && String(raw2.rawHeaders[i]).toLowerCase() === 'content-length',
       )
-      check('未填 content-length 时自动补正确值', auto.ok && cl2.length === 1 && raw2.rawHeaders[raw2.rawHeaders.indexOf(cl2[0]) + 1] === '5')
+      check(
+        '未填 content-length 时自动补正确值',
+        auto.ok && cl2.length === 1 && raw2.rawHeaders[raw2.rawHeaders.indexOf(cl2[0]) + 1] === '5',
+      )
     }
 
     /* ---- URL 容错 ---- */

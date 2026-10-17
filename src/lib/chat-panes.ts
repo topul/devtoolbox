@@ -61,14 +61,20 @@ function newRuntime(): PaneRuntime {
 }
 
 export function newPaneSession(): PaneSession {
-  return { tree: { kind: 'leaf', id: 'pane-root', profileId: null }, panes: { 'pane-root': newRuntime() } }
+  return {
+    tree: { kind: 'leaf', id: 'pane-root', profileId: null },
+    panes: { 'pane-root': newRuntime() },
+  }
 }
 
 export function leafIds(tree: PaneNode): string[] {
-  return tree.kind === 'leaf' ? [tree.id] : [...leafIds(tree.children[0]), ...leafIds(tree.children[1])]
+  return tree.kind === 'leaf'
+    ? [tree.id]
+    : [...leafIds(tree.children[0]), ...leafIds(tree.children[1])]
 }
 
-export const countLeaves = (tree: PaneNode): number => (tree.kind === 'leaf' ? 1 : countLeaves(tree.children[0]) + countLeaves(tree.children[1]))
+export const countLeaves = (tree: PaneNode): number =>
+  tree.kind === 'leaf' ? 1 : countLeaves(tree.children[0]) + countLeaves(tree.children[1])
 
 /** 深度优先改树：命中叶就替换为 split(原叶, 新空叶) */
 function mapTree(tree: PaneNode, fn: (n: PaneNode) => PaneNode): PaneNode {
@@ -77,17 +83,29 @@ function mapTree(tree: PaneNode, fn: (n: PaneNode) => PaneNode): PaneNode {
   if (mapped.kind === 'leaf') return mapped
   const a = mapTree(mapped.children[0], fn)
   const b = mapTree(mapped.children[1], fn)
-  return a === mapped.children[0] && b === mapped.children[1] ? mapped : { ...mapped, children: [a, b] }
+  return a === mapped.children[0] && b === mapped.children[1]
+    ? mapped
+    : { ...mapped, children: [a, b] }
 }
 
 /** 拆叶：原叶留在前（保住会话与模型绑定），新叶在后（空绑定）。到上限或找不到 → null */
-export function splitPane(sess: PaneSession, paneId: string, dir: SplitDir, makeId: () => string): PaneSession | null {
+export function splitPane(
+  sess: PaneSession,
+  paneId: string,
+  dir: SplitDir,
+  makeId: () => string,
+): PaneSession | null {
   if (countLeaves(sess.tree) >= MAX_PANES) return null
   if (!leafIds(sess.tree).includes(paneId)) return null
   const newLeafId = makeId()
   const tree = mapTree(sess.tree, (n) =>
     n.kind === 'leaf' && n.id === paneId
-      ? { kind: 'split', id: makeId(), dir, children: [n, { kind: 'leaf', id: newLeafId, profileId: null }] }
+      ? {
+          kind: 'split',
+          id: makeId(),
+          dir,
+          children: [n, { kind: 'leaf', id: newLeafId, profileId: null }],
+        }
       : n,
   )
   return { tree, panes: { ...sess.panes, [newLeafId]: newRuntime() } }
@@ -112,7 +130,11 @@ export function closePane(sess: PaneSession, paneId: string): PaneSession | null
   return { tree, panes }
 }
 
-export function assignProfile(sess: PaneSession, paneId: string, profileId: string | null): PaneSession {
+export function assignProfile(
+  sess: PaneSession,
+  paneId: string,
+  profileId: string | null,
+): PaneSession {
   const tree = mapTree(sess.tree, (n) =>
     n.kind === 'leaf' && n.id === paneId ? { ...n, profileId } : n,
   )
@@ -122,7 +144,11 @@ export function assignProfile(sess: PaneSession, paneId: string, profileId: stri
 /* ==================== fan-out ==================== */
 
 /** 纯文本规格：不带工具、不带系统提示 —— 窗间唯一变量是模型 */
-export function buildPaneSpec(p: ModelProfile, messages: ChatMessage[], requestId: string): ChatSendSpec {
+export function buildPaneSpec(
+  p: ModelProfile,
+  messages: ChatMessage[],
+  requestId: string,
+): ChatSendSpec {
   return {
     requestId,
     baseUrl: p.baseUrl.trim(),
@@ -174,7 +200,9 @@ function trimHistory(h: ChatMessage[]): ChatMessage[] {
 }
 
 function leafList(tree: PaneNode): Extract<PaneNode, { kind: 'leaf' }>[] {
-  return tree.kind === 'leaf' ? [tree] : [...leafList(tree.children[0]), ...leafList(tree.children[1])]
+  return tree.kind === 'leaf'
+    ? [tree]
+    : [...leafList(tree.children[0]), ...leafList(tree.children[1])]
 }
 
 /* ==================== 事件归组 ==================== */
@@ -202,7 +230,8 @@ export function applyPaneEvent(sess: PaneSession, evt: ChatEvent): PaneSession {
     case 'delta':
       if (evt.kind === 'content') {
         next.text += evt.text
-        if (next.firstTokenMs === null && next.startedAt !== null) next.firstTokenMs = now - next.startedAt
+        if (next.firstTokenMs === null && next.startedAt !== null)
+          next.firstTokenMs = now - next.startedAt
       } else {
         next.reasoningChars += evt.text.length
       }
@@ -212,7 +241,8 @@ export function applyPaneEvent(sess: PaneSession, evt: ChatEvent): PaneSession {
       next.totalMs = evt.meta.totalMs ?? (rt.startedAt !== null ? now - rt.startedAt : null)
       next.firstTokenMs = next.firstTokenMs ?? evt.meta.firstTokenMs ?? null
       next.usage = evt.meta.usage
-      if (rt.text) next.history = trimHistory([...rt.history, { role: 'assistant', content: rt.text }])
+      if (rt.text)
+        next.history = trimHistory([...rt.history, { role: 'assistant', content: rt.text }])
       next.activeRequestId = null
       break
     case 'error':
@@ -229,7 +259,11 @@ export function applyPaneEvent(sess: PaneSession, evt: ChatEvent): PaneSession {
 }
 
 /** 指标行数据（界面拼装用；空值跳过） */
-export function paneMetrics(rt: PaneRuntime): { firstToken: number | null; totalMs: number | null; tokens: number | null } {
+export function paneMetrics(rt: PaneRuntime): {
+  firstToken: number | null
+  totalMs: number | null
+  tokens: number | null
+} {
   return { firstToken: rt.firstTokenMs, totalMs: rt.totalMs, tokens: rt.usage?.totalTokens ?? null }
 }
 
@@ -246,15 +280,19 @@ function coerceRuntime(raw: unknown): PaneRuntime | null {
   const o = raw as Record<string, unknown>
   const base = newRuntime()
   const history = Array.isArray(o.history)
-    ? o.history
-        .filter(
-          (m): m is ChatMessage =>
-            typeof m === 'object' && m !== null &&
-            ((m as ChatMessage).role === 'user' || (m as ChatMessage).role === 'assistant') &&
-            typeof (m as ChatMessage).content === 'string',
-        )
+    ? o.history.filter(
+        (m): m is ChatMessage =>
+          typeof m === 'object' &&
+          m !== null &&
+          ((m as ChatMessage).role === 'user' || (m as ChatMessage).role === 'assistant') &&
+          typeof (m as ChatMessage).content === 'string',
+      )
     : []
-  const status = typeof o.status === 'string' && ['idle', 'pending', 'streaming', 'done', 'error', 'aborted'].includes(o.status) ? (o.status as PaneRuntime['status']) : 'idle'
+  const status =
+    typeof o.status === 'string' &&
+    ['idle', 'pending', 'streaming', 'done', 'error', 'aborted'].includes(o.status)
+      ? (o.status as PaneRuntime['status'])
+      : 'idle'
   return {
     ...base,
     history,
@@ -273,14 +311,20 @@ function coerceTree(raw: unknown, seen: Set<string>): PaneNode | null {
   if (o.kind === 'leaf') {
     if (typeof o.id !== 'string' || !o.id || seen.has(o.id)) return null
     seen.add(o.id)
-    return { kind: 'leaf', id: o.id, profileId: typeof o.profileId === 'string' ? o.profileId : null }
+    return {
+      kind: 'leaf',
+      id: o.id,
+      profileId: typeof o.profileId === 'string' ? o.profileId : null,
+    }
   }
   if (o.kind === 'split') {
     if (o.dir !== 'row' && o.dir !== 'col') return null
     const children = Array.isArray(o.children) ? (o.children as unknown[]) : []
     const a = coerceTree(children[0], seen)
     const b = coerceTree(children[1], seen)
-    return a && b ? { kind: 'split', id: typeof o.id === 'string' ? o.id : '', dir: o.dir, children: [a, b] } : null
+    return a && b
+      ? { kind: 'split', id: typeof o.id === 'string' ? o.id : '', dir: o.dir, children: [a, b] }
+      : null
   }
   return null
 }

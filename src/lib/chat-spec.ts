@@ -29,7 +29,11 @@ export interface ChatSpecCtx {
 }
 
 /** 组一条待发请求：档案三件套 + 设置参数 + 工具源组装；档案未就绪直接抛 */
-export function buildChatSendSpec(c: ChatSpecCtx, history: ChatMessage[], requestId: string): ChatSendSpec {
+export function buildChatSendSpec(
+  c: ChatSpecCtx,
+  history: ChatMessage[],
+  requestId: string,
+): ChatSendSpec {
   const prof = c.active
   if (!prof || !profileReady(prof)) throw new Error(c.noModel)
   const custom = toChatToolServers(c.servers)

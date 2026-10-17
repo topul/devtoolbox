@@ -186,287 +186,284 @@ function AppInner() {
         {/* 桌面端：侧栏是浮在画布上的白卡片，靠弥散阴影分层而不是 1px 描边；
             移动端抽屉不受影响（lg: 前缀外的样式保持原样） */}
         <div className="flex flex-col flex-1 min-h-0 lg:m-3 lg:mr-0 lg:rounded-[20px] lg:bg-panel lg:shadow-soft-card overflow-hidden">
-        {/* ===== 桌面端窄栏（收起态） ===== */}
-        {sidebar.collapsed && (
-          <div data-sb-rail className="hidden lg:flex flex-col flex-1 min-h-0">
-            <button
-              onClick={() => openTool(null)}
-              className="py-3 text-phosphor text-[15px] hover:opacity-80 !min-h-0"
-              title={t.chatNav}
-              aria-label={t.chatNav}
-            >
-              ✦
-            </button>
-            <button
-              onClick={() => openTool('home')}
-              className="py-2 text-muted hover:text-bright text-[14px] !min-h-0"
-              title={t.homeNav}
-              aria-label={t.homeNav}
-            >
-              ⌂
-            </button>
-            <button
-              onClick={sidebar.toggle}
-              className="py-2 border-y border-line-soft text-muted hover:text-bright text-[13px] !min-h-0"
-              title={t.expandSidebar}
-              aria-label={t.expandSidebar}
-            >
-              »
-            </button>
-            <button
-              onClick={() => setPaletteOpen(true)}
-              className="py-2.5 border-b border-line-soft text-muted hover:text-bright text-[13px] !min-h-0"
-              title={`${t.searchToolsAria} (${kbdHint})`}
-              aria-label={t.searchToolsAria}
-            >
-              ⌕
-            </button>
-
-            <div className="flex-1 min-h-0 overflow-y-auto py-1">
-              {SECTIONS.map((sec) => (
-                <button
-                  key={sec.id}
-                  onClick={() => jumpToSection(sec.id)}
-                  className={cn(
-                    'w-full py-2 text-[14px] rounded-md transition-colors !min-h-0',
-                    sec.id === 'ai'
-                      ? 'text-phosphor/80 hover:text-phosphor'
-                      : 'text-muted hover:text-bright hover:bg-panel-2',
-                  )}
-                  title={`${t.jumpToSection}: ${sectionName(sec.id)}`}
-                  aria-label={sectionName(sec.id)}
-                >
-                  {SECTION_ICONS[sec.id]}
-                </button>
-              ))}
-            </div>
-
-            <div className="border-t border-line-soft py-1">
+          {/* ===== 桌面端窄栏（收起态） ===== */}
+          {sidebar.collapsed && (
+            <div data-sb-rail className="hidden lg:flex flex-col flex-1 min-h-0">
               <button
-                onClick={zoom.cycle}
-                className="w-full py-1.5 text-muted hover:text-bright text-[11px] !min-h-0"
-                title={t.zoomTip}
-                aria-label={t.zoomTip}
+                onClick={() => openTool(null)}
+                className="py-3 text-phosphor text-[15px] hover:opacity-80 !min-h-0"
+                title={t.chatNav}
+                aria-label={t.chatNav}
               >
-                ⇕
-              </button>
-              <button
-                onClick={() => setLocale(locale === 'zh' ? 'en' : 'zh')}
-                className="w-full py-1.5 text-muted hover:text-bright text-[10px] !min-h-0"
-                title={t.switchLangTip}
-                aria-label={t.switchLangTip}
-              >
-                {t.langSwitch}
-              </button>
-              <button
-                onClick={toggleTheme}
-                className="w-full py-1.5 text-muted hover:text-bright text-[11px] !min-h-0"
-                title={theme === 'dark' ? t.switchToLight : t.switchToDark}
-                aria-label={t.toggleTheme}
-              >
-                {theme === 'dark' ? '◑' : '◐'}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* ===== 移动端抽屉 + 桌面端展开态 ===== */}
-        <div className={cn('flex flex-col flex-1 min-h-0', sidebar.collapsed ? 'lg:hidden' : '')}>
-          <div className="flex items-center px-3 pt-4 pb-2">
-            <button
-              onClick={() => openTool(null)}
-              className="flex items-center gap-2.5 flex-1 min-w-0 text-left group !min-h-0"
-            >
-              <span className="chip-c grad-hero w-9 h-9 !rounded-[13px] text-white text-[15px] shadow-[0_6px_16px_-6px_rgba(11,169,119,.55)]">
                 ✦
-              </span>
-              <span className="min-w-0">
-                <span className="block text-[15px] font-bold tracking-tight text-bright group-hover:text-phosphor transition-colors truncate">
-                  BUGBUCKET<span className="text-phosphor">.BOX</span>
-                </span>
-                <span className="block text-[10px] text-muted tracking-[0.2em] mt-0.5 uppercase">
-                  Dev × Sec Toolkit
-                </span>
-              </span>
-            </button>
-            <button
-              onClick={sidebar.toggle}
-              className="hidden lg:flex items-center self-stretch px-2 text-muted hover:text-bright text-[14px] transition-colors"
-              title={t.collapseSidebar}
-              aria-label={t.collapseSidebar}
-            >
-              «
-            </button>
-            <button
-              onClick={() => setSidebarOpen(false)}
-              className="lg:hidden px-2 self-stretch flex items-center text-muted text-xl"
-              aria-label={t.closeMenu}
-            >
-              ×
-            </button>
-          </div>
+              </button>
+              <button
+                onClick={() => openTool('home')}
+                className="py-2 text-muted hover:text-bright text-[14px] !min-h-0"
+                title={t.homeNav}
+                aria-label={t.homeNav}
+              >
+                ⌂
+              </button>
+              <button
+                onClick={sidebar.toggle}
+                className="py-2 border-y border-line-soft text-muted hover:text-bright text-[13px] !min-h-0"
+                title={t.expandSidebar}
+                aria-label={t.expandSidebar}
+              >
+                »
+              </button>
+              <button
+                onClick={() => setPaletteOpen(true)}
+                className="py-2.5 border-b border-line-soft text-muted hover:text-bright text-[13px] !min-h-0"
+                title={`${t.searchToolsAria} (${kbdHint})`}
+                aria-label={t.searchToolsAria}
+              >
+                ⌕
+              </button>
 
-          {/* 搜索入口：直接打开命令面板（⌘K），不再做侧栏内过滤 */}
-          <div className="px-3 pb-3">
-            <button
-              onClick={() => setPaletteOpen(true)}
-              className="w-full flex items-center gap-2 rounded-full bg-panel-2 px-3.5 py-2 text-[12.5px] text-muted hover:text-bright transition-colors"
-            >
-              <span className="text-[12px]">⌕</span>
-              <span className="flex-1 text-left truncate">{t.searchPlaceholder}</span>
-              <kbd className="shrink-0 rounded-md bg-panel px-1.5 py-0.5 text-[10px] text-muted shadow-soft-sm">
-                {kbdHint}
-              </kbd>
-            </button>
-          </div>
-
-          <nav className="flex-1 overflow-y-auto px-2.5 py-1 space-y-0.5">
-            <button
-              onClick={() => openTool(null)}
-              className={cn(
-                'w-full flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-[13px] transition-colors',
-                view === 'chat'
-                  ? 'bg-phosphor-faint text-phosphor font-semibold'
-                  : 'text-muted hover:text-bright hover:bg-panel-2',
-              )}
-            >
-              <span className="chip-c chip-emerald w-[26px] h-[26px] text-[13px]">✦</span>
-              {t.chatNav}
-            </button>
-            <button
-              onClick={() => openTool('home')}
-              className={cn(
-                'w-full flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-[13px] transition-colors',
-                view === 'home'
-                  ? 'bg-phosphor-faint text-phosphor font-semibold'
-                  : 'text-muted hover:text-bright hover:bg-panel-2',
-              )}
-            >
-              <span className="chip-c chip-slate w-[26px] h-[26px] text-[13px]">⌂</span>
-              {t.homeNav}
-              <span className="ml-auto text-[10.5px] text-muted/60">{visibleToolCount()}</span>
-            </button>
-
-            {[...grouped.entries()].map(([sec, entry]) => {
-              const open = openSections.isOpen(sec)
-              const multiCat = entry.cats.size > 1
-              return (
-                <div key={sec} className="pt-1">
+              <div className="flex-1 min-h-0 overflow-y-auto py-1">
+                {SECTIONS.map((sec) => (
                   <button
-                    onClick={() => openSections.toggle(sec)}
-                    aria-expanded={open}
-                    className="w-full flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-left transition-colors hover:bg-panel-2 text-muted hover:text-bright"
+                    key={sec.id}
+                    onClick={() => jumpToSection(sec.id)}
+                    className={cn(
+                      'w-full py-2 text-[14px] rounded-md transition-colors !min-h-0',
+                      sec.id === 'ai'
+                        ? 'text-phosphor/80 hover:text-phosphor'
+                        : 'text-muted hover:text-bright hover:bg-panel-2',
+                    )}
+                    title={`${t.jumpToSection}: ${sectionName(sec.id)}`}
+                    aria-label={sectionName(sec.id)}
                   >
-                    <span
-                      className={cn(
-                        'chip-c w-[26px] h-[26px] text-[13px]',
-                        SECTION_CHIP[sec],
-                      )}
-                    >
-                      {SECTION_ICONS[sec]}
-                    </span>
-                    <span className="text-[13px] font-medium truncate">{sectionName(sec)}</span>
-                    <span className="ml-auto text-[10.5px] text-muted/60 shrink-0">
-                      {entry.tools.length}
-                    </span>
-                    <span
-                      className={cn(
-                        'text-[8px] shrink-0 text-muted/50 transition-transform duration-200',
-                        open && 'rotate-90',
-                      )}
-                    >
-                      ▶
-                    </span>
+                    {SECTION_ICONS[sec.id]}
                   </button>
+                ))}
+              </div>
 
-                  <div
-                    className="collapse-grid"
-                    style={{ gridTemplateRows: open ? '1fr' : '0fr' }}
-                    aria-hidden={!open}
-                    {...(open ? {} : { inert: '' as unknown as boolean })}
-                  >
-                    <div>
-                      <div className="pb-1">
-                        {[...entry.cats.entries()].map(([cat, items]) => (
-                          <div key={cat}>
-                            {multiCat && (
-                              <div className="pl-[46px] pr-2 pt-1.5 pb-0.5 text-[10.5px] text-muted/60 select-none truncate">
-                                {catName(cat)}
-                              </div>
-                            )}
-                            {items.map((item) => (
-                              <button
-                                key={item.id}
-                                onClick={() => openTool(item.id)}
-                                className={cn(
-                                  'w-full text-left rounded-lg pl-[46px] pr-2 py-1.5 text-[12.5px] transition-colors truncate',
-                                  active?.id === item.id
-                                    ? 'bg-phosphor-faint text-phosphor font-medium'
-                                    : 'text-muted hover:text-bright hover:bg-panel-2',
-                                )}
-                              >
-                                {toolName(item)}
-                                {item.hot && (
-                                  <span className="ml-1.5 text-[9px] text-amber">★</span>
-                                )}
-                              </button>
-                            ))}
-                          </div>
-                        ))}
+              <div className="border-t border-line-soft py-1">
+                <button
+                  onClick={zoom.cycle}
+                  className="w-full py-1.5 text-muted hover:text-bright text-[11px] !min-h-0"
+                  title={t.zoomTip}
+                  aria-label={t.zoomTip}
+                >
+                  ⇕
+                </button>
+                <button
+                  onClick={() => setLocale(locale === 'zh' ? 'en' : 'zh')}
+                  className="w-full py-1.5 text-muted hover:text-bright text-[10px] !min-h-0"
+                  title={t.switchLangTip}
+                  aria-label={t.switchLangTip}
+                >
+                  {t.langSwitch}
+                </button>
+                <button
+                  onClick={toggleTheme}
+                  className="w-full py-1.5 text-muted hover:text-bright text-[11px] !min-h-0"
+                  title={theme === 'dark' ? t.switchToLight : t.switchToDark}
+                  aria-label={t.toggleTheme}
+                >
+                  {theme === 'dark' ? '◑' : '◐'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ===== 移动端抽屉 + 桌面端展开态 ===== */}
+          <div className={cn('flex flex-col flex-1 min-h-0', sidebar.collapsed ? 'lg:hidden' : '')}>
+            <div className="flex items-center px-3 pt-4 pb-2">
+              <button
+                onClick={() => openTool(null)}
+                className="flex items-center gap-2.5 flex-1 min-w-0 text-left group !min-h-0"
+              >
+                <span className="chip-c grad-hero w-9 h-9 !rounded-[13px] text-white text-[15px] shadow-[0_6px_16px_-6px_rgba(11,169,119,.55)]">
+                  ✦
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-[15px] font-bold tracking-tight text-bright group-hover:text-phosphor transition-colors truncate">
+                    BUGBUCKET<span className="text-phosphor">.BOX</span>
+                  </span>
+                  <span className="block text-[10px] text-muted tracking-[0.2em] mt-0.5 uppercase">
+                    Dev × Sec Toolkit
+                  </span>
+                </span>
+              </button>
+              <button
+                onClick={sidebar.toggle}
+                className="hidden lg:flex items-center self-stretch px-2 text-muted hover:text-bright text-[14px] transition-colors"
+                title={t.collapseSidebar}
+                aria-label={t.collapseSidebar}
+              >
+                «
+              </button>
+              <button
+                onClick={() => setSidebarOpen(false)}
+                className="lg:hidden px-2 self-stretch flex items-center text-muted text-xl"
+                aria-label={t.closeMenu}
+              >
+                ×
+              </button>
+            </div>
+
+            {/* 搜索入口：直接打开命令面板（⌘K），不再做侧栏内过滤 */}
+            <div className="px-3 pb-3">
+              <button
+                onClick={() => setPaletteOpen(true)}
+                className="w-full flex items-center gap-2 rounded-full bg-panel-2 px-3.5 py-2 text-[12.5px] text-muted hover:text-bright transition-colors"
+              >
+                <span className="text-[12px]">⌕</span>
+                <span className="flex-1 text-left truncate">{t.searchPlaceholder}</span>
+                <kbd className="shrink-0 rounded-md bg-panel px-1.5 py-0.5 text-[10px] text-muted shadow-soft-sm">
+                  {kbdHint}
+                </kbd>
+              </button>
+            </div>
+
+            <nav className="flex-1 overflow-y-auto px-2.5 py-1 space-y-0.5">
+              <button
+                onClick={() => openTool(null)}
+                className={cn(
+                  'w-full flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-[13px] transition-colors',
+                  view === 'chat'
+                    ? 'bg-phosphor-faint text-phosphor font-semibold'
+                    : 'text-muted hover:text-bright hover:bg-panel-2',
+                )}
+              >
+                <span className="chip-c chip-emerald w-[26px] h-[26px] text-[13px]">✦</span>
+                {t.chatNav}
+              </button>
+              <button
+                onClick={() => openTool('home')}
+                className={cn(
+                  'w-full flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-[13px] transition-colors',
+                  view === 'home'
+                    ? 'bg-phosphor-faint text-phosphor font-semibold'
+                    : 'text-muted hover:text-bright hover:bg-panel-2',
+                )}
+              >
+                <span className="chip-c chip-slate w-[26px] h-[26px] text-[13px]">⌂</span>
+                {t.homeNav}
+                <span className="ml-auto text-[10.5px] text-muted/60">{visibleToolCount()}</span>
+              </button>
+
+              {[...grouped.entries()].map(([sec, entry]) => {
+                const open = openSections.isOpen(sec)
+                const multiCat = entry.cats.size > 1
+                return (
+                  <div key={sec} className="pt-1">
+                    <button
+                      onClick={() => openSections.toggle(sec)}
+                      aria-expanded={open}
+                      className="w-full flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-left transition-colors hover:bg-panel-2 text-muted hover:text-bright"
+                    >
+                      <span
+                        className={cn('chip-c w-[26px] h-[26px] text-[13px]', SECTION_CHIP[sec])}
+                      >
+                        {SECTION_ICONS[sec]}
+                      </span>
+                      <span className="text-[13px] font-medium truncate">{sectionName(sec)}</span>
+                      <span className="ml-auto text-[10.5px] text-muted/60 shrink-0">
+                        {entry.tools.length}
+                      </span>
+                      <span
+                        className={cn(
+                          'text-[8px] shrink-0 text-muted/50 transition-transform duration-200',
+                          open && 'rotate-90',
+                        )}
+                      >
+                        ▶
+                      </span>
+                    </button>
+
+                    <div
+                      className="collapse-grid"
+                      style={{ gridTemplateRows: open ? '1fr' : '0fr' }}
+                      aria-hidden={!open}
+                      {...(open ? {} : { inert: '' as unknown as boolean })}
+                    >
+                      <div>
+                        <div className="pb-1">
+                          {[...entry.cats.entries()].map(([cat, items]) => (
+                            <div key={cat}>
+                              {multiCat && (
+                                <div className="pl-[46px] pr-2 pt-1.5 pb-0.5 text-[10.5px] text-muted/60 select-none truncate">
+                                  {catName(cat)}
+                                </div>
+                              )}
+                              {items.map((item) => (
+                                <button
+                                  key={item.id}
+                                  onClick={() => openTool(item.id)}
+                                  className={cn(
+                                    'w-full text-left rounded-lg pl-[46px] pr-2 py-1.5 text-[12.5px] transition-colors truncate',
+                                    active?.id === item.id
+                                      ? 'bg-phosphor-faint text-phosphor font-medium'
+                                      : 'text-muted hover:text-bright hover:bg-panel-2',
+                                  )}
+                                >
+                                  {toolName(item)}
+                                  {item.hot && (
+                                    <span className="ml-1.5 text-[9px] text-amber">★</span>
+                                  )}
+                                </button>
+                              ))}
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              )
-            })}
-          </nav>
+                )
+              })}
+            </nav>
 
-          {/* 底栏：操作三键 + 版本行（免责声明收进 ⓘ 悬浮提示，不再常驻占行） */}
-          <div data-sb-foot className="px-3 pt-2 pb-3 space-y-2">
-            <div className="grid grid-cols-3 gap-1.5">
-              <button
-                onClick={zoom.cycle}
-                className="rounded-xl bg-panel-2 px-1.5 py-1.5 text-[10.5px] text-muted text-center truncate hover:text-bright transition-colors"
-                aria-label={t.zoomTip}
-                title={t.zoomTip}
-              >
-                ⇕ {zoom.percent || t.zoomAuto}
-              </button>
-              <button
-                onClick={() => setLocale(locale === 'zh' ? 'en' : 'zh')}
-                className="rounded-xl bg-panel-2 px-1.5 py-1.5 text-[10.5px] text-muted text-center truncate hover:text-bright transition-colors"
-                aria-label={t.switchLangTip}
-                title={t.switchLangTip}
-              >
-                {t.langSwitch}
-              </button>
-              <button
-                onClick={toggleTheme}
-                className="rounded-xl bg-panel-2 px-1.5 py-1.5 text-[10.5px] text-muted text-center truncate hover:text-bright transition-colors"
-                aria-label={t.toggleTheme}
-                title={theme === 'dark' ? t.switchToLight : t.switchToDark}
-              >
-                {theme === 'dark' ? t.themeLight : t.themeDark}
-              </button>
-            </div>
-            <div className="flex items-center justify-between gap-2 text-[10.5px] text-muted/80">
-              <span className="truncate">
-                <span className="cursor-help text-amber/90" title={t.disclaimer}>
-                  ⓘ
-                </span>{' '}
-                {t.localCompute} · v{version || '...'}
-              </span>
-              {window.electronAPI && (
+            {/* 底栏：操作三键 + 版本行（免责声明收进 ⓘ 悬浮提示，不再常驻占行） */}
+            <div data-sb-foot className="px-3 pt-2 pb-3 space-y-2">
+              <div className="grid grid-cols-3 gap-1.5">
                 <button
-                  onClick={() => window.electronAPI?.checkForUpdates()}
-                  className="shrink-0 text-muted/80 hover:text-phosphor rounded-md border border-line-soft hover:border-phosphor/40 px-1.5 py-1 text-[9.5px] transition-colors"
+                  onClick={zoom.cycle}
+                  className="rounded-xl bg-panel-2 px-1.5 py-1.5 text-[10.5px] text-muted text-center truncate hover:text-bright transition-colors"
+                  aria-label={t.zoomTip}
+                  title={t.zoomTip}
                 >
-                  {t.checkUpdate}
+                  ⇕ {zoom.percent || t.zoomAuto}
                 </button>
-              )}
+                <button
+                  onClick={() => setLocale(locale === 'zh' ? 'en' : 'zh')}
+                  className="rounded-xl bg-panel-2 px-1.5 py-1.5 text-[10.5px] text-muted text-center truncate hover:text-bright transition-colors"
+                  aria-label={t.switchLangTip}
+                  title={t.switchLangTip}
+                >
+                  {t.langSwitch}
+                </button>
+                <button
+                  onClick={toggleTheme}
+                  className="rounded-xl bg-panel-2 px-1.5 py-1.5 text-[10.5px] text-muted text-center truncate hover:text-bright transition-colors"
+                  aria-label={t.toggleTheme}
+                  title={theme === 'dark' ? t.switchToLight : t.switchToDark}
+                >
+                  {theme === 'dark' ? t.themeLight : t.themeDark}
+                </button>
+              </div>
+              <div className="flex items-center justify-between gap-2 text-[10.5px] text-muted/80">
+                <span className="truncate">
+                  <span className="cursor-help text-amber/90" title={t.disclaimer}>
+                    ⓘ
+                  </span>{' '}
+                  {t.localCompute} · v{version || '...'}
+                </span>
+                {window.electronAPI && (
+                  <button
+                    onClick={() => window.electronAPI?.checkForUpdates()}
+                    className="shrink-0 text-muted/80 hover:text-phosphor rounded-md border border-line-soft hover:border-phosphor/40 px-1.5 py-1 text-[9.5px] transition-colors"
+                  >
+                    {t.checkUpdate}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
-        </div>
         </div>
       </aside>
 

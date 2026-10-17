@@ -710,23 +710,71 @@ button:focus-visible {
   border-radius: 10px;
   font-weight: 600;
 }
-.chip-emerald { background: #e7f6ef; color: #0b9e6e; }
-.chip-sky { background: #e9f5fe; color: #0e9bd8; }
-.chip-amber { background: #fef3e0; color: #e8930c; }
-.chip-rose { background: #fcedf1; color: #e14e78; }
-.chip-indigo { background: #edf0fd; color: #5b6be0; }
-.chip-teal { background: #e5f6f5; color: #0ca5a5; }
-.chip-violet { background: #f0effe; color: #7c6cf0; }
-.chip-slate { background: #eef0f3; color: #64748b; }
+.chip-emerald {
+  background: #e7f6ef;
+  color: #0b9e6e;
+}
+.chip-sky {
+  background: #e9f5fe;
+  color: #0e9bd8;
+}
+.chip-amber {
+  background: #fef3e0;
+  color: #e8930c;
+}
+.chip-rose {
+  background: #fcedf1;
+  color: #e14e78;
+}
+.chip-indigo {
+  background: #edf0fd;
+  color: #5b6be0;
+}
+.chip-teal {
+  background: #e5f6f5;
+  color: #0ca5a5;
+}
+.chip-violet {
+  background: #f0effe;
+  color: #7c6cf0;
+}
+.chip-slate {
+  background: #eef0f3;
+  color: #64748b;
+}
 
-.dark .chip-emerald { background: rgba(52, 211, 153, 0.14); color: #6ee7b7; }
-.dark .chip-sky { background: rgba(56, 189, 248, 0.14); color: #7dd3fc; }
-.dark .chip-amber { background: rgba(251, 191, 36, 0.14); color: #fcd34d; }
-.dark .chip-rose { background: rgba(251, 113, 133, 0.14); color: #fda4af; }
-.dark .chip-indigo { background: rgba(129, 140, 248, 0.14); color: #a5b4fc; }
-.dark .chip-teal { background: rgba(45, 212, 191, 0.14); color: #5eead4; }
-.dark .chip-violet { background: rgba(167, 139, 250, 0.14); color: #c4b5fd; }
-.dark .chip-slate { background: rgba(148, 163, 184, 0.14); color: #b0bccb; }
+.dark .chip-emerald {
+  background: rgba(52, 211, 153, 0.14);
+  color: #6ee7b7;
+}
+.dark .chip-sky {
+  background: rgba(56, 189, 248, 0.14);
+  color: #7dd3fc;
+}
+.dark .chip-amber {
+  background: rgba(251, 191, 36, 0.14);
+  color: #fcd34d;
+}
+.dark .chip-rose {
+  background: rgba(251, 113, 133, 0.14);
+  color: #fda4af;
+}
+.dark .chip-indigo {
+  background: rgba(129, 140, 248, 0.14);
+  color: #a5b4fc;
+}
+.dark .chip-teal {
+  background: rgba(45, 212, 191, 0.14);
+  color: #5eead4;
+}
+.dark .chip-violet {
+  background: rgba(167, 139, 250, 0.14);
+  color: #c4b5fd;
+}
+.dark .chip-slate {
+  background: rgba(148, 163, 184, 0.14);
+  color: #b0bccb;
+}
 
 /* 「+N 更多」虚线卡：收敛长尾工具，hover 时才染上品牌色 */
 .tool-more-card {

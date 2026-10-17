@@ -109,7 +109,11 @@ const metaOf = (totalMs: number, tokens: number): ChatMeta => ({
 
   function findProfileId(sess: PaneSession, id: string): string | null {
     const walk = (n: PaneSession['tree']): string | null =>
-      n.kind === 'leaf' ? (n.id === id ? n.profileId : null) : walk(n.children[0]) ?? walk(n.children[1])
+      n.kind === 'leaf'
+        ? n.id === id
+          ? n.profileId
+          : null
+        : (walk(n.children[0]) ?? walk(n.children[1]))
     return walk(sess.tree)
   }
 }
@@ -163,7 +167,10 @@ const metaOf = (totalMs: number, tokens: number): ChatMeta => ({
   const ev = (e: ChatEvent): void => {
     sess = applyPaneEvent(sess, e)
   }
-  ok('不认识 requestId 原样返回', applyPaneEvent(sess, { type: 'start', requestId: 'zzz' }) === sess)
+  ok(
+    '不认识 requestId 原样返回',
+    applyPaneEvent(sess, { type: 'start', requestId: 'zzz' }) === sess,
+  )
 
   ev({ type: 'start', requestId: ra })
   ev({ type: 'start', requestId: rb })
@@ -186,7 +193,10 @@ const metaOf = (totalMs: number, tokens: number): ChatMeta => ({
   const sa2 = r2.specs.find((x) => x.paneId === a)!
   eq('第二轮消息数=3（u/a/u）', sa2.spec.messages.length, 3)
   eq('第二轮末条=Q2', sa2.spec.messages.at(-1)?.content, 'Q2')
-  ok('流式中的 b 也收到 Q2', r2.specs.some((x) => x.paneId === b))
+  ok(
+    '流式中的 b 也收到 Q2',
+    r2.specs.some((x) => x.paneId === b),
+  )
 
   // 取消不是失败
   let s3 = r2.session
@@ -219,7 +229,13 @@ const metaOf = (totalMs: number, tokens: number): ChatMeta => ({
     s = r.session
     for (const sp of r.specs) {
       s = applyPaneEvent(s, { type: 'start', requestId: sp.requestId })
-      s = applyPaneEvent(s, { type: 'delta', requestId: sp.requestId, text: 'x', kind: 'content', atMs: 0 })
+      s = applyPaneEvent(s, {
+        type: 'delta',
+        requestId: sp.requestId,
+        text: 'x',
+        kind: 'content',
+        atMs: 0,
+      })
       s = applyPaneEvent(s, { type: 'done', requestId: sp.requestId, meta: metaOf(1, 1) })
     }
   }
@@ -253,20 +269,31 @@ const metaOf = (totalMs: number, tokens: number): ChatMeta => ({
   eq('往返后历史保留', back.panes[a].history.at(-1)?.content, 'hi')
   eq('往返后流式文本保留', back.panes[a].text, '部分回复')
   eq('往返后另一叶状态保留', back.panes[b].status, 'pending')
-  ok('往返后再发可续', beginFanOut(back, 'next', (id) => profiles[id] ?? null, rid).specs.length === 2)
+  ok(
+    '往返后再发可续',
+    beginFanOut(back, 'next', (id) => profiles[id] ?? null, rid).specs.length === 2,
+  )
 
   ok('坏 JSON → null', loadPaneSession('{oops') === null)
   ok('空串 → null', loadPaneSession('') === null)
   ok('版本不符 → null', loadPaneSession('{"version":99,"tree":{},"panes":{}}') === null)
-  ok(
-    '缺 panes → null',
-    loadPaneSession(JSON.stringify({ version: 1, tree: sess.tree })) === null,
-  )
+  ok('缺 panes → null', loadPaneSession(JSON.stringify({ version: 1, tree: sess.tree })) === null)
 
   // 树中 runtime 缺失 → 补默认；多余 runtime → 丢弃
   const partial = JSON.parse(raw) as { tree: unknown; panes: Record<string, unknown> }
   delete partial.panes[b]
-  partial.panes['ghost'] = { history: [], text: '', reasoningChars: 0, status: 'idle', error: '', startedAt: null, firstTokenMs: null, totalMs: null, usage: null, activeRequestId: null }
+  partial.panes['ghost'] = {
+    history: [],
+    text: '',
+    reasoningChars: 0,
+    status: 'idle',
+    error: '',
+    startedAt: null,
+    firstTokenMs: null,
+    totalMs: null,
+    usage: null,
+    activeRequestId: null,
+  }
   const healed = loadPaneSession(JSON.stringify(partial))!
   ok('缺 runtime 补默认', !!healed.panes[b] && healed.panes[b].status === 'idle')
   ok('幽灵 runtime 被丢弃', !healed.panes['ghost'])
