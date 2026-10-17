@@ -1,10 +1,9 @@
 export const chatpanesL = {
   zh: {
-    enter: '分窗对比',
     splitRow: '左右拆分',
     splitCol: '上下拆分',
-    splitNoRoomRow: '横向空间不足，试试上下拆分 ⬍',
-    splitNoRoomCol: '纵向空间不足，试试左右拆分 ⬌',
+    maximize: '全屏显示',
+    restore: '还原窗格',
     closePane: '关闭窗格',
     noModel: '未配置模型',
     hint: '从下方输入问题，所有窗格会同时回复；每个窗格的上下文独立累积，可连续追问。',
@@ -17,11 +16,10 @@ export const chatpanesL = {
     toksLabel: 'tok',
   },
   en: {
-    enter: 'Split panes',
     splitRow: 'Split left/right',
     splitCol: 'Split top/bottom',
-    splitNoRoomRow: 'Not enough width — try a top/bottom split ⬍',
-    splitNoRoomCol: 'Not enough height — try a left/right split ⬌',
+    maximize: 'Maximize pane',
+    restore: 'Restore pane',
     closePane: 'Close pane',
     noModel: 'No model assigned',
     hint: 'Type below and every pane replies at once; each pane keeps its own multi-turn context.',

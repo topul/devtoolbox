@@ -22,7 +22,8 @@ import { ChatHeader } from '../components/chat/ChatHeader'
 import { MobileSessionList, SessionRail } from '../components/chat/SessionRail'
 import { useChatSessions } from '../components/chat/useChatSessions'
 import { usePaneMode } from '../components/chat/usePaneMode'
-import { PaneEnterButton, PaneView } from '../components/chat/PaneView'
+import { PaneView } from '../components/chat/PaneView'
+import { SplitEntryButtons } from '../components/chat/PaneIcons'
 import { SettingsDrawer } from '../components/chat/SettingsDrawer'
 import { TraceDrawer } from '../components/chat/TraceView'
 import { useLocalized } from '../lib/i18n'
@@ -191,24 +192,21 @@ export function ChatTool(): React.ReactElement {
   })
   ctxRef.current = { active, settings, servers, toolServer, l }
 
-  const buildSpec = useCallback(
-    (history: ChatMessage[], requestId: string): ChatSendSpec => {
-      const c = ctxRef.current
-      return buildChatSendSpec(
-        {
-          active: c.active,
-          settings: c.settings,
-          servers: c.servers,
-          toolServer: c.toolServer,
-          noModel: c.l.noModel,
-          toolSelfLabel: c.l.toolSelfLabel,
-        },
-        history,
-        requestId,
-      )
-    },
-    [],
-  )
+  const buildSpec = useCallback((history: ChatMessage[], requestId: string): ChatSendSpec => {
+    const c = ctxRef.current
+    return buildChatSendSpec(
+      {
+        active: c.active,
+        settings: c.settings,
+        servers: c.servers,
+        toolServer: c.toolServer,
+        noModel: c.l.noModel,
+        toolSelfLabel: c.l.toolSelfLabel,
+      },
+      history,
+      requestId,
+    )
+  }, [])
 
   const transport = useMemo(
     () =>
@@ -271,7 +269,11 @@ export function ChatTool(): React.ReactElement {
     busy,
     messages,
     setMessages,
-    strings: { storeTooLarge: l.storeTooLarge, storeFailed: l.storeFailed, storeRecovered: l.storeRecovered },
+    strings: {
+      storeTooLarge: l.storeTooLarge,
+      storeFailed: l.storeFailed,
+      storeRecovered: l.storeRecovered,
+    },
   })
   const {
     storeApi,
@@ -416,7 +418,12 @@ export function ChatTool(): React.ReactElement {
           onOpenSettings={() => setShowSettings(true)}
           extra={
             panes.active ? undefined : (
-              <PaneEnterButton onClick={() => panes.enter(active?.id ?? null)} label={lp.enter} />
+              <SplitEntryButtons
+                titleRight={lp.splitRow}
+                titleDown={lp.splitCol}
+                onSplitRight={() => panes.enter(active?.id ?? null, 'row')}
+                onSplitDown={() => panes.enter(active?.id ?? null, 'col')}
+              />
             )
           }
         />
